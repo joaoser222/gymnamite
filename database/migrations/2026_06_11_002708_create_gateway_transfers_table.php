@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('gateway_reference_key');
             $table->decimal('gross_value', 13, 4);
             $table->decimal('fee_value', 13, 4);
-            $table->decimal('total', 13, 4)->virtualAs('value - fee');
+            $table->decimal('total', 13, 4)->virtualAs('gross_value - fee_value');
             $table->string('status', 20);
             $table->foreignId('gateway_account_id')->constrained()->onDelete('cascade');
             $table->foreignId('gateway_postback_id')->constrained()->onDelete('cascade');

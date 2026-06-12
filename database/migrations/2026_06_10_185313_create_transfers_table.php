@@ -17,7 +17,7 @@ return new class extends Migration
             $table->decimal('value', 13, 4);
             $table->string('status', 20);
             $table->string('visibility', 10);
-            $table->foreignId('account_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('financial_account_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
         });
     }

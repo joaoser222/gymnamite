@@ -32,7 +32,7 @@ return new class extends Migration
             // Relacionamentos
             $table->morphs('holder');
             $table->morphs('billable');
-            $table->foreignId('account_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('financial_account_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('financial_category_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
         });

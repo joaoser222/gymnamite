@@ -37,7 +37,7 @@ class Invoice extends Model
         'holder_type',
         'billable_id',
         'billable_type',
-        'account_id',
+        'financial_account_id',
         'financial_category_id',
     ];
 
@@ -77,7 +77,7 @@ class Invoice extends Model
         ],
     ];
 
-    public function account()
+    public function financialAccount()
     {
         return $this->belongsTo(FinancialAccount::class);
     }

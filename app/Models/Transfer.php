@@ -12,6 +12,6 @@ class Transfer extends Model
         'annotations',
         'value',
         'status',
-        'account_id',
+        'financial_account_id',
     ];
 }
