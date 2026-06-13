@@ -13,5 +13,3 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('clients', ClientController::class)
         ->only(['index', 'store', 'update', 'destroy']);
 });
-
-require __DIR__.'/settings.php';
