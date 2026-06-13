@@ -10,27 +10,36 @@ import {
 import { useState } from 'react';
 import { useAlert } from '@/hooks/useAlert';
 import { useLoading } from '@/hooks/useLoading';
-import { store as loginStore } from '@/routes/login';
-import { request as passwordRequest } from '@/routes/password';
+import { login } from '@/routes';
+import { update as passwordUpdate } from '@/routes/password';
 
-interface LoginProps {
-    canResetPassword: boolean;
-    status?: string;
+interface ResetPasswordProps {
+    email?: string;
+    token: string;
 }
 
-function Login({ canResetPassword, status }: LoginProps) {
+function ResetPassword({
+    email: initialEmail = '',
+    token,
+}: ResetPasswordProps) {
     const { showError } = useAlert();
     const { withLoading } = useLoading();
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(initialEmail);
     const [password, setPassword] = useState('');
+    const [passwordConfirmation, setPasswordConfirmation] = useState('');
 
     async function handleSubmit() {
         try {
             await withLoading(
                 new Promise<void>((resolve, reject) => {
                     router.post(
-                        loginStore.url(),
-                        { email, password },
+                        passwordUpdate.url(),
+                        {
+                            token,
+                            email,
+                            password,
+                            password_confirmation: passwordConfirmation,
+                        },
                         {
                             onSuccess: () => resolve(),
                             onError: (errors) => {
@@ -47,7 +56,7 @@ function Login({ canResetPassword, status }: LoginProps) {
                 }),
                 {
                     message: 'Enviando dados',
-                    subMessage: 'Autenticando usuário...',
+                    subMessage: 'Atualizando senha...',
                 },
             );
         } catch {
@@ -59,14 +68,8 @@ function Login({ canResetPassword, status }: LoginProps) {
         <Center h="100vh" bg="dark.9">
             <Paper withBorder shadow="0" p={30} w={420} radius="md" bg="dark.7">
                 <Title order={2} fw={600} mb={15} ta="center">
-                    Entrar na Conta
+                    Nova Senha
                 </Title>
-
-                {status && (
-                    <Title order={6} c="green" ta="center" mb="sm">
-                        {status}
-                    </Title>
-                )}
 
                 <TextInput
                     label="E-mail"
@@ -78,31 +81,36 @@ function Login({ canResetPassword, status }: LoginProps) {
                 <PasswordInput
                     label="Senha"
                     placeholder="••••••••"
-                    mb="lg"
+                    mb="sm"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                />
+                <PasswordInput
+                    label="Confirmar senha"
+                    placeholder="••••••••"
+                    mb="lg"
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 />
 
                 <Button fullWidth onClick={handleSubmit} my={15}>
-                    Entrar
+                    Atualizar senha
                 </Button>
 
-                {canResetPassword && (
-                    <Button
-                        variant="subtle"
-                        fullWidth
-                        component={Link}
-                        href={passwordRequest.url()}
-                    >
-                        Esqueceu a senha?
-                    </Button>
-                )}
+                <Button
+                    variant="subtle"
+                    fullWidth
+                    component={Link}
+                    href={login.url()}
+                >
+                    Voltar para login
+                </Button>
             </Paper>
         </Center>
     );
 }
 
-Login.layout = (page: React.ReactNode) => page;
+ResetPassword.layout = (page: React.ReactNode) => page;
 
-export default Login;
+export default ResetPassword;

@@ -1,37 +1,29 @@
 import { Link, router } from '@inertiajs/react';
-import {
-    TextInput,
-    PasswordInput,
-    Button,
-    Paper,
-    Title,
-    Center,
-} from '@mantine/core';
+import { TextInput, Button, Paper, Title, Center } from '@mantine/core';
 import { useState } from 'react';
 import { useAlert } from '@/hooks/useAlert';
 import { useLoading } from '@/hooks/useLoading';
-import { store as loginStore } from '@/routes/login';
-import { request as passwordRequest } from '@/routes/password';
+import { login } from '@/routes';
+import { email as passwordEmail } from '@/routes/password';
 
-interface LoginProps {
-    canResetPassword: boolean;
+interface ForgotPasswordProps {
     status?: string;
 }
 
-function Login({ canResetPassword, status }: LoginProps) {
+function ForgotPassword({ status }: ForgotPasswordProps) {
     const { showError } = useAlert();
     const { withLoading } = useLoading();
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
 
     async function handleSubmit() {
         try {
             await withLoading(
                 new Promise<void>((resolve, reject) => {
                     router.post(
-                        loginStore.url(),
-                        { email, password },
+                        passwordEmail.url(),
+                        { email },
                         {
+                            preserveScroll: true,
                             onSuccess: () => resolve(),
                             onError: (errors) => {
                                 const firstError = Object.values(errors)[0];
@@ -47,7 +39,7 @@ function Login({ canResetPassword, status }: LoginProps) {
                 }),
                 {
                     message: 'Enviando dados',
-                    subMessage: 'Autenticando usuário...',
+                    subMessage: 'Solicitando recuperação de senha...',
                 },
             );
         } catch {
@@ -59,7 +51,7 @@ function Login({ canResetPassword, status }: LoginProps) {
         <Center h="100vh" bg="dark.9">
             <Paper withBorder shadow="0" p={30} w={420} radius="md" bg="dark.7">
                 <Title order={2} fw={600} mb={15} ta="center">
-                    Entrar na Conta
+                    Recuperar Senha
                 </Title>
 
                 {status && (
@@ -71,38 +63,29 @@ function Login({ canResetPassword, status }: LoginProps) {
                 <TextInput
                     label="E-mail"
                     placeholder="seu@email.com"
-                    mb="sm"
+                    mb="lg"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                />
-                <PasswordInput
-                    label="Senha"
-                    placeholder="••••••••"
-                    mb="lg"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 />
 
                 <Button fullWidth onClick={handleSubmit} my={15}>
-                    Entrar
+                    Enviar link de recuperação
                 </Button>
 
-                {canResetPassword && (
-                    <Button
-                        variant="subtle"
-                        fullWidth
-                        component={Link}
-                        href={passwordRequest.url()}
-                    >
-                        Esqueceu a senha?
-                    </Button>
-                )}
+                <Button
+                    variant="subtle"
+                    fullWidth
+                    component={Link}
+                    href={login.url()}
+                >
+                    Voltar para login
+                </Button>
             </Paper>
         </Center>
     );
 }
 
-Login.layout = (page: React.ReactNode) => page;
+ForgotPassword.layout = (page: React.ReactNode) => page;
 
-export default Login;
+export default ForgotPassword;
