@@ -11,6 +11,7 @@ import {
     update as clientsUpdate,
 } from '@/routes/clients';
 import type { FetchParams, Paginator } from '@/types';
+import { masks } from '@/utils/mask';
 import type { ClientFormPayload } from './Form';
 import ClientFormModal from './Form';
 import type { Client } from './types';
@@ -85,8 +86,16 @@ function Index({ clients, filters }: IndexProps) {
 
     const columns: TableColumn[] = [
         { key: 'name', title: 'Nome' },
-        { key: 'document', title: 'CPF' },
-        { key: 'phone', title: 'Telefone' },
+        {
+            key: 'document',
+            title: 'CPF',
+            formatter: (item: Client) => masks.cpf(item.document),
+        },
+        {
+            key: 'phone',
+            title: 'Telefone',
+            formatter: (item: Client) => masks.phone(item.phone),
+        },
         { key: 'status', title: 'Status', searchable: false },
         {
             key: 'created_at',
