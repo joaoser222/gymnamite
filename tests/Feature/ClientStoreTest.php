@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -9,6 +10,16 @@ use Tests\TestCase;
 class ClientStoreTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function grantPermission(User $user, string $permission): void
+    {
+        $permission = Permission::query()->create([
+            'name' => $permission,
+            'description' => $permission,
+        ]);
+
+        $user->permissions()->attach($permission);
+    }
 
     /**
      * @return array<string, mixed>
@@ -36,6 +47,7 @@ class ClientStoreTest extends TestCase
     public function test_authenticated_users_can_create_clients(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.create');
 
         $response = $this->actingAs($user)->post(route('clients.store'), $this->validPayload());
 
@@ -49,6 +61,7 @@ class ClientStoreTest extends TestCase
     public function test_client_creation_requires_valid_data(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.create');
 
         $response = $this->actingAs($user)->post(route('clients.store'), []);
 

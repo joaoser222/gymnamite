@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -11,6 +12,16 @@ use Tests\TestCase;
 class ClientIndexTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function grantPermission(User $user, string $permission): void
+    {
+        $permission = Permission::query()->create([
+            'name' => $permission,
+            'description' => $permission,
+        ]);
+
+        $user->permissions()->attach($permission);
+    }
 
     public function test_guests_are_redirected_from_clients_index(): void
     {
@@ -22,6 +33,7 @@ class ClientIndexTest extends TestCase
     public function test_authenticated_users_can_visit_clients_index(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.view');
 
         $response = $this->actingAs($user)->get(route('clients.index'));
 
@@ -36,6 +48,7 @@ class ClientIndexTest extends TestCase
     public function test_clients_index_filters_by_search(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.view');
 
         Client::factory()->create(['name' => 'João Silva']);
         Client::factory()->create(['name' => 'Maria Souza']);

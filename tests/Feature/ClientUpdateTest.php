@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Client;
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,6 +11,16 @@ use Tests\TestCase;
 class ClientUpdateTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function grantPermission(User $user, string $permission): void
+    {
+        $permission = Permission::query()->create([
+            'name' => $permission,
+            'description' => $permission,
+        ]);
+
+        $user->permissions()->attach($permission);
+    }
 
     /**
      * @return array<string, mixed>
@@ -37,6 +48,7 @@ class ClientUpdateTest extends TestCase
     public function test_authenticated_users_can_update_clients(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.update');
         $client = Client::factory()->create([
             'document' => '12345678901',
         ]);
@@ -54,6 +66,7 @@ class ClientUpdateTest extends TestCase
     public function test_client_update_requires_valid_data(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.update');
         $client = Client::factory()->create();
 
         $response = $this->actingAs($user)->put(route('clients.update', $client), [
