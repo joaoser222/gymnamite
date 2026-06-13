@@ -54,7 +54,9 @@ declare module '@inertiajs/core' {
 }
 
 declare module '@inertiajs/react' {
-    export function usePage<T extends Record<string, unknown> = Record<string, unknown>>(): {
+    export function usePage<
+        T extends Record<string, unknown> = Record<string, unknown>,
+    >(): {
         props: T & SharedData;
         url: string;
         component: string;

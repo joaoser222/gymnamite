@@ -1,5 +1,12 @@
-import { TextInput, PasswordInput, Button, Paper, Title, Center } from '@mantine/core';
 import { router } from '@inertiajs/react';
+import {
+    TextInput,
+    PasswordInput,
+    Button,
+    Paper,
+    Title,
+    Center,
+} from '@mantine/core';
 import { useState } from 'react';
 import { useAlert } from '@/hooks/useAlert';
 import { useLoading } from '@/hooks/useLoading';
@@ -20,14 +27,22 @@ function Login({ canResetPassword, status }: LoginProps) {
         try {
             await withLoading(
                 new Promise<void>((resolve, reject) => {
-                    router.post(loginStore.url(), { email, password }, {
-                        onSuccess: () => resolve(),
-                        onError: (errors) => {
-                            const firstError = Object.values(errors)[0];
-                            showError(Array.isArray(firstError) ? firstError[0] : String(firstError));
-                            reject(errors);
+                    router.post(
+                        loginStore.url(),
+                        { email, password },
+                        {
+                            onSuccess: () => resolve(),
+                            onError: (errors) => {
+                                const firstError = Object.values(errors)[0];
+                                showError(
+                                    Array.isArray(firstError)
+                                        ? firstError[0]
+                                        : String(firstError),
+                                );
+                                reject(errors);
+                            },
                         },
-                    });
+                    );
                 }),
                 {
                     message: 'Enviando dados',
@@ -42,10 +57,14 @@ function Login({ canResetPassword, status }: LoginProps) {
     return (
         <Center h="100vh" bg="dark.9">
             <Paper withBorder shadow="0" p={30} w={420} radius="md" bg="dark.7">
-                <Title order={2} fw={600} mb={15} ta="center">Entrar na Conta</Title>
+                <Title order={2} fw={600} mb={15} ta="center">
+                    Entrar na Conta
+                </Title>
 
                 {status && (
-                    <Title order={6} c="green" ta="center" mb="sm">{status}</Title>
+                    <Title order={6} c="green" ta="center" mb="sm">
+                        {status}
+                    </Title>
                 )}
 
                 <TextInput
@@ -64,10 +83,17 @@ function Login({ canResetPassword, status }: LoginProps) {
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 />
 
-                <Button fullWidth onClick={handleSubmit} my={15}>Entrar</Button>
+                <Button fullWidth onClick={handleSubmit} my={15}>
+                    Entrar
+                </Button>
 
                 {canResetPassword && (
-                    <Button variant="subtle" fullWidth component="a" href="/forgot-password">
+                    <Button
+                        variant="subtle"
+                        fullWidth
+                        component="a"
+                        href="/forgot-password"
+                    >
                         Esqueceu a senha?
                     </Button>
                 )}

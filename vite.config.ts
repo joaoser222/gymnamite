@@ -16,8 +16,14 @@ export default defineConfig({
                 }),
             ],
         }),
+        react({
+            babel: {
+                plugins: [
+                    ['babel-plugin-react-compiler', {}],
+                ],
+            },
+        }),
         inertia(),
-        react(),
         wayfinder({
             formVariants: true,
         }),

@@ -1,9 +1,10 @@
-import { Paper } from '@mantine/core';
 import { router } from '@inertiajs/react';
-import { ServerTable, TableColumn } from '@/components/ServerTable';
+import { Paper } from '@mantine/core';
+import type { TableColumn } from '@/components/ServerTable';
+import { ServerTable } from '@/components/ServerTable';
+import type { FormModalProps } from '@/hooks/useFormModal';
+import type { FetchParams, Paginator, VisibilityOption } from '@/types';
 import { ActionToolbar } from './ActionToolbar';
-import { FormModalProps } from '@/hooks/useFormModal';
-import { FetchParams, Paginator, VisibilityOption } from '@/types';
 
 export interface CrudPageProps<T extends object> {
     columns: TableColumn[];
@@ -58,7 +59,9 @@ export function CrudPage<T extends object>({
             />
 
             {loading ? (
-                <Paper p="xl" ta="center">Carregando...</Paper>
+                <Paper p="xl" ta="center">
+                    Carregando...
+                </Paper>
             ) : (
                 <ServerTable
                     columns={columns}

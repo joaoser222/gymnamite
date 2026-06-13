@@ -1,16 +1,11 @@
-import { TextInput, TextInputProps } from '@mantine/core';
+import type { TextInputProps } from '@mantine/core';
+import { TextInput } from '@mantine/core';
 
 type InputProps = Omit<TextInputProps, 'ref'>;
 
 function createInput(label: string, placeholder: string) {
     return function MaskedField(props: InputProps) {
-        return (
-            <TextInput
-                label={label}
-                placeholder={placeholder}
-                {...props}
-            />
-        );
+        return <TextInput label={label} placeholder={placeholder} {...props} />;
     };
 }
 

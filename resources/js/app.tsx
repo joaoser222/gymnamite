@@ -3,13 +3,12 @@ import '@mantine/dates/styles.css';
 import './App.css';
 
 import { createInertiaApp } from '@inertiajs/react';
-import { ModalsProvider } from '@mantine/modals';
 import { MantineProvider } from '@mantine/core';
-import { createRoot } from 'react-dom/client';
+import { ModalsProvider } from '@mantine/modals';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-
-import { GlobalAlert } from '@/components/GlobalAlert';
-import { LoadingModal } from '@/components/LoadingModal';
+import { createRoot } from 'react-dom/client';
+import { GlobalAlert } from './components/GlobalAlert';
+import { LoadingModal } from './components/LoadingModal';
 import { theme } from './theme';
 
 const modals = {

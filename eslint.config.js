@@ -1,8 +1,11 @@
+import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript';
 import prettier from 'eslint-config-prettier/flat';
 import importPlugin from 'eslint-plugin-import';
-import vue from 'eslint-plugin-vue';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 const controlStatements = [
     'if',
@@ -21,12 +24,42 @@ const paddingAroundControl = [
     ]),
 ];
 
-export default defineConfigWithVueTs(
-    vue.configs['flat/essential'],
-    vueTsConfigs.recommended,
+export default tseslint.config(
     {
+        ignores: [
+            'vendor',
+            'node_modules',
+            'public',
+            'bootstrap/ssr',
+            'tailwind.config.js',
+            'vite.config.ts',
+            'resources/js/actions/**',
+            'resources/js/components/ui/*',
+            'resources/js/routes/**',
+            'resources/js/wayfinder/**',
+        ],
+    },
+    js.configs.recommended,
+    ...tseslint.configs.recommended,
+    react.configs.flat.recommended,
+    react.configs.flat['jsx-runtime'],
+    {
+        settings: {
+            react: {
+                version: 'detect',
+            },
+        },
+    },
+    {
+        files: ['resources/js/**/*.{ts,tsx}'],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+            },
+        },
         plugins: {
             import: importPlugin,
+            'react-hooks': reactHooks,
         },
         settings: {
             'import/resolver': {
@@ -38,8 +71,18 @@ export default defineConfigWithVueTs(
             },
         },
         rules: {
-            'vue/multi-word-component-names': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
+            'react/prop-types': 'off',
+            'react-hooks/exhaustive-deps': 'warn',
+            'react-hooks/rules-of-hooks': 'error',
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                {
+                    argsIgnorePattern: '^_',
+                    caughtErrorsIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                },
+            ],
             '@typescript-eslint/consistent-type-imports': [
                 'error',
                 {
@@ -61,6 +104,12 @@ export default defineConfigWithVueTs(
         },
     },
     {
+        files: ['resources/js/**/*.d.ts'],
+        rules: {
+            '@typescript-eslint/no-empty-object-type': 'off',
+        },
+    },
+    {
         plugins: {
             '@stylistic': stylistic,
         },
@@ -71,20 +120,6 @@ export default defineConfigWithVueTs(
                 ...paddingAroundControl,
             ],
         },
-    },
-    {
-        ignores: [
-            'vendor',
-            'node_modules',
-            'public',
-            'bootstrap/ssr',
-            'tailwind.config.js',
-            'vite.config.ts',
-            'resources/js/actions/**',
-            'resources/js/components/ui/*',
-            'resources/js/routes/**',
-            'resources/js/wayfinder/**',
-        ],
     },
     prettier,
     {
