@@ -42,6 +42,8 @@ class ClientIndexTest extends TestCase
             ->component('clients/Index')
             ->has('clients.data')
             ->has('filters')
+            ->where('enums.genderTypes.0.value', 'M')
+            ->where('enums.genderTypes.0.label', 'Masculino')
         );
     }
 
