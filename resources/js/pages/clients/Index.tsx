@@ -21,7 +21,29 @@ interface IndexProps {
 }
 
 function Index({ clients, filters }: IndexProps) {
-    const { showError } = useAlert();
+    const { showError, showWarning } = useAlert();
+
+    function firstErrorMessage(errors: Record<string, unknown>): string {
+        const firstError = Object.values(errors)[0];
+
+        if (Array.isArray(firstError)) {
+            return String(firstError[0] ?? 'Não foi possível salvar.');
+        }
+
+        return String(firstError ?? 'Não foi possível salvar.');
+    }
+
+    function httpExceptionMessage(status: number): string {
+        if (status === 403) {
+            return 'Você não tem permissão para executar esta ação.';
+        }
+
+        if (status === 419) {
+            return 'Sua sessão expirou. Recarregue a página e tente novamente.';
+        }
+
+        return 'Não foi possível concluir a operação.';
+    }
 
     const { formModalProps, openCreate, openEdit } =
         useFormModal<ClientFormPayload>(
@@ -33,8 +55,12 @@ function Index({ clients, filters }: IndexProps) {
                             resolve();
                         },
                         onError: (errors) => {
-                            showError(Object.values(errors)[0] as string);
+                            showError(firstErrorMessage(errors));
                             reject(errors);
+                        },
+                        onHttpException: (response) => {
+                            showWarning(httpExceptionMessage(response.status));
+                            reject(response);
                         },
                     });
                 }),
@@ -46,8 +72,12 @@ function Index({ clients, filters }: IndexProps) {
                             resolve();
                         },
                         onError: (errors) => {
-                            showError(Object.values(errors)[0] as string);
+                            showError(firstErrorMessage(errors));
                             reject(errors);
+                        },
+                        onHttpException: (response) => {
+                            showWarning(httpExceptionMessage(response.status));
+                            reject(response);
                         },
                     });
                 }),
