@@ -1,7 +1,8 @@
-import { TextInput, Grid } from '@mantine/core';
+import { usePage } from '@inertiajs/react';
+import { TextInput, Grid, Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { FormModal } from '@/components/FormModal';
 import { CpfInput, PhoneInput } from '@/components/inputs';
 import type { FormModalProps } from '@/hooks/useFormModal';
@@ -42,6 +43,7 @@ export default function ClientFormModal({
     onSubmit,
     onSuccess,
 }: ClientFormModalProps) {
+    const { props } = usePage();
     const form = useForm<ClientFormPayload>({
         initialValues,
         validate: {
@@ -61,19 +63,31 @@ export default function ClientFormModal({
                 validators.required(),
                 validators.minLength(11),
             ),
+            gender: validators.compose('Gênero', validators.required()),
+            birth_date: validators.compose(
+                'Data de nascimento',
+                validators.required(),
+            ),
         },
     });
+
+    const formRef = useRef(form);
+
+    useEffect(() => {
+        formRef.current = form;
+    });
+
     useEffect(() => {
         if (!opened) {
             return;
         }
 
         if (editValues) {
-            form.setValues({ ...initialValues, ...editValues });
+            formRef.current.setValues({ ...initialValues, ...editValues });
         } else {
-            form.reset();
+            formRef.current.reset();
         }
-    }, [opened, editValues, form]);
+    }, [opened, editValues]);
 
     async function handleSubmit(values: ClientFormPayload) {
         await onSubmit(values);
@@ -107,9 +121,10 @@ export default function ClientFormModal({
                     />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <PhoneInput
-                        label="Telefone"
-                        {...form.getInputProps('phone')}
+                    <Select
+                        label="Gênero"
+                        data={props.enums.genderTypes}
+                        {...form.getInputProps('gender')}
                     />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6 }}>
