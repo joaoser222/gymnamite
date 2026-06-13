@@ -9,6 +9,31 @@ export interface FlashToast {
     message: string;
 }
 
+export interface EnumOption {
+    value: string;
+    label: string;
+}
+
+export interface SharedEnums {
+    accessActions: EnumOption[];
+    accessModules: EnumOption[];
+    accessRoles: EnumOption[];
+    billableStatus: EnumOption[];
+    clientStatus: EnumOption[];
+    financialAccountTypes: EnumOption[];
+    genderTypes: EnumOption[];
+    invoiceStatus: EnumOption[];
+    invoiceTypes: EnumOption[];
+    legalTypes: EnumOption[];
+    movementTypes: EnumOption[];
+    operationTypes: EnumOption[];
+    paymentMethods: EnumOption[];
+    postbackStatus: EnumOption[];
+    productTypes: EnumOption[];
+    transactionStatus: EnumOption[];
+    visibility: EnumOption[];
+}
+
 export interface SharedData {
     name: string;
     auth: {
@@ -18,6 +43,7 @@ export interface SharedData {
     flash: {
         toast: FlashToast | null;
     };
+    enums: SharedEnums;
     [key: string]: unknown;
 }
 
