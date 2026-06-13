@@ -2,9 +2,6 @@ import { router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import { CrudPage } from '@/components/CrudPage';
 import type { TableColumn } from '@/components/ServerTable';
-import type { ClientFormPayload } from './Form';
-import ClientFormModal from './Form';
-import type { Client } from './types';
 import { useAlert } from '@/hooks/useAlert';
 import { useFormModal } from '@/hooks/useFormModal';
 import { authenticatedLayout } from '@/layouts/authenticatedLayout';
@@ -14,6 +11,9 @@ import {
     update as clientsUpdate,
 } from '@/routes/clients';
 import type { FetchParams, Paginator } from '@/types';
+import type { ClientFormPayload } from './Form';
+import ClientFormModal from './Form';
+import type { Client } from './types';
 
 interface IndexProps {
     clients: Paginator<Client>;
@@ -21,7 +21,7 @@ interface IndexProps {
 }
 
 function Index({ clients, filters }: IndexProps) {
-    const { showError, showSuccess } = useAlert();
+    const { showError } = useAlert();
 
     const { formModalProps, openCreate, openEdit } =
         useFormModal<ClientFormPayload>(
@@ -30,7 +30,6 @@ function Index({ clients, filters }: IndexProps) {
                     router.post(clientsStore.url(), values, {
                         preserveScroll: true,
                         onSuccess: () => {
-                            showSuccess('Cliente criado com sucesso.');
                             resolve();
                         },
                         onError: (errors) => {
@@ -44,7 +43,6 @@ function Index({ clients, filters }: IndexProps) {
                     router.put(clientsUpdate.url(Number(id)), values, {
                         preserveScroll: true,
                         onSuccess: () => {
-                            showSuccess('Cliente atualizado com sucesso.');
                             resolve();
                         },
                         onError: (errors) => {

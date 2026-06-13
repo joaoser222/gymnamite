@@ -1,5 +1,6 @@
 // hooks/useAlert.ts
 import { openContextModal } from '@mantine/modals';
+import { useCallback } from 'react';
 
 interface AlertOptions {
     title?: string;
@@ -22,7 +23,7 @@ interface AlertHook {
 }
 
 export function useAlert(): AlertHook {
-    const showAlert = (options: AlertOptions) => {
+    const showAlert = useCallback((options: AlertOptions) => {
         const {
             title,
             message,
@@ -47,27 +48,27 @@ export function useAlert(): AlertHook {
                 showCancel,
             },
         });
-    };
+    }, []);
 
-    const showError = (message: string, title?: string) => {
+    const showError = useCallback((message: string, title?: string) => {
         showAlert({ message, title, type: 'error' });
-    };
+    }, [showAlert]);
 
-    const showSuccess = (message: string, title?: string) => {
+    const showSuccess = useCallback((message: string, title?: string) => {
         showAlert({ message, title, type: 'success' });
-    };
+    }, [showAlert]);
 
-    const showWarning = (message: string, title?: string) => {
+    const showWarning = useCallback((message: string, title?: string) => {
         showAlert({ message, title, type: 'warning' });
-    };
+    }, [showAlert]);
 
-    const showInfo = (message: string, title?: string) => {
+    const showInfo = useCallback((message: string, title?: string) => {
         showAlert({ message, title, type: 'info' });
-    };
+    }, [showAlert]);
 
-    const showConfirm = (options: AlertOptions) => {
+    const showConfirm = useCallback((options: AlertOptions) => {
         showAlert({ ...options, showCancel: true });
-    };
+    }, [showAlert]);
 
     return {
         showAlert,

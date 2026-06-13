@@ -39,7 +39,8 @@ import {
     IconCalendarDollar,
     IconReceiptDollar,
 } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAlert } from '@/hooks/useAlert';
 import { logout as logoutRoute } from '@/routes';
 
 const navItems = [
@@ -222,8 +223,10 @@ function NavbarContent({
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { url, props } = usePage();
     const user = props.auth.user;
+    const { showAlert } = useAlert();
     const [mobileOpened, { toggle: toggleMobile }] = useDisclosure(false);
     const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
+    const flashToast = props.flash.toast;
 
     const [opened, setOpened] = useState<Record<string, boolean>>(() => {
         const activeGroup = navItems.find((g) =>
@@ -246,6 +249,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     function handleLogout() {
         router.post(logoutRoute.url());
     }
+
+    useEffect(() => {
+        if (flashToast) {
+            showAlert(flashToast);
+        }
+    }, [flashToast, showAlert]);
 
     const userInitial = user?.name?.charAt(0).toUpperCase() ?? 'U';
 
