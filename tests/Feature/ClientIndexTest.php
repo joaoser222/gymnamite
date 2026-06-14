@@ -30,6 +30,15 @@ class ClientIndexTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
+    public function test_guests_are_redirected_from_client_show(): void
+    {
+        $client = Client::factory()->create();
+
+        $response = $this->get(route('clients.show', $client));
+
+        $response->assertRedirect(route('login'));
+    }
+
     public function test_authenticated_users_can_visit_clients_index(): void
     {
         $user = User::factory()->create();
@@ -39,12 +48,44 @@ class ClientIndexTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('clients/Index')
+            ->component('client/Index')
             ->has('clients.data')
             ->has('filters')
             ->where('enums.genderTypes.0.value', 'M')
             ->where('enums.genderTypes.0.label', 'Masculino')
         );
+    }
+
+    public function test_authenticated_users_can_fetch_client_for_editing(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.view');
+        $client = Client::factory()->create([
+            'name' => 'Cliente Completo',
+            'email' => 'cliente-completo@example.com',
+            'address' => 'Rua Completa',
+            'legal_representative_name' => 'Responsável Legal',
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('clients.show', $client));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('id', $client->id)
+            ->assertJsonPath('name', 'Cliente Completo')
+            ->assertJsonPath('email', 'cliente-completo@example.com')
+            ->assertJsonPath('address', 'Rua Completa')
+            ->assertJsonPath('legal_representative_name', 'Responsável Legal');
+    }
+
+    public function test_client_show_requires_view_permission(): void
+    {
+        $user = User::factory()->create();
+        $client = Client::factory()->create();
+
+        $response = $this->actingAs($user)->getJson(route('clients.show', $client));
+
+        $response->assertForbidden();
     }
 
     public function test_clients_index_filters_by_search(): void
@@ -62,7 +103,7 @@ class ClientIndexTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('clients/Index')
+            ->component('client/Index')
             ->where('clients.total', 1)
             ->where('clients.data.0.name', 'João Silva')
         );

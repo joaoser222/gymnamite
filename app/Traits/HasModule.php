@@ -6,6 +6,7 @@ use App\AccessControl\AccessAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -21,16 +22,16 @@ trait HasModule
      */
     abstract protected function modelClass(): string;
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|JsonResponse
     {
         $this->authorizeAccess(AccessAction::VIEW);
 
         $filters = [
             'page' => (int) $request->input('page', 1),
             'search' => (string) $request->input('search', ''),
-            'searchField' => (string) $request->input('searchField', $this->defaultSearchField()),
+            'searchField' => (string) $request->input('searchField', $request->input('search_field', $this->defaultSearchField())),
             'visibility' => (string) $request->input('visibility', 'visible'),
-            'sortBy' => (string) $request->input('sortBy', 'id'),
+            'sortBy' => (string) $request->input('sortBy', $request->input('sort_by', 'id')),
         ];
 
         $searchField = in_array($filters['searchField'], $this->searchableFields(), true)
@@ -51,22 +52,44 @@ trait HasModule
             ->paginate(15)
             ->withQueryString();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'results' => $records->items(),
+                'count' => $records->total(),
+                'per_page' => $records->perPage(),
+                'num_pages' => $records->lastPage(),
+                'page' => $records->currentPage(),
+            ]);
+        }
+
         return Inertia::render($this->indexComponent(), [
             $this->collectionPropName() => $records,
             'filters' => array_merge($filters, [
                 'searchField' => $searchField,
                 'sortBy' => $sortBy,
             ]),
+            'id' => $this->pageItemId($request),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function show(Request $request): JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::VIEW);
+
+        return response()->json($this->modelFromRoute($request));
+    }
+
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $this->newModelQuery()->create(
+        $model = $this->newModelQuery()->create(
             $this->validatedRequestData($request, $this->storeRequestClass())
         );
+
+        if ($request->expectsJson()) {
+            return response()->json($model, 201);
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -76,7 +99,7 @@ trait HasModule
         return redirect()->route($this->routePrefix().'.index');
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorizeAccess(AccessAction::UPDATE);
 
@@ -86,6 +109,10 @@ trait HasModule
             $this->validatedRequestData($request, $this->updateRequestClass())
         );
 
+        if ($request->expectsJson()) {
+            return response()->json($model->refresh());
+        }
+
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __($this->accessModule()->label().' atualizado com sucesso.'),
@@ -94,11 +121,15 @@ trait HasModule
         return redirect()->route($this->routePrefix().'.index');
     }
 
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorizeAccess(AccessAction::DELETE);
 
         $this->modelFromRoute($request)->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json(null, 204);
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -106,6 +137,37 @@ trait HasModule
         ]);
 
         return redirect()->route($this->routePrefix().'.index');
+    }
+
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::DELETE);
+
+        $ids = $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['integer'],
+        ])['ids'];
+
+        $this->newModelQuery()->whereKey($ids)->delete();
+
+        return response()->json(null, 204);
+    }
+
+    public function bulkChangeVisibility(Request $request): JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::VISIBILITY);
+
+        $data = $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['integer'],
+            'visibility' => ['required', 'string'],
+        ]);
+
+        $this->newModelQuery()
+            ->whereKey($data['ids'])
+            ->update(['visibility' => $data['visibility']]);
+
+        return response()->json(null, 204);
     }
 
     protected function routePrefix(): string
@@ -120,7 +182,11 @@ trait HasModule
 
     protected function indexComponent(): string
     {
-        return $this->routePrefix().'/Index';
+        return Str::of($this->routePrefix())
+            ->singular()
+            ->replace('_', '-')
+            ->append('/Index')
+            ->toString();
     }
 
     protected function collectionPropName(): string
@@ -182,6 +248,21 @@ trait HasModule
         $request->route()?->setParameter($this->routeParameterName(), $model);
 
         return $model;
+    }
+
+    protected function pageItemId(Request $request): string|int|null
+    {
+        if ($request->routeIs($this->routePrefix().'.create')) {
+            return 'new';
+        }
+
+        $routeValue = $request->route($this->routeParameterName());
+
+        if ($routeValue instanceof Model) {
+            return $routeValue->getKey();
+        }
+
+        return $routeValue;
     }
 
     protected function newModelQuery(): Builder

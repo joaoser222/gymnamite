@@ -1,0 +1,50 @@
+import { createInertiaApp } from '@inertiajs/vue3';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createApp, h, type DefineComponent } from 'vue';
+import { vMaska } from 'maska/vue';
+import RootApp from '@/App.vue';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
+import vuetify from '@/plugins/vuetify';
+
+type InertiaPageComponent = DefineComponent & {
+    layout?: unknown;
+};
+
+type PageModule = {
+    default: InertiaPageComponent;
+};
+
+createInertiaApp({
+    resolve: async (name) => {
+        const page = await resolvePageComponent<PageModule>(
+            `./pages/${name}.vue`,
+            import.meta.glob<PageModule>('./pages/**/*.vue'),
+        );
+        const component = page.default;
+
+        if (component.layout === undefined) {
+            component.layout = AuthenticatedLayout;
+        }
+
+        return component;
+    },
+
+    setup({ el, App, props, plugin }) {
+        const app = createApp({
+            render: () =>
+                h(RootApp, null, {
+                    default: () => h(App, props),
+                }),
+        });
+
+        app.use(plugin);
+        app.use(vuetify);
+        app.directive('maska', vMaska);
+
+        app.mount(el);
+    },
+
+    progress: {
+        color: '#6750A4', // Material You primary — ajuste para sua cor
+    },
+});

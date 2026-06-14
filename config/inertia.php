@@ -44,6 +44,7 @@ return [
             'jsx',
             'ts',
             'tsx',
+            'vue',
         ],
 
     ],

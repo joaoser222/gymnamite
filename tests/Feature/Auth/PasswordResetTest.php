@@ -6,25 +6,22 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use Laravel\Fortify\Features;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $this->skipUnlessFortifyHas(Features::resetPasswords());
-    }
-
     public function test_reset_password_link_screen_can_be_rendered()
     {
         $response = $this->get(route('password.request'));
 
-        $response->assertOk();
+        $response
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/ForgotPassword')
+            );
     }
 
     public function test_reset_password_link_can_be_requested()
@@ -49,7 +46,12 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
             $response = $this->get(route('password.reset', $notification->token));
 
-            $response->assertOk();
+            $response
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('auth/ResetPassword')
+                    ->where('token', $notification->token)
+                );
 
             return true;
         });

@@ -8,11 +8,10 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts
-        @viteReactRefresh
-        @vite(['resources/js/app.tsx'])
+        @vite(['resources/js/app.ts'])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased">
+    <body>
         @inertia
     </body>
 </html>

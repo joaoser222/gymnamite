@@ -1,31 +1,46 @@
-import inertia from '@inertiajs/vite';
-import { wayfinder } from '@laravel/vite-plugin-wayfinder';
-import react from '@vitejs/plugin-react';
+import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
+import vuetify from 'vite-plugin-vuetify';
+import Components from 'unplugin-vue-components/vite';
 
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/js/app.tsx'],
+            input: ['resources/js/app.ts'],
             refresh: true,
             fonts: [
-                bunny('Instrument Sans', {
+                bunny('Inter', {
                     weights: [400, 500, 600],
                 }),
             ],
         }),
-        react({
-            babel: {
-                plugins: [
-                    ['babel-plugin-react-compiler', {}],
-                ],
+        vue(),
+        vuetify({
+            autoImport: true,
+            styles: {
+                configFile: 'resources/js/styles/app.scss',
             },
         }),
-        inertia(),
-        wayfinder({
-            formVariants: true,
+        Components({
+            dirs: ['resources/js/components'],
+            dts: 'resources/js/components.d.ts',
         }),
     ],
+    resolve: {
+        alias: {
+            '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
+        },
+    },
+    build: {
+        minify: 'terser',
+        terserOptions: {
+            compress: {
+                drop_console: true,
+                drop_debugger: true,
+            },
+        },
+    },
 });
