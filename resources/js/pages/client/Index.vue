@@ -15,6 +15,12 @@ const props = defineProps<{
         per_page: number;
         total: number;
     };
+    routes: {
+        index: string;
+        create: string;
+        show: string;
+        destroy: string;
+    };
 }>();
 
 // Configuração da tabela
@@ -23,20 +29,20 @@ const headers: TableHeader[] = [
     { title: 'Nome', key: 'name', sortable: true },
     { title: 'Email', key: 'email', sortable: true },
     { title: 'Telefone', key: 'phone' },
-    { 
-        title: 'Status', 
-        key: 'status', 
+    {
+        title: 'Status',
+        key: 'status',
         sortable: true,
-        align: 'center'
+        align: 'center',
     },
-    { title: 'Criado em', key: 'created_at', sortable: true }
+    { title: 'Criado em', key: 'created_at', sortable: true },
 ];
 
 const routes: TableRoutes = {
-    index: '/clients',
-    create: '/clients/create',
-    edit: (id) => `/clients/${id}/edit`,
-    destroy: (id) => `/clients/${id}`
+    index: props.routes.index,
+    create: props.routes.create,
+    show: (id) => props.routes.show.replace(':id', String(id)),
+    destroy: () => props.routes.destroy,
 };
 </script>
 
@@ -50,10 +56,6 @@ const routes: TableRoutes = {
         :headers="headers"
         :routes="routes"
         title="Clientes"
-        searchable
-        creatable
-        editable
-        deletable
         :custom-slots="['status', 'created_at']"
     >
         <!-- Status personalizado -->
@@ -65,22 +67,10 @@ const routes: TableRoutes = {
                 {{ item.status === 'active' ? 'Ativo' : 'Inativo' }}
             </v-chip>
         </template>
-        
+
         <!-- Data formatada -->
         <template #column-created_at="{ item }">
             {{ new Date(item.created_at).toLocaleDateString('pt-BR') }}
-        </template>
-        
-        <!-- Ações em massa -->
-        <template #bulk-actions="{ selected }">
-            <v-btn
-                color="error"
-                variant="text"
-                size="small"
-                @click="console.log('Excluir selecionados:', selected)"
-            >
-                Excluir selecionados
-            </v-btn>
         </template>
     </TablePage>
 </template>
