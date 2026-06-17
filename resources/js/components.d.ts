@@ -8,21 +8,9 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ColorField: typeof import('./components/inputs/ColorField.vue')['default']
-    CrudPage: typeof import('./components/CrudPage.vue')['default']
     DateField: typeof import('./components/inputs/DateField.vue')['default']
-    DialogArea: typeof import('./components/DialogArea.vue')['default']
-    DynamicField: typeof import('./components/DynamicField.vue')['default']
-    FormValidator: typeof import('./components/FormValidator.vue')['default']
-    GridSelectorField: typeof import('./components/ui/GridSelectorField.vue')['default']
-    LoadingDialog: typeof import('./components/LoadingDialog.vue')['default']
-    MoneyField: typeof import('./components/ui/MoneyField.vue')['default']
-    PageModule: typeof import('./components/PageModule.vue')['default']
-    PageTable: typeof import('./components/PageTable.vue')['default']
+    DetailsPage: typeof import('./components/DetailsPage.vue')['default']
     PasswordField: typeof import('./components/inputs/PasswordField.vue')['default']
-    ResponsiveTable: typeof import('./components/ResponsiveTable.vue')['default']
-    RouterShow: typeof import('./components/RouterShow.vue')['default']
-    SearchField: typeof import('./components/ui/SearchField.vue')['default']
-    SnackbarArea: typeof import('./components/SnackbarArea.vue')['default']
     TablePage: typeof import('./components/TablePage.vue')['default']
     TimeField: typeof import('./components/inputs/TimeField.vue')['default']
   }
