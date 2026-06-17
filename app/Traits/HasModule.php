@@ -28,12 +28,17 @@ trait HasModule
     protected function getModuleRoutes(): array
     {
         $prefix = $this->routePrefix();
-        
+        $parameterName = $this->routeParameterName();
+        $showRoute = route("{$prefix}.show", [$parameterName => '__id__']);
+        $updateRoute = route("{$prefix}.update", [$parameterName => '__id__']);
+
         return [
             'index' => route("{$prefix}.index"),
-            'show' => route("{$prefix}.show", [$this->routeParameterName() => ':id']),
+            'create' => route("{$prefix}.create"),
+            'new' => route("{$prefix}.create"),
+            'show' => str_replace('__id__', ':id', $showRoute),
             'store' => route("{$prefix}.store"),
-            'update' => route("{$prefix}.update", [$this->routeParameterName() => ':id']),
+            'update' => str_replace('__id__', ':id', $updateRoute),
             'destroy' => route("{$prefix}.destroy"),
             'changeVisibility' => route("{$prefix}.change-visibility"),
         ];
@@ -102,14 +107,35 @@ trait HasModule
         ]);
     }
 
-    public function show(Request $request): Response
+    public function create(): Response
+    {
+        $this->authorizeAccess(AccessAction::CREATE);
+
+        $this->shareModuleRoutes();
+
+        return Inertia::render($this->detailsComponent(), [
+            $this->itemPropName() => null,
+            'id' => 'new',
+            'routes' => $this->getModuleRoutes(),
+        ]);
+    }
+
+    public function show(Request $request): Response|JsonResponse
     {
         $this->authorizeAccess(AccessAction::VIEW);
 
         $model = $this->modelFromRoute($request);
 
+        if ($request->expectsJson()) {
+            return response()->json($model);
+        }
+
+        $this->shareModuleRoutes();
+
         return Inertia::render($this->detailsComponent(), [
             $this->itemPropName() => $model,
+            'id' => $model->getKey(),
+            'routes' => $this->getModuleRoutes(),
         ]);
     }
 
@@ -165,7 +191,7 @@ trait HasModule
         if (empty($ids)) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Nenhum ID fornecido para deleção.'
+                    'message' => 'Nenhum ID fornecido para deleção.',
                 ], 422);
             }
 
@@ -181,7 +207,7 @@ trait HasModule
         if (empty($validIds)) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Nenhum dos IDs fornecidos é válido.'
+                    'message' => 'Nenhum dos IDs fornecidos é válido.',
                 ], 404);
             }
 
@@ -203,7 +229,7 @@ trait HasModule
             return response()->json([
                 'deleted' => $deletedCount,
                 'items' => $validIds,
-                'message' => __($message)
+                'message' => __($message),
             ]);
         }
 
@@ -217,7 +243,7 @@ trait HasModule
 
     /**
      * Extrai IDs da requisição de diferentes fontes
-     * 
+     *
      * @return array<int, int>
      */
     protected function extractIdsFromRequest(Request $request): array
@@ -244,7 +270,7 @@ trait HasModule
 
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
-            'items.*' => ['integer', 'exists:' . $this->modelClass() . ',id'],
+            'items.*' => ['integer', 'exists:'.$this->modelClass().',id'],
             'visibility' => ['required', 'string', 'in:visible,hidden,archived'],
         ]);
 
@@ -259,7 +285,7 @@ trait HasModule
         if ($request->expectsJson()) {
             return response()->json([
                 'updated' => $count,
-                'message' => __($message)
+                'message' => __($message),
             ]);
         }
 
