@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\AccessControl\AccessAction;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
@@ -104,6 +105,7 @@ trait HasModule
             ]),
             'id' => $this->pageItemId($request),
             'routes' => $this->getModuleRoutes(),
+            ...$this->moduleIndexProps($request),
         ]);
     }
 
@@ -117,6 +119,7 @@ trait HasModule
             $this->itemPropName() => null,
             'id' => 'new',
             'routes' => $this->getModuleRoutes(),
+            ...$this->moduleDetailsProps(),
         ]);
     }
 
@@ -136,6 +139,7 @@ trait HasModule
             $this->itemPropName() => $model,
             'id' => $model->getKey(),
             'routes' => $this->getModuleRoutes(),
+            ...$this->moduleDetailsProps($model),
         ]);
     }
 
@@ -374,6 +378,54 @@ trait HasModule
         return property_exists($this, 'sortableFields')
             ? $this->sortableFields
             : ['id', 'created_at', 'updated_at'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function moduleIndexProps(Request $request): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function moduleDetailsProps(?Model $model = null): array
+    {
+        return [];
+    }
+
+    /**
+     * @param  class-string<BackedEnum>  $enumClass
+     * @return array<int, array{value: string, label: string}>
+     */
+    protected function enumOptions(string $enumClass): array
+    {
+        return array_map(
+            fn (BackedEnum $case): array => [
+                'value' => (string) $case->value,
+                'label' => method_exists($case, 'label') ? $case->label() : (string) $case->value,
+            ],
+            $enumClass::cases(),
+        );
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     * @return array<int, array{value: string, label: string}>
+     */
+    protected function modelOptions(string $modelClass): array
+    {
+        return $modelClass::query()
+            ->select(['code', 'name'])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Model $model): array => [
+                'value' => (string) $model->getAttribute('code'),
+                'label' => (string) $model->getAttribute('name'),
+            ])
+            ->all();
     }
 
     protected function modelFromRoute(Request $request): Model

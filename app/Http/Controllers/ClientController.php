@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
+use App\Enums\ClientStatus;
+use App\Enums\GenderType;
 use App\Http\Requests\StoreClientRequest;
 use App\Http\Requests\UpdateClientRequest;
 use App\Models\Client;
 use App\Traits\HasModule;
+use Illuminate\Database\Eloquent\Model;
 
 class ClientController extends Controller
 {
@@ -40,5 +43,18 @@ class ClientController extends Controller
     protected function updateRequestClass(): ?string
     {
         return UpdateClientRequest::class;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function moduleDetailsProps(?Model $model = null): array
+    {
+        return [
+            'enums' => [
+                'clientStatus' => $this->enumOptions(ClientStatus::class),
+                'genderTypes' => $this->enumOptions(GenderType::class),
+            ],
+        ];
     }
 }
