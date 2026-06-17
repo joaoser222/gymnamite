@@ -39,6 +39,22 @@ class ClientIndexTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
+    public function test_authenticated_users_can_visit_client_create(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.create');
+
+        $response = $this->actingAs($user)->get(route('clients.create'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('client/Details')
+            ->where('client', null)
+            ->where('id', 'new')
+            ->has('routes')
+        );
+    }
+
     public function test_authenticated_users_can_visit_clients_index(): void
     {
         $user = User::factory()->create();
