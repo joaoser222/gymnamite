@@ -1,6 +1,6 @@
 ---
 name: inertia-vue-development
-description: "Develops Inertia.js v3 Vue client-side applications. Activates when creating Vue pages, forms, or navigation; using <Link>, <Form>, useForm, useHttp, setLayoutProps, or router; working with deferred props, prefetching, optimistic updates, instant visits, or polling; or when user mentions Vue with Inertia, Vue pages, Vue forms, or Vue navigation."
+description: "Develops this project's Inertia.js v3 Vue client-side application. Activates when creating Vue pages, forms, or navigation; using <Link>, <Form>, useForm, useHttp, setLayoutProps, or router; working with deferred props, prefetching, optimistic updates, instant visits, or polling; or when user mentions Vue with Inertia, Vue pages, Vue forms, or Vue navigation. This project uses Vuetify for UI, so pair this with vuetify-development for visual components."
 license: MIT
 metadata:
   author: laravel
@@ -17,6 +17,10 @@ Activate this skill when:
 - Implementing client-side navigation with `<Link>` or `router`
 - Using v3 features: deferred props, prefetching, optimistic updates, instant visits, layout props, HTTP requests, WhenVisible, InfiniteScroll, once props, flash data, or polling
 - Building Vue-specific features with the Inertia protocol
+
+## Project UI Stack
+
+This project uses Vuetify for Vue UI. When building visual components, forms, cards, tables, buttons, dialogs, or layouts, activate `vuetify-development` too and prefer Vuetify components over Tailwind or hand-written utility CSS.
 
 ## Documentation
 

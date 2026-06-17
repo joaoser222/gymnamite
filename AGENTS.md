@@ -22,6 +22,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - phpunit/phpunit (PHPUNIT) - v12
 - @inertiajs/vue3 (INERTIA_VUE) - v3
 - vue (VUE) - v3
+- vuetify (VUETIFY) - v3
 - eslint (ESLINT) - v9
 - prettier (PRETTIER) - v3
 
@@ -47,6 +48,14 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 ## Frontend Bundling
 
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+
+## Frontend UI
+
+- This project uses Vuetify 3 as its UI component system. Do not use Tailwind CSS utilities or Tailwind-specific patterns unless the user explicitly asks to introduce Tailwind.
+- Build Vue UI with Vuetify components (`v-card`, `v-form`, `v-text-field`, `v-btn`, `v-data-table`, `v-container`, etc.) and follow the conventions already present in `resources/js`.
+- Use Tabler icon names through Vuetify icon props/classes, matching existing usage such as `ti ti-plus`, `ti ti-pencil`, and `ti ti-search`.
+- Prefer Vuetify spacing, layout, density, variant, color, and validation APIs over custom CSS. Add scoped CSS only when Vuetify props/classes cannot express the needed behavior cleanly.
+- Check sibling Vue components in `resources/js/components` and `resources/js/pages` before creating new shared UI patterns.
 
 ## Documentation Files
 
