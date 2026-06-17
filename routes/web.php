@@ -25,12 +25,5 @@ Route::middleware(['auth'])->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::inertia('dashboard', 'Home')->name('dashboard');
-
-    Route::get('clients/create', [ClientController::class, 'index'])->name('clients.create');
-    Route::get('clients/{client}/edit', [ClientController::class, 'index'])->name('clients.edit');
-    Route::delete('clients/bulk-delete', [ClientController::class, 'bulkDestroy'])->name('clients.bulk-destroy');
-    Route::put('clients/bulk-change-visibility', [ClientController::class, 'bulkChangeVisibility'])->name('clients.bulk-change-visibility');
-
-    Route::resource('clients', ClientController::class)
-        ->only(['index', 'show', 'store', 'update', 'destroy']);
+    Route::module(ClientController::class);
 });

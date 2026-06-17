@@ -22,9 +22,38 @@ trait HasModule
      */
     abstract protected function modelClass(): string;
 
+    /**
+     * Retorna as rotas disponíveis para o frontend
+     */
+    protected function getModuleRoutes(): array
+    {
+        $prefix = $this->routePrefix();
+        
+        return [
+            'index' => route("{$prefix}.index"),
+            'show' => route("{$prefix}.show", [$this->routeParameterName() => ':id']),
+            'store' => route("{$prefix}.store"),
+            'update' => route("{$prefix}.update", [$this->routeParameterName() => ':id']),
+            'destroy' => route("{$prefix}.destroy"),
+            'changeVisibility' => route("{$prefix}.change-visibility"),
+        ];
+    }
+
+    /**
+     * Compartilha as rotas com o Inertia
+     */
+    protected function shareModuleRoutes(): void
+    {
+        Inertia::share('moduleRoutes', function () {
+            return $this->getModuleRoutes();
+        });
+    }
+
     public function index(Request $request): Response|JsonResponse
     {
         $this->authorizeAccess(AccessAction::VIEW);
+
+        $this->shareModuleRoutes();
 
         $filters = [
             'page' => (int) $request->input('page', 1),
@@ -69,14 +98,19 @@ trait HasModule
                 'sortBy' => $sortBy,
             ]),
             'id' => $this->pageItemId($request),
+            'routes' => $this->getModuleRoutes(),
         ]);
     }
 
-    public function show(Request $request): JsonResponse
+    public function show(Request $request): Response
     {
         $this->authorizeAccess(AccessAction::VIEW);
 
-        return response()->json($this->modelFromRoute($request));
+        $model = $this->modelFromRoute($request);
+
+        return Inertia::render($this->detailsComponent(), [
+            $this->itemPropName() => $model,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -125,49 +159,116 @@ trait HasModule
     {
         $this->authorizeAccess(AccessAction::DELETE);
 
-        $this->modelFromRoute($request)->delete();
+        // Tenta obter os IDs de diferentes fontes
+        $ids = $this->extractIdsFromRequest($request);
+
+        if (empty($ids)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Nenhum ID fornecido para deleção.'
+                ], 422);
+            }
+
+            return back()->with('error', 'Nenhum item selecionado para deletar.');
+        }
+
+        // Valida se os IDs existem
+        $validIds = $this->newModelQuery()
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($validIds)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Nenhum dos IDs fornecidos é válido.'
+                ], 404);
+            }
+
+            return back()->with('error', 'Nenhum item válido encontrado para deletar.');
+        }
+
+        // Executa a deleção
+        $deletedCount = $this->newModelQuery()
+            ->whereIn('id', $validIds)
+            ->delete();
+
+        // Prepara a mensagem
+        $moduleLabel = $this->accessModule()->label();
+        $message = $deletedCount > 1
+            ? "{$deletedCount} {$moduleLabel} removidos com sucesso."
+            : "{$moduleLabel} removido com sucesso.";
 
         if ($request->expectsJson()) {
-            return response()->json(null, 204);
+            return response()->json([
+                'deleted' => $deletedCount,
+                'items' => $validIds,
+                'message' => __($message)
+            ]);
         }
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => __($this->accessModule()->label().' removido com sucesso.'),
+            'message' => __($message),
         ]);
 
         return redirect()->route($this->routePrefix().'.index');
     }
 
-    public function bulkDestroy(Request $request): JsonResponse
+    /**
+     * Extrai IDs da requisição de diferentes fontes
+     * 
+     * @return array<int, int>
+     */
+    protected function extractIdsFromRequest(Request $request): array
     {
-        $this->authorizeAccess(AccessAction::DELETE);
+        $ids = [];
 
-        $ids = $request->validate([
-            'ids' => ['required', 'array'],
-            'ids.*' => ['integer'],
-        ])['ids'];
+        if (empty($ids) && $request->has('items')) {
+            $ids = $request->input('items');
+            if (is_string($ids)) {
+                $ids = explode(',', $ids);
+            }
+        }
 
-        $this->newModelQuery()->whereKey($ids)->delete();
-
-        return response()->json(null, 204);
+        // Garante que é um array de inteiros
+        return array_filter(array_map('intval', (array) $ids));
     }
 
-    public function bulkChangeVisibility(Request $request): JsonResponse
+    /**
+     * Altera a visibilidade de múltiplos registros
+     */
+    public function changeVisibility(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorizeAccess(AccessAction::VISIBILITY);
 
         $data = $request->validate([
-            'ids' => ['required', 'array'],
-            'ids.*' => ['integer'],
-            'visibility' => ['required', 'string'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*' => ['integer', 'exists:' . $this->modelClass() . ',id'],
+            'visibility' => ['required', 'string', 'in:visible,hidden,archived'],
         ]);
 
-        $this->newModelQuery()
-            ->whereKey($data['ids'])
+        $count = $this->newModelQuery()
+            ->whereKey($data['items'])
             ->update(['visibility' => $data['visibility']]);
 
-        return response()->json(null, 204);
+        $message = $count > 1
+            ? "Visibilidade de {$count} {$this->accessModule()->label()} atualizada com sucesso."
+            : "Visibilidade de {$this->accessModule()->label()} atualizada com sucesso.";
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'updated' => $count,
+                'message' => __($message)
+            ]);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __($message),
+        ]);
+
+        return redirect()->route($this->routePrefix().'.index');
     }
 
     protected function routePrefix(): string
@@ -189,9 +290,23 @@ trait HasModule
             ->toString();
     }
 
+    protected function detailsComponent(): string
+    {
+        return Str::of($this->routePrefix())
+            ->singular()
+            ->replace('_', '-')
+            ->append('/Details')
+            ->toString();
+    }
+
     protected function collectionPropName(): string
     {
         return $this->routePrefix();
+    }
+
+    protected function itemPropName(): string
+    {
+        return Str::singular($this->routePrefix());
     }
 
     /**
