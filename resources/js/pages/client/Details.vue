@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import DetailsPage, { type DetailsRoutes } from '@/components/DetailsPage.vue';
+import MaskedTextField from '@/components/inputs/MaskedTextField.vue';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
+import { masks, phoneMask } from '@/plugins/masks';
+import { fillAddressFromCep, type AddressForm } from '@/plugins/viacep';
+import { required, email, exactLength, phone, cpf } from '@/plugins/validators';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -68,11 +73,6 @@ const defaults = {
     status: 'active',
 };
 
-const required = (value: unknown) => !!value || 'Campo obrigatório';
-const email = (value: string) => /.+@.+\..+/.test(value) || 'E-mail inválido';
-const exactLength = (length: number) => (value: string) =>
-    !value || value.length === length || `Informe ${length} caracteres`;
-
 const genderOptions =
     sharedProps.enums?.genderTypes?.map((option) => ({
         title: option.label,
@@ -84,6 +84,22 @@ const statusOptions =
         title: option.label,
         value: option.value,
     })) ?? [];
+
+const isLoadingAddress = ref(false);
+
+async function fillAddress(form: AddressForm): Promise<void> {
+    if (isLoadingAddress.value) {
+        return;
+    }
+
+    isLoadingAddress.value = true;
+
+    try {
+        await fillAddressFromCep(form, form.address_postal_code);
+    } finally {
+        isLoadingAddress.value = false;
+    }
+}
 </script>
 
 <template>
@@ -92,49 +108,67 @@ const statusOptions =
         :item="client"
         :defaults="defaults"
         :routes="routes"
+        module="clients"
     >
         <template #default="{ form, errors }">
-            <v-row>
-                <v-col cols="12" md="6">
+            <v-row class="ma-0">
+                <v-col cols="12" md="6" class="d-flex align-center">
+                    <v-checkbox
+                        v-model="form.legal_representative"
+                        label="Possui responsável legal"
+                        :error-messages="errors.legal_representative"
+                    />
+                </v-col>
+                <div class="w-100" v-if="form.legal_representative">
+                    <v-divider class="my-4">
+                        <strong>Dados do Responsável</strong>
+                    </v-divider>
+                    <v-row class="ma-0">
+                        <v-col cols="12">
+                            <v-text-field
+                                v-model="form.legal_representative_name"
+                                label="Nome do responsável"
+                                :rules="[required]"
+                                :error-messages="
+                                    errors.legal_representative_name
+                                "
+                            />
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <MaskedTextField
+                                v-model="form.legal_representative_document"
+                                label="CPF do responsável"
+                                :mask="masks.cpf"
+                                :rules="[required, exactLength(11)]"
+                                :error-messages="
+                                    errors.legal_representative_document
+                                "
+                            />
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <v-text-field
+                                v-model="form.legal_representative_birth_date"
+                                label="Nascimento do responsável"
+                                type="date"
+                                :rules="[required]"
+                                :error-messages="
+                                    errors.legal_representative_birth_date
+                                "
+                            />
+                        </v-col>
+                    </v-row>
+                </div>
+            </v-row>
+            <v-divider class="my-4">
+                <strong>Dados Pessoais</strong>
+            </v-divider>
+            <v-row class="ma-0">
+                <v-col cols="12">
                     <v-text-field
                         v-model="form.name"
                         label="Nome"
                         :rules="[required]"
                         :error-messages="errors.name"
-                    />
-                </v-col>
-                <v-col cols="12" md="6">
-                    <v-text-field
-                        v-model="form.email"
-                        label="E-mail"
-                        type="email"
-                        :rules="[required, email]"
-                        :error-messages="errors.email"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-text-field
-                        v-model="form.phone"
-                        label="Telefone"
-                        :rules="[required, exactLength(11)]"
-                        :error-messages="errors.phone"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-text-field
-                        v-model="form.document"
-                        label="Documento"
-                        :rules="[required, exactLength(11)]"
-                        :error-messages="errors.document"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-select
-                        v-model="form.gender"
-                        label="Gênero"
-                        :items="genderOptions"
-                        :rules="[required]"
-                        :error-messages="errors.gender"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
@@ -148,29 +182,55 @@ const statusOptions =
                 </v-col>
                 <v-col cols="12" md="4">
                     <v-select
-                        v-model="form.status"
-                        label="Status"
-                        :items="statusOptions"
-                        :error-messages="errors.status"
+                        v-model="form.gender"
+                        label="Gênero"
+                        :items="genderOptions"
+                        :rules="[required]"
+                        :error-messages="errors.gender"
                     />
                 </v-col>
-                <v-col cols="12" md="4" class="d-flex align-center">
-                    <v-checkbox
-                        v-model="form.legal_representative"
-                        label="Possui responsável legal"
-                        :error-messages="errors.legal_representative"
+                <v-col cols="12" md="4">
+                    <MaskedTextField
+                        v-model="form.document"
+                        label="CPF"
+                        :mask="masks.cpf"
+                        :rules="[required, cpf]"
+                        :error-messages="errors.document"
+                    />
+                </v-col>
+                <v-col cols="12" md="8">
+                    <v-text-field
+                        v-model="form.email"
+                        label="E-mail"
+                        type="email"
+                        :rules="[required, email]"
+                        :error-messages="errors.email"
+                    />
+                </v-col>
+                <v-col cols="12" md="4">
+                    <MaskedTextField
+                        v-model="form.phone"
+                        label="Telefone"
+                        :mask="phoneMask(form.phone)"
+                        :rules="[required, phone]"
+                        :error-messages="errors.phone"
                     />
                 </v-col>
             </v-row>
 
-            <v-divider class="my-4" />
+            <v-divider class="my-4">
+                <strong>Endereço</strong>
+            </v-divider>
 
-            <v-row>
+            <v-row class="ma-0">
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <MaskedTextField
                         v-model="form.address_postal_code"
                         label="CEP"
+                        :mask="masks.cep"
+                        :loading="isLoadingAddress"
                         :error-messages="errors.address_postal_code"
+                        @blur="fillAddress(form)"
                     />
                 </v-col>
                 <v-col cols="12" md="8">
@@ -180,14 +240,14 @@ const statusOptions =
                         :error-messages="errors.address"
                     />
                 </v-col>
-                <v-col cols="12" md="3">
+                <v-col cols="12" md="4">
                     <v-text-field
                         v-model="form.address_number"
                         label="Número"
                         :error-messages="errors.address_number"
                     />
                 </v-col>
-                <v-col cols="12" md="5">
+                <v-col cols="12" md="8">
                     <v-text-field
                         v-model="form.address_complement"
                         label="Complemento"
@@ -201,14 +261,14 @@ const statusOptions =
                         :error-messages="errors.address_district"
                     />
                 </v-col>
-                <v-col cols="12" md="3">
+                <v-col cols="12" md="4">
                     <v-text-field
                         v-model="form.address_state"
                         label="UF"
                         :error-messages="errors.address_state"
                     />
                 </v-col>
-                <v-col cols="12" md="9">
+                <v-col cols="12" md="4">
                     <v-text-field
                         v-model="form.address_city"
                         label="Cidade"
@@ -216,40 +276,6 @@ const statusOptions =
                     />
                 </v-col>
             </v-row>
-
-            <template v-if="form.legal_representative">
-                <v-divider class="my-4" />
-
-                <v-row>
-                    <v-col cols="12" md="5">
-                        <v-text-field
-                            v-model="form.legal_representative_name"
-                            label="Nome do responsável"
-                            :error-messages="errors.legal_representative_name"
-                        />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-text-field
-                            v-model="form.legal_representative_document"
-                            label="Documento do responsável"
-                            :rules="[exactLength(11)]"
-                            :error-messages="
-                                errors.legal_representative_document
-                            "
-                        />
-                    </v-col>
-                    <v-col cols="12" md="3">
-                        <v-text-field
-                            v-model="form.legal_representative_birth_date"
-                            label="Nascimento do responsável"
-                            type="date"
-                            :error-messages="
-                                errors.legal_representative_birth_date
-                            "
-                        />
-                    </v-col>
-                </v-row>
-            </template>
         </template>
     </DetailsPage>
 </template>
