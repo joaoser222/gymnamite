@@ -1,174 +1,218 @@
-<!-- resources/js/layouts/AuthenticatedLayout.vue -->
 <template>
-    <v-app>
-        <v-navigation-drawer v-model="drawer" :rail="rail" permanent>
-            <v-list-item prepend-icon="ti ti-apps" title="Minha App" nav>
-                <template #append>
-                    <v-btn
-                        :icon="rail ? 'ti ti-chevron-right' : 'ti ti-chevron-left'"
-                        variant="text"
-                        @click="rail = !rail"
-                    />
-                </template>
-            </v-list-item>
-
-            <v-divider />
-
-            <v-list density="compact" nav>
-                <v-list-subheader v-if="!rail">Principal</v-list-subheader>
-
-                <v-list-item
-                    v-for="item in mainNav"
-                    :key="item.title"
-                    :prepend-icon="item.icon"
-                    :title="item.title"
-                    :value="item.title"
-                    :active="isActive(item.routeName)"
-                    active-color="primary"
-                    @click="router.visit(item.href)"
-                />
-
-                <v-divider v-if="systemNav.length > 0" class="my-2" />
-                <v-list-subheader v-if="!rail && systemNav.length > 0"
-                    >Sistema</v-list-subheader
-                >
-
-                <v-list-item
-                    v-for="item in systemNav"
-                    :key="item.title"
-                    :prepend-icon="item.icon"
-                    :title="item.title"
-                    :value="item.title"
-                    :active="isActive(item.routeName)"
-                    active-color="primary"
-                    @click="router.visit(item.href)"
-                />
-            </v-list>
-
-            <template #append>
-                <v-divider />
-                <v-list density="compact" nav>
-                    <v-list-item
-                        :prepend-avatar="userInitials"
-                        :title="user.name"
-                        :subtitle="!rail ? user.email : undefined"
-                    >
-                        <template #append>
-                            <v-menu v-if="!rail">
-                                <template #activator="{ props }">
-                                    <v-btn
-                                        icon="ti ti-settings"
-                                        variant="text"
-                                        size="small"
-                                        v-bind="props"
-                                    />
-                                </template>
-                                <v-list density="compact">
-                                    <v-list-item
-                                        prepend-icon="ti ti-logout"
-                                        title="Sair"
-                                        @click="router.post('/logout')"
-                                    />
-                                </v-list>
-                            </v-menu>
-                        </template>
-                    </v-list-item>
-                </v-list>
-            </template>
-        </v-navigation-drawer>
-
-        <v-app-bar flat border="b" density="compact">
-            <v-app-bar-title>{{ currentPageTitle }}</v-app-bar-title>
-            <template #append>
-                <v-btn icon="ti ti-bell" variant="text">
-                    <v-badge color="primary" floating>
-                        <v-icon>ti ti-bell</v-icon>
-                    </v-badge>
-                </v-btn>
-            </template>
-        </v-app-bar>
-
-        <v-main>
-            <v-container fluid class="pa-6">
-                <slot />
-            </v-container>
-        </v-main>
-    </v-app>
+    <BaseLayout :menu="visibleMenuGroups">
+        <slot />
+    </BaseLayout>
 </template>
 
 <script setup lang="ts">
-import { router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onMounted } from 'vue';
+import { usePermissions } from '@/composables/usePermissions';
+import BaseLayout from '@/layouts/BaseLayout.vue';
 
-type AuthUser = {
-    name: string;
-    email: string;
-};
-
-type SharedProps = {
-    auth?: {
-        user?: AuthUser;
-    };
-};
-
-const page = usePage();
-
-const user = computed(
-    () =>
-        (page.props as SharedProps).auth?.user ?? {
-            name: '',
-            email: '',
-        },
-);
-
-const userInitials = computed(() =>
-    user.value.name
-        .split(' ')
-        .slice(0, 2)
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase(),
-);
-
-const drawer = ref(true);
-const rail = ref(false);
-
-const mainNav: Array<{
+type MenuItem = {
     title: string;
     icon: string;
-    routeName: string;
     href: string;
-}> = [
+    permission?: string;
+};
+
+type MenuGroup = {
+    name: string;
+    title: string;
+    icon: string;
+    items: MenuItem[];
+};
+
+const { can, loadPermissions } = usePermissions();
+
+const menuGroups: MenuGroup[] = [
     {
-        title: 'Dashboard',
+        name: 'start',
+        title: 'Início',
         icon: 'ti ti-home',
-        routeName: 'dashboard',
-        href: '/dashboard',
+        items: [
+            {
+                title: 'Dashboard',
+                icon: 'ti ti-home',
+                href: '/dashboard',
+            },
+        ],
     },
     {
-        title: 'Clientes',
+        name: 'catalog',
+        title: 'Catálogo',
+        icon: 'ti ti-book',
+        items: [
+            {
+                title: 'Planos',
+                icon: 'ti ti-briefcase',
+                href: '/plans',
+                permission: 'plans.view',
+            },
+            {
+                title: 'Categorias de Plano',
+                icon: 'filter',
+                href: '/plan-categories',
+                permission: 'plan_categories.view',
+            },
+            {
+                title: 'Modalidades',
+                icon: 'ti ti-gymnastics',
+                href: '/modalities',
+                permission: 'modalities.view',
+            },
+            {
+                title: 'Produtos',
+                icon: 'ti ti-packages',
+                href: '/products',
+                permission: 'products.view',
+            },
+        ],
+    },
+    {
+        name: 'peoples',
+        title: 'Pessoas',
         icon: 'ti ti-users',
-        routeName: 'clients.index',
-        href: '/clients',
+        items: [
+            {
+                title: 'Clientes',
+                icon: 'ti ti-user',
+                href: '/clients',
+                permission: 'clients.view',
+            },
+            {
+                title: 'Treinadores',
+                icon: 'ti ti-stretching',
+                href: '/trainers',
+                permission: 'trainers.view',
+            },
+            {
+                title: 'Fornecedores',
+                icon: 'ti ti-buildings',
+                href: '/suppliers',
+                permission: 'suppliers.view',
+            },
+        ],
+    },
+    {
+        name: 'billing',
+        title: 'Faturamento',
+        icon: 'ti ti-report-money',
+        items: [
+            {
+                title: 'Contratos',
+                icon: 'ti ti-contract',
+                href: '/contracts',
+                permission: 'contracts.view',
+            },
+            {
+                title: 'Cupons',
+                icon: 'ti ti-circle-dashed-percentage',
+                href: '/coupons',
+                permission: 'coupons.view',
+            },
+            {
+                title: 'Compras',
+                icon: 'ti ti-shopping-cart',
+                href: '/purchases',
+                permission: 'purchases.view',
+            },
+            {
+                title: 'Vendas',
+                icon: 'ti ti-basket',
+                href: '/sales',
+                permission: 'sales.view',
+            },
+            {
+                title: 'Aula Avulsa',
+                icon: 'ti ti-barbell',
+                href: '/direct-lesson',
+                permission: 'direct_lessons.view',
+            },
+        ],
+    },
+    {
+        name: 'financial',
+        title: 'Financeiro',
+        icon: 'ti ti-cash-banknote',
+        items: [
+            {
+                title: 'Contas',
+                icon: 'ti ti-building-bank',
+                href: '/financial-accounts',
+                permission: 'financial_accounts.view',
+            },
+            {
+                title: 'Centros de Custo',
+                icon: 'ti ti-filter-dollar',
+                href: '/cost-centers',
+                permission: 'cost_centers.view',
+            },
+            {
+                title: 'Categorias Financeiras',
+                icon: 'ti ti-filter-2-dollar',
+                href: '/financial-categories',
+                permission: 'financial_categories.view',
+            },
+            {
+                title: 'Pagamentos',
+                icon: 'ti ti-cash-banknote-minus',
+                href: '/payables',
+                permission: 'payables.view',
+            },
+            {
+                title: 'Recebimentos',
+                icon: 'ti ti-cash-banknote-plus',
+                href: '/receivables',
+                permission: 'receivables.view',
+            },
+            {
+                title: 'Caixa',
+                icon: 'ti ti-cash-register',
+                href: '/movements',
+                permission: 'movements.view',
+            },
+            {
+                title: 'Transferências',
+                icon: 'ti ti-cash-banknote-move',
+                href: '/transfers',
+                permission: 'transfers.view',
+            },
+        ],
+    },
+    {
+        name: 'advanced',
+        title: 'Avançado',
+        icon: 'ti ti-settings',
+        items: [
+            {
+                title: 'Usuários',
+                icon: 'ti ti-user-shield',
+                href: '/users',
+                permission: 'users.view',
+            },
+            {
+                title: 'Configurações',
+                icon: 'ti ti-adjustments',
+                href: '/settings',
+                permission: 'settings.view',
+            },
+        ],
     },
 ];
 
-const systemNav: typeof mainNav = [];
+const visibleMenuGroups = computed(() => {
+    return menuGroups
+        .map((group) => ({
+            ...group,
+            items: group.items.filter((item) => {
+                return item.permission === undefined || can(item.permission);
+            }),
+        }))
+        .filter((group) => group.items.length > 0);
+});
 
-const isActive = (routeName: string) =>
-    usePage().component === 'Home'
-        ? routeName === 'dashboard'
-        : window.location.pathname ===
-          new URL(
-              [...mainNav, ...systemNav].find(
-                  (item) => item.routeName === routeName,
-              )?.href ?? '/',
-              window.location.origin,
-          ).pathname;
-
-const currentPageTitle = computed(
-    () =>
-        [...mainNav, ...systemNav].find((item) => isActive(item.routeName))
-            ?.title ?? 'Dashboard',
-);
+onMounted(() => {
+    void loadPermissions();
+});
 </script>
