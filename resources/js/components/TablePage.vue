@@ -1,7 +1,7 @@
 <!-- resources/js/Components/GenericTable.vue -->
 <script setup lang="ts">
 import { computed, onMounted, ref, useSlots, watch } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { usePermissions } from '@/composables/usePermissions';
 
 type TablePermissionAction = 'view' | 'create' | 'delete' | 'visibility';
@@ -68,6 +68,12 @@ export interface PaginatedResponse<T> {
     total: number;
 }
 
+type SharedProps = {
+    filters?: {
+        visibility?: string;
+    };
+};
+
 const props = withDefaults(defineProps<Props>(), {
     hideSelection: false,
     loading: false,
@@ -80,6 +86,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const slots = useSlots();
+const page = usePage<SharedProps>();
 const { permissions: loadedPermissions, loadPermissions } = usePermissions();
 
 // Emits
@@ -102,6 +109,9 @@ const internalPage = ref(props.currentPage);
 const internalPerPage = ref(props.perPage);
 const internalLoading = ref(props.loading);
 const modalVisibility = ref(false);
+const internalVisibilityFilter = ref(
+    page.props.filters?.visibility ?? 'visible',
+);
 const internalVisibilityOptions = ref<any[]>([
     { title: 'Visível', value: 'visible', icon: 'ti ti-eye' },
     { title: 'Oculto', value: 'hidden', icon: 'ti ti-eye-off' },
@@ -182,6 +192,10 @@ const computedHeaders = computed(() => {
     return headers;
 });
 
+const isSelectable = computed(() => {
+    return !props.hideSelection && selectedItems.value.length > 0;
+});
+
 const selectedIds = computed(() => {
     return selectedItems.value.map((item) => item.id);
 });
@@ -197,6 +211,7 @@ const loadItems = (options?: { page?: number; sortBy?: any[] }) => {
         page: options?.page || internalPage.value,
         per_page: internalPerPage.value,
         [props.searchKey]: search.value,
+        visibility: internalVisibilityFilter.value,
     };
 
     if (options?.sortBy && options.sortBy.length > 0) {
@@ -279,6 +294,18 @@ const handleSelection = (items: any[]) => {
     emit('selection', items);
 };
 
+const applyVisibilityFilter = (visibility: string) => {
+    if (internalVisibilityFilter.value === visibility) {
+        return;
+    }
+
+    internalVisibilityFilter.value = visibility;
+    selectedItems.value = [];
+    internalPage.value = 1;
+    emit('update:page', 1);
+    loadItems({ page: 1 });
+};
+
 const handleRowDoubleClick = (_event: MouseEvent, payload: { item: any }) => {
     handleEdit(payload.item);
 };
@@ -300,6 +327,13 @@ watch(search, (newValue) => {
         loadItems();
     }, 500);
 });
+
+watch(
+    () => page.props.filters?.visibility,
+    (visibility) => {
+        internalVisibilityFilter.value = visibility ?? 'visible';
+    },
+);
 
 // Expor métodos para o componente pai
 defineExpose({
@@ -341,7 +375,7 @@ defineExpose({
             <div class="flex-grow-1"></div>
             <!-- Botão criar -->
             <v-btn
-                v-if="!hideCreate && canCreate"
+                v-if="canCreate"
                 color="primary"
                 prepend-icon="ti ti-plus"
                 class="ml-2"
@@ -351,10 +385,7 @@ defineExpose({
             </v-btn>
             <!-- Botão criar -->
             <v-btn
-                v-if="
-                    canChangeVisibility &&
-                    selectedItems.length > 0
-                "
+                v-if="canChangeVisibility && selectedItems.length > 0"
                 color="secondary"
                 class="ml-2"
                 prepend-icon="ti ti-eye"
@@ -373,6 +404,29 @@ defineExpose({
             </v-btn>
         </div>
 
+        <div class="mb-4">
+            <v-btn-group>
+                <v-btn
+                    v-for="item in internalVisibilityOptions"
+                    :key="item.value"
+                    :color="
+                        internalVisibilityFilter === item.value
+                            ? 'primary'
+                            : undefined
+                    "
+                    :variant="
+                        internalVisibilityFilter === item.value
+                            ? 'flat'
+                            : 'text'
+                    "
+                    :prepend-icon="item.icon"
+                    @click="applyVisibilityFilter(item.value)"
+                >
+                    {{ item.title }}
+                </v-btn>
+            </v-btn-group>
+        </div>
+
         <!-- Tabela -->
         <v-data-table
             :headers="computedHeaders"
@@ -381,7 +435,7 @@ defineExpose({
             :page="internalPage"
             :items-length="total"
             :loading="internalLoading"
-            :show-select="!hideSelection"
+            :show-select="isSelectable"
             :model-value="selectedItems"
             loading-text="Carregando..."
             hover
