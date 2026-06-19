@@ -1,7 +1,10 @@
 <!-- resources/js/Components/GenericTable.vue -->
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { computed, onMounted, ref, useSlots, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { usePermissions } from '@/composables/usePermissions';
+
+type TablePermissionAction = 'view' | 'create' | 'delete' | 'visibility';
 
 // Props genéricos
 interface Props {
@@ -29,16 +32,13 @@ interface Props {
         destroy?: (items: any[]) => string;
     };
 
-    // Configurações adicionais
-    hideSearch?: boolean;
-    hideCreate?: boolean;
-    hideEdit?: boolean;
-    hideDelete?: boolean;
     hideSelection?: boolean;
-    hideVisibility?: boolean;
     loading?: boolean;
     searchKey?: string;
     title?: string;
+    module?: string;
+    permissions?: string[];
+    permissionMap?: Partial<Record<TablePermissionAction, string | false>>;
 
     // Slots para personalização
     customSlots?: string[];
@@ -69,17 +69,18 @@ export interface PaginatedResponse<T> {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    hideSearch: false,
-    hideCreate: false,
-    hideEdit: false,
-    hideDelete: false,
     hideSelection: false,
-    hideVisibility: false,
     loading: false,
     searchKey: 'search',
     title: 'Items',
+    module: undefined,
+    permissions: undefined,
+    permissionMap: undefined,
     customSlots: () => [],
 });
+
+const slots = useSlots();
+const { permissions: loadedPermissions, loadPermissions } = usePermissions();
 
 // Emits
 const emit = defineEmits<{
@@ -109,6 +110,51 @@ const internalVisibilityOptions = ref<any[]>([
 
 let searchTimeout: number | null = null;
 
+const permissionSource = computed(() => {
+    return props.permissions ?? loadedPermissions.value;
+});
+
+const usesModulePermissions = computed(() => {
+    return props.module !== undefined || props.permissionMap !== undefined;
+});
+
+const hasExtraActions = computed(() => {
+    return slots['extra-actions'] !== undefined;
+});
+
+const resolvePermission = (action: TablePermissionAction): string | null => {
+    const override = props.permissionMap?.[action];
+
+    if (override === false) {
+        return null;
+    }
+
+    if (typeof override === 'string') {
+        return override;
+    }
+
+    if (props.module === undefined) {
+        return null;
+    }
+
+    return `${props.module}.${action}`;
+};
+
+const hasPermission = (action: TablePermissionAction): boolean => {
+    const permission = resolvePermission(action);
+
+    if (permission === null) {
+        return true;
+    }
+
+    return permissionSource.value.includes(permission);
+};
+
+const canOpenDetails = computed(() => hasPermission('view'));
+const canCreate = computed(() => hasPermission('create'));
+const canDelete = computed(() => hasPermission('delete'));
+const canChangeVisibility = computed(() => hasPermission('visibility'));
+
 // Headers com ações
 const computedHeaders = computed(() => {
     const headers = [...props.headers];
@@ -123,7 +169,7 @@ const computedHeaders = computed(() => {
         });
     }
 
-    if (!props.hideEdit || !props.hideVisibility) {
+    if (canOpenDetails.value || hasExtraActions.value) {
         headers.push({
             title: 'Ações',
             key: 'actions',
@@ -176,8 +222,12 @@ const handleTableUpdate = (options: any) => {
 };
 
 const handleEdit = (item: any) => {
+    if (!canOpenDetails.value) {
+        return;
+    }
+
     emit('edit', item);
-    console.log(item.target);
+
     if (props.routes?.show) {
         router.get(props.routes.show(item.id));
     }
@@ -196,6 +246,10 @@ const handleDelete = () => {
 };
 
 const handleCreate = () => {
+    if (!canCreate.value) {
+        return;
+    }
+
     emit('create');
     if (props.routes?.create) {
         router.get(props.routes.create);
@@ -203,6 +257,10 @@ const handleCreate = () => {
 };
 
 const changeVisibility = (visibility: string) => {
+    if (!canChangeVisibility.value) {
+        return;
+    }
+
     emit('change:visibility', selectedIds.value, visibility);
     if (props.routes?.changeVisibility) {
         router.post(
@@ -220,6 +278,16 @@ const handleSelection = (items: any[]) => {
     selectedItems.value = items;
     emit('selection', items);
 };
+
+const handleRowDoubleClick = (_event: MouseEvent, payload: { item: any }) => {
+    handleEdit(payload.item);
+};
+
+onMounted(() => {
+    if (props.permissions === undefined && usesModulePermissions.value) {
+        void loadPermissions();
+    }
+});
 
 // Watch para busca
 watch(search, (newValue) => {
@@ -263,7 +331,6 @@ defineExpose({
         <div class="d-flex justify-start align-center my-4">
             <!-- Busca -->
             <v-text-field
-                v-if="!hideSearch"
                 v-model="search"
                 label="Buscar..."
                 prepend-inner-icon="ti ti-search"
@@ -274,7 +341,7 @@ defineExpose({
             <div class="flex-grow-1"></div>
             <!-- Botão criar -->
             <v-btn
-                v-if="!hideCreate"
+                v-if="!hideCreate && canCreate"
                 color="primary"
                 prepend-icon="ti ti-plus"
                 class="ml-2"
@@ -284,7 +351,10 @@ defineExpose({
             </v-btn>
             <!-- Botão criar -->
             <v-btn
-                v-if="!hideVisibility && selectedItems.length > 0"
+                v-if="
+                    canChangeVisibility &&
+                    selectedItems.length > 0
+                "
                 color="secondary"
                 class="ml-2"
                 prepend-icon="ti ti-eye"
@@ -293,7 +363,7 @@ defineExpose({
                 Alterar Visibilidade
             </v-btn>
             <v-btn
-                v-if="selectedItems.length > 0"
+                v-if="canDelete && selectedItems.length > 0"
                 color="secondary"
                 class="ml-2"
                 prepend-icon="ti ti-eye"
@@ -315,7 +385,7 @@ defineExpose({
             :model-value="selectedItems"
             loading-text="Carregando..."
             hover
-            @dblclick:row="(mouseEvent, { item }) => handleEdit(item)"
+            @dblclick:row="handleRowDoubleClick"
             class="elevation-1"
             @update:options="handleTableUpdate"
             @update:model-value="handleSelection"
@@ -331,12 +401,12 @@ defineExpose({
 
             <!-- Slot para ações -->
             <template
-                v-if="!hideEdit || !hideVisibility"
+                v-if="canOpenDetails || hasExtraActions"
                 #item.actions="{ item }"
             >
                 <div class="d-flex gap-1">
                     <v-btn
-                        v-if="!hideEdit"
+                        v-if="canOpenDetails"
                         icon="ti ti-pencil"
                         size="small"
                         color="primary"

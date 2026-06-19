@@ -27,6 +27,12 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Home')
+                ->where('name', config('app.name'))
+                ->where('auth.user.id', $user->id)
+                ->where('auth.user.name', $user->name)
+                ->where('auth.user.email', $user->email)
+                ->where('auth.user.permissions_version', $user->updated_at?->toISOString())
+                ->where('sidebarOpen', true)
             );
     }
 }
