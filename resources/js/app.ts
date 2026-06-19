@@ -4,6 +4,7 @@ import { createApp, h, type DefineComponent } from 'vue';
 import { vMaska } from 'maska/vue';
 import RootApp from '@/App.vue';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
+import viaCep from '@/plugins/viacep';
 import vuetify from '@/plugins/vuetify';
 
 type InertiaPageComponent = DefineComponent & {
@@ -39,6 +40,7 @@ createInertiaApp({
 
         app.use(plugin);
         app.use(vuetify);
+        app.use(viaCep);
         app.directive('maska', vMaska);
 
         app.mount(el);
