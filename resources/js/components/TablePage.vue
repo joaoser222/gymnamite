@@ -4,6 +4,8 @@ import { computed, onMounted, ref, useSlots, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { usePermissions } from '@/composables/usePermissions';
 
+// A tabela genérica assume o padrão de permissões por módulo.
+// Quando necessário, `permissions` e `permissionMap` permitem sobrescrever esse comportamento.
 type TablePermissionAction = 'view' | 'create' | 'delete' | 'visibility';
 
 // Props genéricos
@@ -74,6 +76,7 @@ type SharedProps = {
     };
 };
 
+// Mantém defaults mínimos para que a página possa delegar só dados e rotas.
 const props = withDefaults(defineProps<Props>(), {
     hideSelection: false,
     loading: false,
@@ -109,6 +112,7 @@ const internalPage = ref(props.currentPage);
 const internalPerPage = ref(props.perPage);
 const internalLoading = ref(props.loading);
 const modalVisibility = ref(false);
+// O filtro inicial acompanha o valor vindo do backend e assume `visible` quando ausente.
 const internalVisibilityFilter = ref(
     page.props.filters?.visibility ?? 'visible',
 );
@@ -132,6 +136,7 @@ const hasExtraActions = computed(() => {
     return slots['extra-actions'] !== undefined;
 });
 
+// Resolve a permissão final da ação, permitindo derivação por módulo ou override explícito.
 const resolvePermission = (action: TablePermissionAction): string | null => {
     const override = props.permissionMap?.[action];
 
@@ -165,7 +170,7 @@ const canCreate = computed(() => hasPermission('create'));
 const canDelete = computed(() => hasPermission('delete'));
 const canChangeVisibility = computed(() => hasPermission('visibility'));
 
-// Headers com ações
+// Os headers são enriquecidos dinamicamente para seleção e ações sem obrigar cada página a repetir isso.
 const computedHeaders = computed(() => {
     const headers = [...props.headers];
 
@@ -200,7 +205,7 @@ const selectedIds = computed(() => {
     return selectedItems.value.map((item) => item.id);
 });
 
-// Métodos públicos
+// Centraliza a navegação Inertia da listagem, preservando estado visual entre filtros e paginação.
 const loadItems = (options?: { page?: number; sortBy?: any[] }) => {
     if (!props.routes?.index) return;
 
@@ -294,6 +299,7 @@ const handleSelection = (items: any[]) => {
     emit('selection', items);
 };
 
+// Trocar a visibilidade limpa a seleção e volta à primeira página para evitar estado inconsistente.
 const applyVisibilityFilter = (visibility: string) => {
     if (internalVisibilityFilter.value === visibility) {
         return;
@@ -316,7 +322,7 @@ onMounted(() => {
     }
 });
 
-// Watch para busca
+// A busca usa debounce simples para evitar múltiplas visitas Inertia em sequência.
 watch(search, (newValue) => {
     if (searchTimeout) clearTimeout(searchTimeout);
 
@@ -335,7 +341,7 @@ watch(
     },
 );
 
-// Expor métodos para o componente pai
+// Exposição mínima para páginas que precisem disparar reload manual ou inspecionar seleção.
 defineExpose({
     loadItems,
     selectedItems,

@@ -32,14 +32,14 @@
 import { ref, watch, computed, useAttrs } from 'vue';
 import moment from '@/plugins/moment';
 
-// Props
+// Campo de data reutilizável com suporte a texto e picker, sempre convertendo entre display e persistência.
 const props = defineProps<{
     modelValue?: string;
     formatDisplay?: string;
     formatOutput?: string;
 }>();
 
-// Valores padrão para props
+// Os formatos seguem defaults seguros, mas podem ser adaptados por tela.
 const formatDisplay = props.formatDisplay ?? 'DD/MM/YYYY';
 const formatOutput = props.formatOutput ?? 'YYYY-MM-DD';
 
@@ -60,7 +60,7 @@ const dynamicProps = computed(() => ({
     ...attrs,
 }));
 
-// Métodos de formatação
+// As helpers isolam conversão e limpeza quando a entrada não representa uma data válida.
 function formatToDisplay(date: string | undefined): string {
     if (!date) return '';
 
@@ -83,7 +83,7 @@ function formatToOutput(date: string): string {
     return '';
 }
 
-// Handler do date picker
+// O picker trabalha com um valor normalizado e emite no formato esperado pelo backend.
 function datePickerInput(date: unknown): void {
     if (typeof date !== 'string') return;
 
@@ -92,7 +92,7 @@ function datePickerInput(date: unknown): void {
     emit('update:modelValue', formatted);
 }
 
-// Watch para mudanças no modelValue
+// Mantém o texto sincronizado quando o valor externo muda por navegação ou preenchimento automático.
 watch(
     () => props.modelValue,
     (newVal: string | undefined) => {
@@ -103,7 +103,7 @@ watch(
     { immediate: true },
 );
 
-// Handler do input manual
+// A conversão acontece no blur para evitar conflitos com a digitação do usuário.
 function handleInput(): void {
     const formatted = formatToOutput(inputValue.value);
     emit('update:modelValue', formatted);

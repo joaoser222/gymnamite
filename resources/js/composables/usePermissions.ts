@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
+// Centraliza carregamento e cache local das permissões do usuário autenticado.
 type AuthUser = {
     id: number;
     permissions_version: string | null;
@@ -29,6 +30,7 @@ const permissions = ref<string[]>([]);
 const ready = ref(false);
 const loading = ref(false);
 
+// Evita requisições concorrentes e garante hidratação única por versão de permissão.
 let pendingRequest: Promise<string[]> | null = null;
 let cacheInitializedForUser: number | null = null;
 
@@ -64,6 +66,7 @@ function writeCache(payload: PermissionsCache): void {
     window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
 }
 
+// Sempre que o usuário muda ou a sessão expira, o cache local também precisa ser descartado.
 function clearPermissionsCache(): void {
     permissions.value = [];
     ready.value = false;
@@ -123,6 +126,7 @@ export function usePermissions() {
         return true;
     }
 
+    // Tenta cache primeiro e só recorre à API quando necessário ou quando `force` for solicitado.
     async function loadPermissions(force = false): Promise<string[]> {
         if (user.value === null) {
             clearPermissionsCache();
@@ -172,6 +176,7 @@ export function usePermissions() {
         return pendingRequest;
     }
 
+    // Helper semântica para consultas diretas em templates e layouts.
     function can(permission: string): boolean {
         return permissions.value.includes(permission);
     }

@@ -32,6 +32,7 @@
 import { ref, watch, computed, useAttrs } from 'vue';
 import moment from '@/plugins/moment';
 
+// Campo de horário com digitação manual e picker compartilhando a mesma regra de formatação.
 interface Props {
     modelValue?: string;
     formatDisplay?: string;
@@ -59,6 +60,7 @@ const dynamicProps = computed<Record<string, unknown>>(() => {
     };
 });
 
+// O picker sempre emite no formato de saída, enquanto o input continua amigável ao usuário.
 function timePickerInput(time: string | null): void {
     if (!time) return;
 
@@ -98,6 +100,7 @@ watch(
     { immediate: true },
 );
 
+// A normalização no blur evita emitir valores parciais durante a digitação.
 function handleInput(): void {
     emit('update:modelValue', formatToOutput(inputValue.value));
 }

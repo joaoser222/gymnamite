@@ -3,6 +3,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { usePermissions } from '@/composables/usePermissions';
 
+// O formulário genérico diferencia automaticamente permissões de criação e atualização.
 type DetailsPermissionAction = 'create' | 'update';
 
 export interface DetailsRoutes {
@@ -17,6 +18,7 @@ type VForm = {
     resetValidation: () => void;
 };
 
+// A página dona do formulário fornece dados, rotas e defaults; este componente cuida do ciclo de edição.
 const props = withDefaults(
     defineProps<{
         title: string;
@@ -54,6 +56,7 @@ const initialData = computed<FormData>(() => ({
     ...(props.item ?? {}),
 }));
 
+// `useForm` mantém integração com validação/erros do Inertia sem acoplar o schema ao componente genérico.
 const form = useForm<FormData>({ ...initialData.value });
 
 const emit = defineEmits<{
@@ -76,6 +79,7 @@ const usesModulePermissions = computed(() => {
     return props.module !== undefined || props.permissionMap !== undefined;
 });
 
+// Permite derivar permissões por módulo, mas ainda aceitar nomes customizados quando preciso.
 const resolvePermission = (action: DetailsPermissionAction): string | null => {
     const override = props.permissionMap?.[action];
 
@@ -116,6 +120,7 @@ const canSave = computed(
         !form.processing,
 );
 
+// As rotas de update chegam com `:id` para que a mesma estrutura sirva para qualquer módulo.
 const routeWithId = (route: string): string => {
     if (recordId.value === undefined || recordId.value === null) {
         return route;
@@ -140,6 +145,7 @@ const validate = async (): Promise<boolean> => {
     return result.valid;
 };
 
+// O submit escolhe automaticamente entre criação e atualização a partir da presença do identificador.
 const submit = async (): Promise<void> => {
     if (!canSubmitPermission.value) {
         return;
@@ -171,6 +177,7 @@ const cancel = (): void => {
 watch(
     initialData,
     (data) => {
+        // Sempre que o item muda, o formulário volta ao estado base daquela edição.
         form.defaults({ ...data });
         form.reset();
         formDetails.value?.resetValidation();
@@ -184,6 +191,7 @@ watch(
 watch(
     form,
     () => {
+        // Revalida de forma assíncrona para manter o estado do botão consistente com o formulário atual.
         void nextTick(validate);
     },
     { deep: true },
