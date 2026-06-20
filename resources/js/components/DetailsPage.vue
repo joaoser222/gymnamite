@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
-import { usePermissions } from '@/composables/usePermissions';
+import {
+    useModulePermissions,
+    type ModulePermissionMap,
+} from '@/composables/useModulePermissions';
+import { resolveRoute, type RouteHandler } from '@/shared/routeHandler';
 
 // O formulário genérico diferencia automaticamente permissões de criação e atualização.
 type DetailsPermissionAction = 'create' | 'update';
+type DetailsPermissionMap = ModulePermissionMap<DetailsPermissionAction>;
 
 export interface DetailsRoutes {
-    index: string;
-    store: string;
-    update: string;
+    index: RouteHandler;
+    store: RouteHandler;
+    update: RouteHandler;
 }
 
 type FormData = Record<string, any>;
@@ -30,9 +35,7 @@ const props = withDefaults(
         cancelLabel?: string;
         module?: string;
         permissions?: string[];
-        permissionMap?: Partial<
-            Record<DetailsPermissionAction, string | false>
-        >;
+        permissionMap?: DetailsPermissionMap;
     }>(),
     {
         item: null,
@@ -40,16 +43,18 @@ const props = withDefaults(
         itemKey: 'id',
         saveLabel: 'Salvar',
         cancelLabel: 'Cancelar',
-        module: undefined,
-        permissions: undefined,
-        permissionMap: undefined,
     },
 );
 
 const formDetails = ref<VForm | null>(null);
 const isValid = ref<boolean | null>(null);
 const hasValidated = ref(false);
-const { permissions: loadedPermissions, loadPermissions } = usePermissions();
+const { hasPermission, ensurePermissionsLoaded } =
+    useModulePermissions<DetailsPermissionAction>({
+        module: () => props.module,
+        permissions: () => props.permissions,
+        permissionMap: () => props.permissionMap,
+    });
 
 const initialData = computed<FormData>(() => ({
     ...props.defaults,
@@ -71,42 +76,6 @@ const isCreating = computed(
 const pageTitle = computed(
     () => `${isCreating.value ? 'Novo' : 'Editar'} ${props.title}`,
 );
-const permissionSource = computed(() => {
-    return props.permissions ?? loadedPermissions.value;
-});
-
-const usesModulePermissions = computed(() => {
-    return props.module !== undefined || props.permissionMap !== undefined;
-});
-
-// Permite derivar permissões por módulo, mas ainda aceitar nomes customizados quando preciso.
-const resolvePermission = (action: DetailsPermissionAction): string | null => {
-    const override = props.permissionMap?.[action];
-
-    if (override === false) {
-        return null;
-    }
-
-    if (typeof override === 'string') {
-        return override;
-    }
-
-    if (props.module === undefined) {
-        return null;
-    }
-
-    return `${props.module}.${action}`;
-};
-
-const hasPermission = (action: DetailsPermissionAction): boolean => {
-    const permission = resolvePermission(action);
-
-    if (permission === null) {
-        return true;
-    }
-
-    return permissionSource.value.includes(permission);
-};
 
 const canSubmitPermission = computed(() => {
     return isCreating.value ? hasPermission('create') : hasPermission('update');
@@ -119,15 +88,6 @@ const canSave = computed(
         isValid.value === true &&
         !form.processing,
 );
-
-// As rotas de update chegam com `:id` para que a mesma estrutura sirva para qualquer módulo.
-const routeWithId = (route: string): string => {
-    if (recordId.value === undefined || recordId.value === null) {
-        return route;
-    }
-
-    return route.replace(':id', String(recordId.value));
-};
 
 const validate = async (): Promise<boolean> => {
     if (!formDetails.value) {
@@ -161,17 +121,32 @@ const submit = async (): Promise<void> => {
     };
 
     if (isCreating.value) {
-        form.post(props.routes.store, options);
+        const storeRoute = resolveRoute(props.routes.store);
+
+        if (storeRoute !== null) {
+            form.post(storeRoute, options);
+        }
 
         return;
     }
 
-    form.put(routeWithId(props.routes.update), options);
+    const updateRoute = resolveRoute(props.routes.update, {
+        id: recordId.value as string | number | undefined,
+    });
+
+    if (updateRoute !== null) {
+        form.put(updateRoute, options);
+    }
 };
 
 const cancel = (): void => {
     emit('cancel');
-    router.visit(props.routes.index);
+
+    const indexRoute = resolveRoute(props.routes.index);
+
+    if (indexRoute !== null) {
+        router.visit(indexRoute);
+    }
 };
 
 watch(
@@ -198,9 +173,7 @@ watch(
 );
 
 onMounted(() => {
-    if (props.permissions === undefined && usesModulePermissions.value) {
-        void loadPermissions();
-    }
+    void ensurePermissionsLoaded();
 });
 
 void nextTick(validate);

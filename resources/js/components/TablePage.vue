@@ -1,176 +1,229 @@
 <!-- resources/js/Components/GenericTable.vue -->
 <script setup lang="ts">
+import type { FormDataConvertible } from '@inertiajs/core';
 import { computed, onMounted, ref, useSlots, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
-import { usePermissions } from '@/composables/usePermissions';
+import DateField from '@/components/inputs/DateField.vue';
+import MaskedTextField from '@/components/inputs/MaskedTextField.vue';
+import { VSelect, VTextField } from 'vuetify/components';
+import {
+    useModulePermissions,
+    type ModulePermissionMap,
+} from '@/composables/useModulePermissions';
+import { resolveRoute, type RouteHandler } from '@/shared/routeHandler';
+import { visibilityOptions, type VisibilityValue } from '@/shared/visibility';
 
-// A tabela genérica assume o padrão de permissões por módulo.
-// Quando necessário, `permissions` e `permissionMap` permitem sobrescrever esse comportamento.
-type TablePermissionAction = 'view' | 'create' | 'delete' | 'visibility';
+// ─── Tipos ───────────────────────────────────────────────────────────────────
 
-// Props genéricos
-interface Props {
-    // Dados da tabela
-    items: any[];
-    total: number;
-    currentPage: number;
-    lastPage: number;
-    perPage: number;
+type SearchValue = string | number | boolean | null;
 
-    // Configuração da tabela
-    headers: Array<{
-        title: string;
-        key: string;
-        sortable?: boolean;
-        align?: 'start' | 'center' | 'end';
-        width?: string;
-    }>;
+type SearchComponentName =
+    | 'VTextField'
+    | 'VSelect'
+    | 'DateField'
+    | 'MaskedTextField';
 
-    routes?: {
-        index: string;
-        create?: string;
-        changeVisibility?: (items: any[], visibility: string) => string;
-        show?: (id: number) => string;
-        destroy?: (items: any[]) => string;
-    };
+type SearchableConfig = {
+    component?: SearchComponentName;
+    props?: Record<string, unknown>;
+};
 
-    hideSelection?: boolean;
-    loading?: boolean;
-    searchKey?: string;
-    title?: string;
-    module?: string;
-    permissions?: string[];
-    permissionMap?: Partial<Record<TablePermissionAction, string | false>>;
-
-    // Slots para personalização
-    customSlots?: string[];
-}
-
-export interface TableHeader {
+export type TableHeader = {
     title: string;
     key: string;
     sortable?: boolean;
     align?: 'start' | 'center' | 'end';
     width?: string;
-}
+    searchable?: boolean | SearchableConfig;
+};
 
-export interface TableRoutes {
+export type TableRoutes = {
     index: string;
-    create?: string;
-    changeVisibility?: (items: any[], visibility: string) => string;
-    show?: (id: number) => string;
-    destroy?: (items: any[]) => string;
-}
+    create?: RouteHandler;
+    show?: RouteHandler;
+    destroy?: string;
+    changeVisibility?: string;
+};
 
-export interface PaginatedResponse<T> {
+// Conveniente para quem consome: descreve a shape paginada que o backend retorna.
+export type PaginatedResponse<T> = {
     data: T[];
     current_page: number;
     last_page: number;
     per_page: number;
     total: number;
-}
+};
+
+type TablePermissionAction = 'view' | 'create' | 'delete' | 'visibility';
+type TablePermissionMap = ModulePermissionMap<TablePermissionAction>;
 
 type SharedProps = {
     filters?: {
         visibility?: string;
+        search?: SearchValue;
+        searchField?: string;
     };
 };
 
-// Mantém defaults mínimos para que a página possa delegar só dados e rotas.
+// ─── Registro de componentes de busca ────────────────────────────────────────
+
+const searchComponentRegistry = {
+    VTextField,
+    VSelect,
+    DateField,
+    MaskedTextField,
+} as const;
+
+// ─── Props / Emits ───────────────────────────────────────────────────────────
+
+interface Props {
+    items: unknown[];
+    total: number;
+    currentPage: number;
+    lastPage: number;
+    perPage: number;
+    headers: TableHeader[];
+    routes?: TableRoutes;
+    hideSelection?: boolean;
+    loading?: boolean;
+    searchKey?: string;
+    title?: string;
+    // Permissões: o padrão é derivar do módulo; `permissions` e `permissionMap` permitem sobrescrever.
+    module?: string;
+    permissions?: string[];
+    permissionMap?: TablePermissionMap;
+    customSlots?: string[];
+}
+
 const props = withDefaults(defineProps<Props>(), {
     hideSelection: false,
     loading: false,
     searchKey: 'search',
     title: 'Items',
-    module: undefined,
-    permissions: undefined,
-    permissionMap: undefined,
     customSlots: () => [],
 });
 
-const slots = useSlots();
-const page = usePage<SharedProps>();
-const { permissions: loadedPermissions, loadPermissions } = usePermissions();
-
-// Emits
 const emit = defineEmits<{
-    'update:search': [value: string];
+    'update:search': [value: SearchValue];
     'update:page': [value: number];
     'update:perPage': [value: number];
-    edit: [item: any];
-    delete: [items: any[]];
-    'change:visibility': [items: any[], visibility: string];
+    edit: [item: unknown];
+    delete: [ids: number[]];
+    'change:visibility': [ids: number[], visibility: string];
     create: [];
-    selection: [items: any[]];
+    selection: [items: unknown[]];
     reload: [];
 }>();
 
-// Estado interno
-const search = defineModel<string>('search', { default: '' });
-const selectedItems = ref<any[]>([]);
+// ─── Estado ──────────────────────────────────────────────────────────────────
+
+const slots = useSlots();
+const page = usePage<SharedProps>();
+const { hasPermission, ensurePermissionsLoaded } =
+    useModulePermissions<TablePermissionAction>({
+        module: () => props.module,
+        permissions: () => props.permissions,
+        permissionMap: () => props.permissionMap,
+    });
+
+const search = defineModel<SearchValue>('search', { default: '' });
+const selectedItems = ref<number[]>([]);
 const internalPage = ref(props.currentPage);
 const internalPerPage = ref(props.perPage);
 const internalLoading = ref(props.loading);
 const modalVisibility = ref(false);
-// O filtro inicial acompanha o valor vindo do backend e assume `visible` quando ausente.
 const internalVisibilityFilter = ref(
     page.props.filters?.visibility ?? 'visible',
 );
-const internalVisibilityOptions = ref<any[]>([
-    { title: 'Visível', value: 'visible', icon: 'ti ti-eye' },
-    { title: 'Oculto', value: 'hidden', icon: 'ti ti-eye-off' },
-    { title: 'Arquivado', value: 'archived', icon: 'ti ti-archive' },
-]);
 
-let searchTimeout: number | null = null;
-
-const permissionSource = computed(() => {
-    return props.permissions ?? loadedPermissions.value;
-});
-
-const usesModulePermissions = computed(() => {
-    return props.module !== undefined || props.permissionMap !== undefined;
-});
-
-const hasExtraActions = computed(() => {
-    return slots['extra-actions'] !== undefined;
-});
-
-// Resolve a permissão final da ação, permitindo derivação por módulo ou override explícito.
-const resolvePermission = (action: TablePermissionAction): string | null => {
-    const override = props.permissionMap?.[action];
-
-    if (override === false) {
-        return null;
-    }
-
-    if (typeof override === 'string') {
-        return override;
-    }
-
-    if (props.module === undefined) {
-        return null;
-    }
-
-    return `${props.module}.${action}`;
+// Garante que o campo de busca inicial seja válido; cai no primeiro searchable se não encontrar.
+const resolveSearchField = (key?: string): string => {
+    const headers = props.headers.filter((h) => h.searchable !== undefined);
+    return headers.some((h) => h.key === key) ? key! : (headers[0]?.key ?? '');
 };
 
-const hasPermission = (action: TablePermissionAction): boolean => {
-    const permission = resolvePermission(action);
+const internalSearchField = ref(
+    resolveSearchField(page.props.filters?.searchField),
+);
 
-    if (permission === null) {
-        return true;
+search.value = page.props.filters?.search ?? '';
+
+// ─── Computeds ───────────────────────────────────────────────────────────────
+
+const searchableHeaders = computed(() =>
+    props.headers.filter((h) => h.searchable !== undefined),
+);
+
+const searchableFieldOptions = computed(() =>
+    searchableHeaders.value.map((h) => ({ title: h.title, value: h.key })),
+);
+
+const selectedSearchableHeader = computed(() =>
+    searchableHeaders.value.find((h) => h.key === internalSearchField.value),
+);
+
+const selectedSearchableConfig = computed<SearchableConfig>(() => {
+    const s = selectedSearchableHeader.value?.searchable;
+    return s && typeof s === 'object' ? s : { component: 'VTextField' };
+});
+
+const selectedSearchComponentName = computed<SearchComponentName>(
+    () => selectedSearchableConfig.value.component ?? 'VTextField',
+);
+
+const selectedSearchComponent = computed(
+    () => searchComponentRegistry[selectedSearchComponentName.value],
+);
+
+const isDateComponent = computed(
+    () => selectedSearchComponentName.value === 'DateField',
+);
+
+const selectedSearchComponentProps = computed(() => {
+    const name = selectedSearchComponentName.value;
+    const label = selectedSearchableHeader.value?.title ?? '';
+    const base: Record<string, unknown> = {
+        label: `Pesquisar por ${label}`,
+        hideDetails: true,
+    };
+
+    if (name === 'VTextField' || name === 'MaskedTextField') {
+        base.clearable = true;
+        base.prependInnerIcon = 'ti ti-search';
     }
 
-    return permissionSource.value.includes(permission);
-};
+    if (name === 'VSelect') {
+        base.clearable = true;
+    }
 
-const canOpenDetails = computed(() => hasPermission('view'));
+    return { ...base, ...(selectedSearchableConfig.value.props ?? {}) };
+});
+
+// Para campos de data o v-model espera string; para os demais, SearchValue direto.
+const searchInputValue = computed<SearchValue>({
+    get: () =>
+        isDateComponent.value
+            ? typeof search.value === 'string'
+                ? search.value
+                : ''
+            : search.value,
+    set: (v) => {
+        search.value = isDateComponent.value
+            ? typeof v === 'string'
+                ? v
+                : ''
+            : v;
+    },
+});
+
+const canView = computed(() => hasPermission('view'));
 const canCreate = computed(() => hasPermission('create'));
 const canDelete = computed(() => hasPermission('delete'));
 const canChangeVisibility = computed(() => hasPermission('visibility'));
 
-// Os headers são enriquecidos dinamicamente para seleção e ações sem obrigar cada página a repetir isso.
+const hasExtraActions = computed(() => !!slots['extra-actions']);
+
+// Colunas de seleção e ações são injetadas aqui para não poluir as definições de cada página.
 const computedHeaders = computed(() => {
     const headers = [...props.headers];
 
@@ -184,7 +237,7 @@ const computedHeaders = computed(() => {
         });
     }
 
-    if (canOpenDetails.value || hasExtraActions.value) {
+    if (canView.value || hasExtraActions.value) {
         headers.push({
             title: 'Ações',
             key: 'actions',
@@ -197,29 +250,27 @@ const computedHeaders = computed(() => {
     return headers;
 });
 
-const isSelectable = computed(() => {
-    return !props.hideSelection && selectedItems.value.length > 0;
-});
+// ─── Navegação / Inertia ─────────────────────────────────────────────────────
 
-const selectedIds = computed(() => {
-    return selectedItems.value.map((item) => item.id);
-});
-
-// Centraliza a navegação Inertia da listagem, preservando estado visual entre filtros e paginação.
-const loadItems = (options?: { page?: number; sortBy?: any[] }) => {
+// Centraliza todas as visitas ao backend; preserva estado visual entre filtros e paginação.
+const loadItems = (options?: {
+    page?: number;
+    sortBy?: { key: string; order: string }[];
+}) => {
     if (!props.routes?.index) return;
 
     internalLoading.value = true;
     emit('reload');
 
-    const params: any = {
-        page: options?.page || internalPage.value,
+    const params: Record<string, FormDataConvertible> = {
+        page: options?.page ?? internalPage.value,
         per_page: internalPerPage.value,
-        [props.searchKey]: search.value,
+        [props.searchKey]: search.value ?? '',
+        searchField: internalSearchField.value,
         visibility: internalVisibilityFilter.value,
     };
 
-    if (options?.sortBy && options.sortBy.length > 0) {
+    if (options?.sortBy?.length) {
         params.sort_by = options.sortBy[0].key;
         params.sort_direction = options.sortBy[0].order;
     }
@@ -233,7 +284,13 @@ const loadItems = (options?: { page?: number; sortBy?: any[] }) => {
     });
 };
 
-const handleTableUpdate = (options: any) => {
+// ─── Handlers ────────────────────────────────────────────────────────────────
+
+const handleTableUpdate = (options: {
+    page: number;
+    itemsPerPage: number;
+    sortBy?: any[];
+}) => {
     internalPage.value = options.page;
     internalPerPage.value = options.itemsPerPage;
     emit('update:page', options.page);
@@ -241,70 +298,72 @@ const handleTableUpdate = (options: any) => {
     loadItems(options);
 };
 
-const handleEdit = (item: any) => {
-    if (!canOpenDetails.value) {
-        return;
-    }
-
+const handleEdit = (item: unknown) => {
+    if (!canView.value) return;
     emit('edit', item);
 
-    if (props.routes?.show) {
-        router.get(props.routes.show(item.id));
+    const route = resolveRoute(props.routes?.show, {
+        id: (item as { id: number }).id,
+    });
+
+    if (route !== null) {
+        router.get(route);
     }
 };
 
 const handleDelete = () => {
-    if (confirm(`Tem certeza que deseja excluir estes itens?`)) {
-        emit('delete', selectedIds.value);
-        if (props.routes?.destroy) {
-            router.delete(props.routes.destroy(selectedIds.value), {
-                preserveScroll: true,
-                onSuccess: () => loadItems(),
-            });
-        }
+    if (!confirm('Tem certeza que deseja excluir estes itens?')) return;
+
+    emit('delete', selectedItems.value);
+
+    const route = props.routes?.destroy ?? null;
+
+    if (route !== null) {
+        internalLoading.value = true;
+        const payload: Record<string, FormDataConvertible> = {
+            items: selectedItems.value,
+        };
+
+        router.delete(route, {
+            data: payload,
+            preserveScroll: true,
+            onSuccess: () => loadItems(),
+            onFinish: () => {
+                internalLoading.value = false;
+            },
+        });
     }
 };
 
 const handleCreate = () => {
-    if (!canCreate.value) {
-        return;
-    }
-
+    if (!canCreate.value) return;
     emit('create');
-    if (props.routes?.create) {
-        router.get(props.routes.create);
+
+    const route = resolveRoute(props.routes?.create);
+
+    if (route !== null) {
+        router.get(route);
     }
 };
 
 const changeVisibility = (visibility: string) => {
-    if (!canChangeVisibility.value) {
-        return;
-    }
+    if (!canChangeVisibility.value) return;
+    emit('change:visibility', selectedItems.value, visibility);
 
-    emit('change:visibility', selectedIds.value, visibility);
-    if (props.routes?.changeVisibility) {
-        router.post(
-            props.routes.changeVisibility(selectedIds.value, visibility),
-            { items: selectedIds.value, visibility },
-            {
-                preserveScroll: true,
-                onSuccess: () => loadItems(),
-            },
+    const route = props.routes?.changeVisibility ?? null;
+
+    if (route !== null) {
+        router.patch(
+            route,
+            { items: selectedItems.value, visibility },
+            { preserveScroll: true, onSuccess: () => loadItems() },
         );
     }
 };
 
-const handleSelection = (items: any[]) => {
-    selectedItems.value = items;
-    emit('selection', items);
-};
-
-// Trocar a visibilidade limpa a seleção e volta à primeira página para evitar estado inconsistente.
-const applyVisibilityFilter = (visibility: string) => {
-    if (internalVisibilityFilter.value === visibility) {
-        return;
-    }
-
+// Limpa seleção e volta à página 1 ao trocar filtro de visibilidade para evitar estado inconsistente.
+const applyVisibilityFilter = (visibility: VisibilityValue) => {
+    if (internalVisibilityFilter.value === visibility) return;
     internalVisibilityFilter.value = visibility;
     selectedItems.value = [];
     internalPage.value = 1;
@@ -312,74 +371,115 @@ const applyVisibilityFilter = (visibility: string) => {
     loadItems({ page: 1 });
 };
 
-const handleRowDoubleClick = (_event: MouseEvent, payload: { item: any }) => {
+let skipNextSearchWatch = false;
+
+const handleSearchFieldChange = (field: string | null) => {
+    if (!field || field === internalSearchField.value) return;
+    internalSearchField.value = field;
+    skipNextSearchWatch = true;
+    search.value = '';
+    internalPage.value = 1;
+    emit('update:page', 1);
+    emit('update:search', '');
+    loadItems({ page: 1 });
+};
+
+const handleSelection = (items: number[]) => {
+    selectedItems.value = items;
+    emit('selection', items);
+};
+
+const handleRowDoubleClick = (
+    _event: MouseEvent,
+    payload: { item: unknown },
+) => {
     handleEdit(payload.item);
 };
 
-onMounted(() => {
-    if (props.permissions === undefined && usesModulePermissions.value) {
-        void loadPermissions();
-    }
-});
+// ─── Watchers ────────────────────────────────────────────────────────────────
 
-// A busca usa debounce simples para evitar múltiplas visitas Inertia em sequência.
-watch(search, (newValue) => {
+// Busca com debounce para evitar múltiplas visitas Inertia em sequência.
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+watch(search, (value) => {
+    if (skipNextSearchWatch) {
+        skipNextSearchWatch = false;
+        return;
+    }
+
     if (searchTimeout) clearTimeout(searchTimeout);
 
     searchTimeout = setTimeout(() => {
         internalPage.value = 1;
         emit('update:page', 1);
-        emit('update:search', newValue);
+        emit('update:search', value ?? '');
         loadItems();
     }, 500);
 });
 
+// Sincroniza estado interno com os filtros vindos do backend (ex.: navegação pelo histórico do browser).
 watch(
-    () => page.props.filters?.visibility,
-    (visibility) => {
-        internalVisibilityFilter.value = visibility ?? 'visible';
+    () => page.props.filters,
+    (filters) => {
+        search.value = filters?.search ?? '';
+        internalSearchField.value = resolveSearchField(filters?.searchField);
+        internalVisibilityFilter.value = filters?.visibility ?? 'visible';
     },
+    { deep: true },
 );
 
-// Exposição mínima para páginas que precisem disparar reload manual ou inspecionar seleção.
-defineExpose({
-    loadItems,
-    selectedItems,
-    internalLoading,
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
+
+onMounted(() => {
+    void ensurePermissionsLoaded();
 });
+
+// Exposição mínima para páginas que precisem disparar reload manual ou inspecionar seleção.
+defineExpose({ loadItems, selectedItems, internalLoading });
 </script>
 
 <template>
     <div>
+        <!-- Modal de visibilidade -->
         <v-dialog v-model="modalVisibility" width="300px">
             <v-card>
                 <v-card-title>Alterar Visibilidade</v-card-title>
                 <v-list density="compact" nav>
                     <v-list-item
-                        v-for="item in internalVisibilityOptions"
+                        v-for="item in visibilityOptions"
                         :key="item.value"
                         :prepend-icon="item.icon"
                         :title="item.title"
                         :value="item.value"
-                        @click="changeVisibility(item.value)"
-                    >
-                    </v-list-item>
+                        @click="
+                            changeVisibility(item.value);
+                            modalVisibility = false;
+                        "
+                    />
                 </v-list>
             </v-card>
         </v-dialog>
-        <!-- Cabeçalho -->
-        <div class="d-flex justify-start align-center my-4">
-            <!-- Busca -->
-            <v-text-field
-                v-model="search"
-                label="Buscar..."
-                prepend-inner-icon="ti ti-search"
-                clearable
+
+        <!-- Barra de ferramentas -->
+        <div class="d-flex justify-start align-center flex-wrap ga-3 my-4">
+            <component
+                :is="selectedSearchComponent"
+                v-model="searchInputValue"
+                v-bind="selectedSearchComponentProps"
                 class="mw-33"
-                hide-details
             />
-            <div class="flex-grow-1"></div>
-            <!-- Botão criar -->
+            <v-select
+                v-if="searchableFieldOptions.length > 0"
+                :model-value="internalSearchField"
+                :items="searchableFieldOptions"
+                hide-details
+                variant="solo-filled"
+                :style="{ 'max-width': '180px' }"
+                @update:model-value="handleSearchFieldChange"
+            />
+
+            <div class="flex-grow-1" />
+
             <v-btn
                 v-if="canCreate"
                 color="primary"
@@ -389,31 +489,31 @@ defineExpose({
             >
                 Novo
             </v-btn>
-            <!-- Botão criar -->
             <v-btn
                 v-if="canChangeVisibility && selectedItems.length > 0"
                 color="secondary"
-                class="ml-2"
                 prepend-icon="ti ti-eye"
+                class="ml-2"
                 @click="modalVisibility = true"
             >
                 Alterar Visibilidade
             </v-btn>
             <v-btn
-                v-if="canDelete && selectedItems.length > 0"
-                color="secondary"
+                v-if="canDelete && selectedItems.length > 0 && internalVisibilityFilter=='archived'"
+                color="error"
+                prepend-icon="ti ti-trash"
                 class="ml-2"
-                prepend-icon="ti ti-eye"
                 @click="handleDelete"
             >
                 Deletar
             </v-btn>
         </div>
 
+        <!-- Filtro de visibilidade -->
         <div class="mb-4">
             <v-btn-group>
                 <v-btn
-                    v-for="item in internalVisibilityOptions"
+                    v-for="item in visibilityOptions"
                     :key="item.value"
                     :color="
                         internalVisibilityFilter === item.value
@@ -441,16 +541,16 @@ defineExpose({
             :page="internalPage"
             :items-length="total"
             :loading="internalLoading"
-            :show-select="isSelectable"
+            :show-select="!hideSelection"
             :model-value="selectedItems"
             loading-text="Carregando..."
             hover
-            @dblclick:row="handleRowDoubleClick"
             class="elevation-1"
+            @dblclick:row="handleRowDoubleClick"
             @update:options="handleTableUpdate"
             @update:model-value="handleSelection"
         >
-            <!-- Slot para colunas personalizadas -->
+            <!-- Colunas personalizadas -->
             <template
                 v-for="slot in customSlots"
                 #[`item.${slot}`]="{ item }"
@@ -459,21 +559,20 @@ defineExpose({
                 <slot :name="`column-${slot}`" :item="item" />
             </template>
 
-            <!-- Slot para ações -->
+            <!-- Ações -->
             <template
-                v-if="canOpenDetails || hasExtraActions"
+                v-if="canView || hasExtraActions"
                 #item.actions="{ item }"
             >
                 <div class="d-flex gap-1">
                     <v-btn
-                        v-if="canOpenDetails"
+                        v-if="canView"
                         icon="ti ti-pencil"
                         size="small"
                         color="primary"
                         variant="tonal"
                         @click="handleEdit(item)"
                     />
-                    <!-- Slot adicional para ações extras -->
                     <slot name="extra-actions" :item="item" />
                 </div>
             </template>
@@ -491,15 +590,15 @@ defineExpose({
                         v-if="search"
                         color="primary"
                         variant="text"
-                        @click="search = ''"
                         class="mt-2"
+                        @click="search = ''"
                     >
                         Limpar busca
                     </v-btn>
                 </div>
             </template>
 
-            <!-- Loading personalizado -->
+            <!-- Loading -->
             <template #loading>
                 <div class="text-center pa-4">
                     <v-progress-circular indeterminate color="primary" />
@@ -507,12 +606,12 @@ defineExpose({
                 </div>
             </template>
 
-            <!-- Footer com informação de total -->
+            <!-- Rodapé com paginação -->
             <template #bottom>
                 <div class="d-flex justify-space-between align-center pa-2">
-                    <div class="text-caption text-grey">
-                        Total: {{ total }} item(s)
-                    </div>
+                    <span class="text-caption text-grey"
+                        >Total: {{ total }} item(s)</span
+                    >
                     <v-pagination
                         v-model="internalPage"
                         :length="lastPage"

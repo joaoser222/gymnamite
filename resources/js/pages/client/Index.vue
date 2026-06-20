@@ -3,7 +3,7 @@
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import TablePage from '@/components/TablePage.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
-import { formatMasks } from '@/plugins/masks';
+import { masks,formatMasks } from '@/plugins/masks';
 defineOptions({ layout: AuthenticatedLayout });
 
 // Props da página
@@ -19,6 +19,7 @@ const props = defineProps<{
         index: string;
         create: string;
         show: string;
+        changeVisibility: string;
         destroy: string;
     };
 }>();
@@ -26,8 +27,13 @@ const props = defineProps<{
 // Configuração da tabela
 const headers: TableHeader[] = [
     { title: 'ID', key: 'id', sortable: true, width: '80px' },
-    { title: 'Nome', key: 'name', sortable: true },
-    { title: 'CPF', key: 'document' },
+    { title: 'Nome', key: 'name', sortable: true, searchable: true },
+    { title: 'CPF', key: 'document',searchable: {
+        component: 'MaskedTextField',
+        props: {
+            mask: masks.cpf
+        }
+    }},
     { title: 'Telefone', key: 'phone' },
     {
         title: 'Status',
@@ -41,8 +47,9 @@ const headers: TableHeader[] = [
 const routes: TableRoutes = {
     index: props.routes.index,
     create: props.routes.create,
-    show: (id) => props.routes.show.replace(':id', String(id)),
-    destroy: () => props.routes.destroy,
+    show: props.routes.show,
+    changeVisibility: props.routes.changeVisibility,
+    destroy: props.routes.destroy,
 };
 </script>
 
