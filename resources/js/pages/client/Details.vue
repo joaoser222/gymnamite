@@ -7,6 +7,7 @@ import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { masks, phoneMask } from '@/plugins/masks';
 import { fillAddressFromCep, type AddressForm } from '@/plugins/viacep';
 import { required, email, exactLength, phone, cpf } from '@/plugins/validators';
+import type { LabeledOption, Option } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -32,15 +33,10 @@ type Client = {
     status?: string;
 };
 
-type Option = {
-    value: string;
-    label: string;
-};
-
 type SharedProps = {
     enums?: {
-        genderTypes?: Option[];
-        clientStatus?: Option[];
+        genderTypes?: LabeledOption<string>[];
+        clientStatus?: LabeledOption<string>[];
     };
 };
 
@@ -73,13 +69,13 @@ const defaults = {
     status: 'active',
 };
 
-const genderOptions =
+const genderOptions: Option<string>[] =
     sharedProps.enums?.genderTypes?.map((option) => ({
         title: option.label,
         value: option.value,
     })) ?? [];
 
-const statusOptions =
+const statusOptions: Option<string>[] =
     sharedProps.enums?.clientStatus?.map((option) => ({
         title: option.label,
         value: option.value,
