@@ -5,17 +5,11 @@ import {
     useModulePermissions,
     type ModulePermissionMap,
 } from '@/composables/useModulePermissions';
-import { resolveRoute, type RouteHandler } from '@/shared/routeHandler';
+import type { DetailsRoutes } from '@/shared/page';
 
 // O formulário genérico diferencia automaticamente permissões de criação e atualização.
 type DetailsPermissionAction = 'create' | 'update';
 type DetailsPermissionMap = ModulePermissionMap<DetailsPermissionAction>;
-
-export interface DetailsRoutes {
-    index: RouteHandler;
-    store: RouteHandler;
-    update: RouteHandler;
-}
 
 type FormData = Record<string, any>;
 type VForm = {
@@ -47,8 +41,7 @@ const props = withDefaults(
 );
 
 const formDetails = ref<VForm | null>(null);
-const isValid = ref<boolean | null>(null);
-const hasValidated = ref(false);
+const formState = ref({ valid: null as boolean | null, validated: false });
 const { hasPermission, ensurePermissionsLoaded } =
     useModulePermissions<DetailsPermissionAction>({
         module: () => props.module,
@@ -77,37 +70,37 @@ const pageTitle = computed(
     () => `${isCreating.value ? 'Novo' : 'Editar'} ${props.title}`,
 );
 
-const canSubmitPermission = computed(() => {
-    return isCreating.value ? hasPermission('create') : hasPermission('update');
-});
+const permissions = computed(() => ({
+    submit: isCreating.value ? hasPermission('create') : hasPermission('update'),
+}));
 
 const canSave = computed(
     () =>
-        canSubmitPermission.value &&
-        hasValidated.value &&
-        isValid.value === true &&
+        permissions.value.submit &&
+        formState.value.validated &&
+        formState.value.valid === true &&
         !form.processing,
 );
 
 const validate = async (): Promise<boolean> => {
     if (!formDetails.value) {
-        hasValidated.value = false;
-        isValid.value = false;
+        formState.value.validated = false;
+        formState.value.valid = false;
 
         return false;
     }
 
     const result = await formDetails.value.validate();
 
-    hasValidated.value = true;
-    isValid.value = result.valid;
+    formState.value.validated = true;
+    formState.value.valid = result.valid;
 
     return result.valid;
 };
 
 // O submit escolhe automaticamente entre criação e atualização a partir da presença do identificador.
 const submit = async (): Promise<void> => {
-    if (!canSubmitPermission.value) {
+    if (!permissions.value.submit) {
         return;
     }
 
@@ -121,20 +114,16 @@ const submit = async (): Promise<void> => {
     };
 
     if (isCreating.value) {
-        const storeRoute = resolveRoute(props.routes.store);
-
-        if (storeRoute !== null) {
-            form.post(storeRoute, options);
+        if (props.routes.store) {
+            form.post(props.routes.store, options);
         }
 
         return;
     }
 
-    const updateRoute = resolveRoute(props.routes.update, {
-        id: recordId.value as string | number | undefined,
-    });
+    const updateRoute = props.routes.update?.replace(':id', String(recordId.value));
 
-    if (updateRoute !== null) {
+    if (updateRoute) {
         form.put(updateRoute, options);
     }
 };
@@ -142,10 +131,8 @@ const submit = async (): Promise<void> => {
 const cancel = (): void => {
     emit('cancel');
 
-    const indexRoute = resolveRoute(props.routes.index);
-
-    if (indexRoute !== null) {
-        router.visit(indexRoute);
+    if (props.routes.index) {
+        router.visit(props.routes.index);
     }
 };
 
@@ -156,8 +143,8 @@ watch(
         form.defaults({ ...data });
         form.reset();
         formDetails.value?.resetValidation();
-        hasValidated.value = false;
-        isValid.value = null;
+        formState.value.validated = false;
+        formState.value.valid = null;
         void nextTick(validate);
     },
     { deep: true },
@@ -191,7 +178,7 @@ void nextTick(validate);
             <v-card-text>
                 <v-form
                     ref="formDetails"
-                    v-model="isValid"
+                    v-model="formState.valid"
                     validate-on="input"
                     @submit.prevent="submit"
                 >
@@ -200,8 +187,8 @@ void nextTick(validate);
                         :errors="form.errors"
                         :is-creating="isCreating"
                         :validate="validate"
-                        :canSubmit="canSubmitPermission"
-                        :readonly="!canSubmitPermission"
+                        :canSubmit="permissions.submit"
+                        :readonly="!permissions.submit"
                     />
                 </v-form>
             </v-card-text>
@@ -217,7 +204,7 @@ void nextTick(validate);
                 {{ cancelLabel }}
             </v-btn>
             <v-btn
-                v-if="canSubmitPermission"
+                v-if="permissions.submit"
                 color="primary"
                 prepend-icon="ti ti-device-floppy"
                 :loading="form.processing"

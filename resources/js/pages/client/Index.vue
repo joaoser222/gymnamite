@@ -3,25 +3,14 @@
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import TablePage from '@/components/TablePage.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
+import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
 import { masks,formatMasks } from '@/plugins/masks';
 defineOptions({ layout: AuthenticatedLayout });
 
 // Props da página
 const props = defineProps<{
-    clients: {
-        data: any[];
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-    };
-    routes: {
-        index: string;
-        create: string;
-        show: string;
-        changeVisibility: string;
-        destroy: string;
-    };
+    clients: PaginatedResponse<any>;
+    routes: IndexRoutes;
 }>();
 
 // Configuração da tabela

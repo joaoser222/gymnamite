@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import DetailsPage, { type DetailsRoutes } from '@/components/DetailsPage.vue';
+import DetailsPage from '@/components/DetailsPage.vue';
+import type { DetailsRoutes } from '@/shared/page';
 import MaskedTextField from '@/components/inputs/MaskedTextField.vue';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { masks, phoneMask } from '@/plugins/masks';

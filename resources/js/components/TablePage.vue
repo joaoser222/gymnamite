@@ -10,8 +10,8 @@ import {
     useModulePermissions,
     type ModulePermissionMap,
 } from '@/composables/useModulePermissions';
-import { resolveRoute, type RouteHandler } from '@/shared/routeHandler';
 import { visibilityOptions, type VisibilityValue } from '@/shared/visibility';
+import type { PaginatedResponse } from '@/shared/page';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +28,8 @@ type SearchableConfig = {
     props?: Record<string, unknown>;
 };
 
+export type { PaginatedResponse };
+
 export type TableHeader = {
     title: string;
     key: string;
@@ -39,19 +41,10 @@ export type TableHeader = {
 
 export type TableRoutes = {
     index: string;
-    create?: RouteHandler;
-    show?: RouteHandler;
+    create?: string;
+    show?: string;
     destroy?: string;
     changeVisibility?: string;
-};
-
-// Conveniente para quem consome: descreve a shape paginada que o backend retorna.
-export type PaginatedResponse<T> = {
-    data: T[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
 };
 
 type TablePermissionAction = 'view' | 'create' | 'delete' | 'visibility';
@@ -128,8 +121,7 @@ const { hasPermission, ensurePermissionsLoaded } =
 
 const search = defineModel<SearchValue>('search', { default: '' });
 const selectedItems = ref<number[]>([]);
-const internalPage = ref(props.currentPage);
-const internalPerPage = ref(props.perPage);
+const pagination = ref({ page: props.currentPage, perPage: props.perPage });
 const internalLoading = ref(props.loading);
 const modalVisibility = ref(false);
 const internalVisibilityFilter = ref(
@@ -175,10 +167,6 @@ const selectedSearchComponent = computed(
     () => searchComponentRegistry[selectedSearchComponentName.value],
 );
 
-const isDateComponent = computed(
-    () => selectedSearchComponentName.value === 'DateField',
-);
-
 const selectedSearchComponentProps = computed(() => {
     const name = selectedSearchComponentName.value;
     const label = selectedSearchableHeader.value?.title ?? '';
@@ -199,27 +187,27 @@ const selectedSearchComponentProps = computed(() => {
     return { ...base, ...(selectedSearchableConfig.value.props ?? {}) };
 });
 
-// Para campos de data o v-model espera string; para os demais, SearchValue direto.
 const searchInputValue = computed<SearchValue>({
     get: () =>
-        isDateComponent.value
-            ? typeof search.value === 'string'
-                ? search.value
-                : ''
+        selectedSearchComponentName.value === 'DateField'
+            ? String(search.value ?? '')
             : search.value,
     set: (v) => {
-        search.value = isDateComponent.value
-            ? typeof v === 'string'
-                ? v
-                : ''
-            : v;
+        search.value =
+            selectedSearchComponentName.value === 'DateField'
+                ? typeof v === 'string'
+                    ? v
+                    : ''
+                : v;
     },
 });
 
-const canView = computed(() => hasPermission('view'));
-const canCreate = computed(() => hasPermission('create'));
-const canDelete = computed(() => hasPermission('delete'));
-const canChangeVisibility = computed(() => hasPermission('visibility'));
+const permissions = computed(() => ({
+    view: hasPermission('view'),
+    create: hasPermission('create'),
+    delete: hasPermission('delete'),
+    visibility: hasPermission('visibility'),
+}));
 
 const hasExtraActions = computed(() => !!slots['extra-actions']);
 
@@ -237,7 +225,7 @@ const computedHeaders = computed(() => {
         });
     }
 
-    if (canView.value || hasExtraActions.value) {
+    if (permissions.value.view || hasExtraActions.value) {
         headers.push({
             title: 'Ações',
             key: 'actions',
@@ -263,8 +251,8 @@ const loadItems = (options?: {
     emit('reload');
 
     const params: Record<string, FormDataConvertible> = {
-        page: options?.page ?? internalPage.value,
-        per_page: internalPerPage.value,
+        page: options?.page ?? pagination.value.page,
+        per_page: pagination.value.perPage,
         [props.searchKey]: search.value ?? '',
         searchField: internalSearchField.value,
         visibility: internalVisibilityFilter.value,
@@ -291,22 +279,20 @@ const handleTableUpdate = (options: {
     itemsPerPage: number;
     sortBy?: any[];
 }) => {
-    internalPage.value = options.page;
-    internalPerPage.value = options.itemsPerPage;
+    pagination.value.page = options.page;
+    pagination.value.perPage = options.itemsPerPage;
     emit('update:page', options.page);
     emit('update:perPage', options.itemsPerPage);
     loadItems(options);
 };
 
 const handleEdit = (item: unknown) => {
-    if (!canView.value) return;
+    if (!permissions.value.view) return;
     emit('edit', item);
 
-    const route = resolveRoute(props.routes?.show, {
-        id: (item as { id: number }).id,
-    });
+    const route = props.routes?.show?.replace(':id', String((item as { id: number }).id));
 
-    if (route !== null) {
+    if (route) {
         router.get(route);
     }
 };
@@ -336,18 +322,16 @@ const handleDelete = () => {
 };
 
 const handleCreate = () => {
-    if (!canCreate.value) return;
+    if (!permissions.value.create) return;
     emit('create');
 
-    const route = resolveRoute(props.routes?.create);
-
-    if (route !== null) {
-        router.get(route);
+    if (props.routes?.create) {
+        router.get(props.routes.create);
     }
 };
 
 const changeVisibility = (visibility: string) => {
-    if (!canChangeVisibility.value) return;
+    if (!permissions.value.visibility) return;
     emit('change:visibility', selectedItems.value, visibility);
 
     const route = props.routes?.changeVisibility ?? null;
@@ -366,7 +350,7 @@ const applyVisibilityFilter = (visibility: VisibilityValue) => {
     if (internalVisibilityFilter.value === visibility) return;
     internalVisibilityFilter.value = visibility;
     selectedItems.value = [];
-    internalPage.value = 1;
+    pagination.value.page = 1;
     emit('update:page', 1);
     loadItems({ page: 1 });
 };
@@ -378,7 +362,7 @@ const handleSearchFieldChange = (field: string | null) => {
     internalSearchField.value = field;
     skipNextSearchWatch = true;
     search.value = '';
-    internalPage.value = 1;
+    pagination.value.page = 1;
     emit('update:page', 1);
     emit('update:search', '');
     loadItems({ page: 1 });
@@ -410,7 +394,7 @@ watch(search, (value) => {
     if (searchTimeout) clearTimeout(searchTimeout);
 
     searchTimeout = setTimeout(() => {
-        internalPage.value = 1;
+        pagination.value.page = 1;
         emit('update:page', 1);
         emit('update:search', value ?? '');
         loadItems();
@@ -481,7 +465,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
             <div class="flex-grow-1" />
 
             <v-btn
-                v-if="canCreate"
+                v-if="permissions.create"
                 color="primary"
                 prepend-icon="ti ti-plus"
                 class="ml-2"
@@ -490,7 +474,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 Novo
             </v-btn>
             <v-btn
-                v-if="canChangeVisibility && selectedItems.length > 0"
+                v-if="permissions.visibility && selectedItems.length > 0"
                 color="secondary"
                 prepend-icon="ti ti-eye"
                 class="ml-2"
@@ -499,7 +483,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 Alterar Visibilidade
             </v-btn>
             <v-btn
-                v-if="canDelete && selectedItems.length > 0 && internalVisibilityFilter=='archived'"
+                v-if="permissions.delete && selectedItems.length > 0 && internalVisibilityFilter=='archived'"
                 color="error"
                 prepend-icon="ti ti-trash"
                 class="ml-2"
@@ -537,8 +521,8 @@ defineExpose({ loadItems, selectedItems, internalLoading });
         <v-data-table
             :headers="computedHeaders"
             :items="items"
-            :items-per-page="internalPerPage"
-            :page="internalPage"
+            :items-per-page="pagination.perPage"
+            :page="pagination.page"
             :items-length="total"
             :loading="internalLoading"
             :show-select="!hideSelection"
@@ -561,12 +545,12 @@ defineExpose({ loadItems, selectedItems, internalLoading });
 
             <!-- Ações -->
             <template
-                v-if="canView || hasExtraActions"
+                v-if="permissions.view || hasExtraActions"
                 #item.actions="{ item }"
             >
                 <div class="d-flex gap-1">
                     <v-btn
-                        v-if="canView"
+                        v-if="permissions.view"
                         icon="ti ti-pencil"
                         size="small"
                         color="primary"
@@ -613,7 +597,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                         >Total: {{ total }} item(s)</span
                     >
                     <v-pagination
-                        v-model="internalPage"
+                        v-model="pagination.page"
                         :length="lastPage"
                         :total-visible="7"
                         @update:model-value="loadItems({ page: $event })"
