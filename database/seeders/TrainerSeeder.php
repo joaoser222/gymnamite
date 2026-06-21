@@ -6,6 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Trainer;
 use App\Enums\GenderType;
+use App\Enums\Visibility;
 
 class TrainerSeeder extends Seeder
 {
@@ -21,7 +22,8 @@ class TrainerSeeder extends Seeder
             'name' => 'TREINADOR PADRÃO',
             'document' => '000000000000',
             'phone' => '99999999999',
-            'gender' => GenderType::MALE->value
+            'gender' => GenderType::MALE->value,
+            'visibility' => Visibility::VISIBLE->value
         ]],['id'],['name','document','phone']);
     }
 }
