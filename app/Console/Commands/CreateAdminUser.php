@@ -7,6 +7,7 @@ use App\Models\Role;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use App\AccessControl\AccessRole;
 
 class CreateAdminUser extends Command
 {
@@ -38,7 +39,7 @@ class CreateAdminUser extends Command
         $name = $this->option('name') ?? $this->ask('Nome do administrador');
         $email = $this->option('email') ?? $this->ask('E-mail do administrador');
         $password = $this->option('password') ?? $this->secret('Senha do administrador');
-        $role = Role::where('name','admin')->first();
+        $role = Role::where('name',AccessRole::ADMINISTRATOR->value)->first();
         // Validação
         $validator = Validator::make([
             'name' => $name,
