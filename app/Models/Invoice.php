@@ -42,8 +42,8 @@ class Invoice extends Model
     ];
 
     protected $casts = [
-        'due_date' => 'date',
-        'payment_date' => 'date',
+        'due_date'  => 'date:Y-m-d',
+        'payment_date'  => 'date:Y-m-d',
         'gross_value' => 'float',
         'discount_value' => 'float',
         'interest_value' => 'float',

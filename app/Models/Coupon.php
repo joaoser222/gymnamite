@@ -20,7 +20,7 @@ class Coupon extends Model
     ];
 
     protected $casts = [
-        'expiration_date' => 'date',
+        'expiration_date'  => 'date:Y-m-d',
         'percent' => 'float',
         'discount_limit' => 'float',
     ];

@@ -25,7 +25,7 @@ class GatewayPayment extends Model
     ];
 
     protected $casts = [
-        'payment_date' => 'date',
+        'payment_date'  => 'date:Y-m-d',
         'gross_value' => 'float',
         'payment_method' => PaymentMethod::class,
         'fee_value' => 'float',

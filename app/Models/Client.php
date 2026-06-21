@@ -38,8 +38,8 @@ class Client extends Model
 
     protected $casts = [
         'legal_representative' => 'boolean',
-        'birth_date' => 'date',
-        'legal_representative_birth_date' => 'date',
+        'birth_date' => 'date:Y-m-d',
+        'legal_representative_birth_date' => 'date:Y-m-d',
         'status' => ClientStatus::class,
     ];
 

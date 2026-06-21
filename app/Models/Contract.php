@@ -27,7 +27,7 @@ class Contract extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'date',
+        'start_date'  => 'date:Y-m-d',
         'price' => 'float',
         'status' => BillableStatus::class,
     ];

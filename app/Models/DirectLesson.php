@@ -22,7 +22,7 @@ class DirectLesson extends Model
 
     protected $casts = [
         'price' => 'float',
-        'lesson_date' => 'date',
+        'lesson_date'  => 'date:Y-m-d',
         'status' => BillableStatus::class,
     ];
 
