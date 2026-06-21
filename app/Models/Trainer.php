@@ -26,6 +26,5 @@ class Trainer extends Model
         'address_city',
         'address_district',
         'address_postal_code',
-        'status',
     ];
 }
