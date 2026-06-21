@@ -38,7 +38,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('visibility', 10);
-            $table->string('profile_image', 255);
+            $table->string('profile_image', 255)->nullable();
             $table->rememberToken();
             $table->foreignId('role_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
