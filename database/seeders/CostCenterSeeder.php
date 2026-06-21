@@ -17,12 +17,12 @@ class CostCenterSeeder extends Seeder
     public function run(): void
     {
         CostCenter::upsert([
-            ['id' => 1,'name' => 'Receitas','color' => '#1dd1a1','operation' => OperationType::RECEIVABLE->value],
-            ['id' => 2,'name' => 'Deduções e Abatimentos','color' => '#feca57','operation' => OperationType::PAYABLE->value],
-            ['id' => 3,'name' => 'Custo de Produtos','color' => '#5f27cd','operation' => OperationType::PAYABLE->value],
-            ['id' => 4,'name' => 'Despesas Administrativas','color' => '#B53471','operation' => OperationType::PAYABLE->value],
-            ['id' => 5,'name' => 'Despesas com Vendas','color' => '#ee5253','operation' => OperationType::PAYABLE->value],
-            ['id' => 6,'name' => 'Despesas Financeiras','color' => '#006266','operation' => OperationType::PAYABLE->value],
-        ],['id'],['name','color','operation']);
+            ['id' => 1,'name' => 'Receitas','color' => '#1dd1a1','operation_type' => OperationType::RECEIVABLE->value],
+            ['id' => 2,'name' => 'Deduções e Abatimentos','color' => '#feca57','operation_type' => OperationType::PAYABLE->value],
+            ['id' => 3,'name' => 'Custo de Produtos','color' => '#5f27cd','operation_type' => OperationType::PAYABLE->value],
+            ['id' => 4,'name' => 'Despesas Administrativas','color' => '#B53471','operation_type' => OperationType::PAYABLE->value],
+            ['id' => 5,'name' => 'Despesas com Vendas','color' => '#ee5253','operation_type' => OperationType::PAYABLE->value],
+            ['id' => 6,'name' => 'Despesas Financeiras','color' => '#006266','operation_type' => OperationType::PAYABLE->value],
+        ],['id'],['name','color','operation_type']);
     }
 }
