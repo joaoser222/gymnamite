@@ -78,6 +78,10 @@ trait HasModule
             : 'id';
 
         $records = $this->newModelQuery()
+            ->when(
+                ! empty($this->fields()),
+                fn (Builder $query) => $query->select($this->fields()),
+            )
             ->where('visibility', $filters['visibility'])
             ->when(
                 $filters['search'] !== '' && $searchField !== null,
@@ -358,6 +362,19 @@ trait HasModule
     protected function defaultSearchField(): ?string
     {
         return $this->searchableFields()[0] ?? null;
+    }
+
+    /**
+     * Campos que serão retornados para o frontend.
+     * Se vazio, retorna todos os campos.
+     *
+     * @return array<int, string>
+     */
+    protected function fields(): array
+    {
+        return property_exists($this, 'fields')
+            ? $this->fields
+            : [];
     }
 
     /**
