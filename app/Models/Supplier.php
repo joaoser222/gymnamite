@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasVisibility;
 
 class Supplier extends Model
 {
+    use HasVisibility;
     protected $table = 'suppliers';
 
     protected $fillable = [
@@ -20,9 +22,6 @@ class Supplier extends Model
         'address_state',
         'address_city',
         'address_district',
-        'address_postal_code',
-        'status',
+        'address_postal_code'
     ];
-
-    //
 }

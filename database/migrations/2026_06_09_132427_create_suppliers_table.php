@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name', 255);
             $table->string('email', 255)->nullable();
             $table->string('document', 14);
-            $table->date('birth_date');
+            $table->date('birth_date')->nullable();
             $table->string('phone', 11);
             $table->string('address', 200)->nullable();
             $table->string('address_number', 10)->nullable();
@@ -25,7 +25,6 @@ return new class extends Migration
             $table->string('address_city', 100)->nullable();
             $table->string('address_district', 100)->nullable();
             $table->string('address_postal_code', 8)->nullable();
-            $table->string('status', 10);
             $table->string('visibility', 10);
             $table->timestamps();
         });
