@@ -1,6 +1,6 @@
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
+import { google } from 'laravel-vite-plugin/fonts';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vuetify from 'vite-plugin-vuetify';
@@ -12,7 +12,7 @@ export default defineConfig({
             input: ['resources/js/app.ts'],
             refresh: true,
             fonts: [
-                bunny('Inter', {
+                google('Inter', {
                     weights: [400, 500, 600],
                 }),
             ],
