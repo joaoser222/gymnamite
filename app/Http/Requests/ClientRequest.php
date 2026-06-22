@@ -4,10 +4,11 @@ namespace App\Http\Requests;
 
 use App\Enums\ClientStatus;
 use App\Enums\GenderType;
+use App\Models\Client;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreClientRequest extends FormRequest
+class ClientRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,11 +20,19 @@ class StoreClientRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var Client|null $client */
+        $client = $this->route('client');
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'size:11'],
-            'document' => ['required', 'string', 'size:11', 'unique:clients,document'],
+            'document' => [
+                'required',
+                'string',
+                'size:11',
+                Rule::unique('clients', 'document')->ignore($client?->id),
+            ],
             'gender' => ['required', 'string', Rule::enum(GenderType::class)],
             'birth_date' => ['required', 'date'],
             'legal_representative' => ['boolean'],

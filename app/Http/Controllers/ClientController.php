@@ -5,8 +5,7 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Enums\ClientStatus;
 use App\Enums\GenderType;
-use App\Http\Requests\StoreClientRequest;
-use App\Http\Requests\UpdateClientRequest;
+use App\Http\Requests\ClientRequest;
 use App\Models\Client;
 use App\Models\Uf;
 use App\Traits\HasModule;
@@ -44,12 +43,12 @@ class ClientController extends Controller
 
     protected function storeRequestClass(): ?string
     {
-        return StoreClientRequest::class;
+        return ClientRequest::class;
     }
 
     protected function updateRequestClass(): ?string
     {
-        return UpdateClientRequest::class;
+        return ClientRequest::class;
     }
 
     /**
@@ -60,9 +59,9 @@ class ClientController extends Controller
         return [
             'options' => [
                 'genderTypes' => $this->enumOptions(GenderType::class),
-                'ufs' => $this->modelOptions(Uf::class)
+                'ufs' => $this->modelOptions(Uf::class),
             ],
-            
+
         ];
     }
 
@@ -70,9 +69,9 @@ class ClientController extends Controller
     {
         return [
             'options' => [
-                'clientStatus' => $this->enumOptions(ClientStatus::class)
+                'clientStatus' => $this->enumOptions(ClientStatus::class),
             ],
-            
+
         ];
     }
 }

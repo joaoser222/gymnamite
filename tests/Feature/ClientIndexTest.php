@@ -52,9 +52,8 @@ class ClientIndexTest extends TestCase
             ->where('client', null)
             ->where('id', 'new')
             ->has('routes')
-            ->where('enums.genderTypes.0.value', 'M')
-            ->where('enums.genderTypes.0.label', 'Masculino')
-            ->where('enums.clientStatus.0.value', 'active')
+            ->where('options.genderTypes.0.value', 'M')
+            ->where('options.genderTypes.0.label', 'Masculino')
         );
     }
 
@@ -70,10 +69,10 @@ class ClientIndexTest extends TestCase
             ->component('client/Index')
             ->has('clients.data')
             ->has('filters')
+            ->has('options.clientStatus')
         );
 
         $this->assertNull($response->inertiaProps('enums'));
-        $this->assertNull($response->inertiaProps('options'));
     }
 
     public function test_authenticated_users_can_fetch_client_for_editing(): void
