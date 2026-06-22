@@ -6,6 +6,7 @@ use App\AccessControl\AccessAction;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -80,7 +81,7 @@ trait HasModule
         $records = $this->newModelQuery()
             ->when(
                 ! empty($this->fields()),
-                fn (Builder $query) => $query->select($this->fields()),
+                fn (Builder $query) => $query->addSelect($this->resolveSelectColumns()),
             )
             ->when(
                 ! empty($this->joins()),
@@ -379,6 +380,35 @@ trait HasModule
         return property_exists($this, 'fields')
             ? $this->fields
             : [];
+    }
+
+    /**
+     * Mapeamento de alias para expressões SQL.
+     * Por padrão, cada field vira `field AS field`.
+     * Sobrescreva no controller para renomear colunas de join.
+     *
+     * @return array<string, string>
+     */
+    protected function fieldsMapping(): array
+    {
+        return [];
+    }
+
+    /**
+     * Resolve as colunas do select aplicando o mapping.
+     *
+     * @return array<int, string|Expression>
+     */
+    protected function resolveSelectColumns(): array
+    {
+        $mapping = $this->fieldsMapping();
+
+        return array_map(
+            fn (string $field) => isset($mapping[$field])
+                ? \DB::raw("{$mapping[$field]} AS `{$field}`")
+                : $field,
+            $this->fields(),
+        );
     }
 
     /**
