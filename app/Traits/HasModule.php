@@ -82,6 +82,10 @@ trait HasModule
                 ! empty($this->fields()),
                 fn (Builder $query) => $query->select($this->fields()),
             )
+            ->when(
+                ! empty($this->joins()),
+                fn (Builder $query) => $this->applyJoins($query),
+            )
             ->where('visibility', $filters['visibility'])
             ->when(
                 $filters['search'] !== '' && $searchField !== null,
@@ -375,6 +379,38 @@ trait HasModule
         return property_exists($this, 'fields')
             ? $this->fields
             : [];
+    }
+
+    /**
+     * Relações Eloquent que devem ser joined na listagem.
+     * Permite usar campos relacionados em searchableFields e sortableFields.
+     *
+     * @return array<int, string>
+     */
+    protected function joins(): array
+    {
+        return property_exists($this, 'joins')
+            ? $this->joins
+            : [];
+    }
+
+    /**
+     * Aplica os joins definidos na query.
+     */
+    protected function applyJoins(Builder $query): void
+    {
+        $model = new $this->modelClass;
+
+        foreach ($this->joins() as $relation) {
+            $relationObject = $model->$relation();
+
+            $query->join(
+                $relationObject->getRelated()->getTable(),
+                $relationObject->getQualifiedForeignKeyName(),
+                '=',
+                $relationObject->getQualifiedOwnerKeyName(),
+            );
+        }
     }
 
     /**
