@@ -87,7 +87,7 @@ trait HasModule
                 ! empty($this->joins()),
                 fn (Builder $query) => $this->applyJoins($query),
             )
-            ->where('visibility', $filters['visibility'])
+            ->where((new ($this->modelClass()))->getTable().'.visibility', $filters['visibility'])
             ->when(
                 $filters['search'] !== '' && $searchField !== null,
                 fn (Builder $query) => $query->where($searchField, 'like', '%'.$filters['search'].'%'),
@@ -312,7 +312,7 @@ trait HasModule
 
     protected function routePrefix(): string
     {
-        return $this->accessModule()->value;
+        return str_replace('_', '-', $this->accessModule()->value);
     }
 
     protected function routeParameterName(): string
@@ -323,8 +323,7 @@ trait HasModule
     protected function indexComponent(): string
     {
         return Str::of($this->routePrefix())
-            ->singular()
-            ->replace('_', '-')
+            ->replace('-', '_')
             ->append('/Index')
             ->toString();
     }
@@ -332,8 +331,7 @@ trait HasModule
     protected function detailsComponent(): string
     {
         return Str::of($this->routePrefix())
-            ->singular()
-            ->replace('_', '-')
+            ->replace('-', '_')
             ->append('/Details')
             ->toString();
     }
@@ -391,7 +389,9 @@ trait HasModule
      */
     protected function fieldsMapping(): array
     {
-        return [];
+        return property_exists($this, 'fieldsMapping')
+            ? $this->fieldsMapping
+            : [];
     }
 
     /**
@@ -429,7 +429,7 @@ trait HasModule
      */
     protected function applyJoins(Builder $query): void
     {
-        $model = new $this->modelClass;
+        $model = new ($this->modelClass());
 
         foreach ($this->joins() as $relation) {
             $relationObject = $model->$relation();

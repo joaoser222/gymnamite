@@ -8,7 +8,7 @@ import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { masks, phoneMask } from '@/plugins/masks';
 import { fillAddressFromCep, type AddressForm } from '@/plugins/viacep';
 import { required, email, exactLength, phone, cpf } from '@/plugins/validators';
-import type { LabeledOption, Option } from '@/shared/options';
+import { useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -31,14 +31,6 @@ type Client = {
     address_district?: string | null;
     address_state?: string | null;
     address_city?: string | null;
-    status?: string;
-};
-
-type SharedProps = {
-    enums?: {
-        genderTypes?: LabeledOption<string>[];
-        clientStatus?: LabeledOption<string>[];
-    };
 };
 
 defineProps<{
@@ -46,8 +38,10 @@ defineProps<{
     routes: DetailsRoutes;
 }>();
 
-const page = usePage();
-const sharedProps = page.props as SharedProps;
+const sharedProps = usePage().props;
+const { genderTypes, ufs } = useSharedOptions(
+    sharedProps.options ?? {},
+);
 
 const defaults = {
     name: '',
@@ -66,21 +60,8 @@ const defaults = {
     address_complement: '',
     address_district: '',
     address_state: '',
-    address_city: '',
-    status: 'active',
+    address_city: ''
 };
-
-const genderOptions: Option<string>[] =
-    sharedProps.enums?.genderTypes?.map((option) => ({
-        title: option.label,
-        value: option.value,
-    })) ?? [];
-
-const statusOptions: Option<string>[] =
-    sharedProps.enums?.clientStatus?.map((option) => ({
-        title: option.label,
-        value: option.value,
-    })) ?? [];
 
 const isLoadingAddress = ref(false);
 
@@ -181,7 +162,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                     <v-select
                         v-model="form.gender"
                         label="Gênero"
-                        :items="genderOptions"
+                        :items="genderTypes"
                         :rules="[required]"
                         :error-messages="errors.gender"
                     />
@@ -259,9 +240,11 @@ async function fillAddress(form: AddressForm): Promise<void> {
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <v-select
                         v-model="form.address_state"
-                        label="UF"
+                        label="Estado"
+                        :items="ufs"
+                        :rules="[required]"
                         :error-messages="errors.address_state"
                     />
                 </v-col>

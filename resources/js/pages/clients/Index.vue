@@ -1,10 +1,13 @@
 <!-- resources/js/Pages/Clients/Index.vue -->
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import TablePage from '@/components/TablePage.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
 import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
 import { masks,formatMasks } from '@/plugins/masks';
+import { findLabel, useSharedOptions } from '@/shared/options';
+
 defineOptions({ layout: AuthenticatedLayout });
 
 // Props da página
@@ -40,6 +43,13 @@ const routes: TableRoutes = {
     changeVisibility: props.routes.changeVisibility,
     destroy: props.routes.destroy,
 };
+
+
+const sharedProps = usePage().props;
+const { clientStatus } = useSharedOptions(
+    sharedProps.options ?? {},
+);
+
 </script>
 
 <template>
@@ -57,11 +67,8 @@ const routes: TableRoutes = {
     >
         <!-- Status personalizado -->
         <template #column-status="{ item }">
-            <v-chip
-                :color="item.status === 'active' ? 'success' : 'error'"
-                size="small"
-            >
-                {{ item.status === 'active' ? 'Ativo' : 'Inativo' }}
+            <v-chip size="small">
+                {{ findLabel(clientStatus, item.status) }}
             </v-chip>
         </template>
         <template #column-created_at="{ item }">
