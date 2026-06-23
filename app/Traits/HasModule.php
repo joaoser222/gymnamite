@@ -90,9 +90,9 @@ trait HasModule
             ->where((new ($this->modelClass()))->getTable().'.visibility', $filters['visibility'])
             ->when(
                 $filters['search'] !== '' && $searchField !== null,
-                fn (Builder $query) => $query->where($searchField, 'like', '%'.$filters['search'].'%'),
+                fn (Builder $query) => $query->where($this->resolveSearchColumn($searchField), 'like', '%'.$filters['search'].'%'),
             )
-            ->orderBy($sortBy, 'desc')
+            ->orderBy($this->resolveSearchColumn($sortBy), 'desc')
             ->paginate(15)
             ->withQueryString();
 
@@ -409,6 +409,17 @@ trait HasModule
                 : $field,
             $this->fields(),
         );
+    }
+
+    /**
+     * Resolve o nome da coluna para cláusulas WHERE/ORDER BY,
+     * convertendo aliases do SELECT para expressões SQL reais.
+     */
+    protected function resolveSearchColumn(string $field): string
+    {
+        $mapping = $this->fieldsMapping();
+
+        return $mapping[$field] ?? $field;
     }
 
     /**
