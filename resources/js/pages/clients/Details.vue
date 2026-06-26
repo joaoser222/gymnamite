@@ -123,10 +123,9 @@ async function fillAddress(form: AddressForm): Promise<void> {
                             />
                         </v-col>
                         <v-col cols="12" md="6">
-                            <v-text-field
+                            <DateField
                                 v-model="form.legal_representative_birth_date"
                                 label="Nascimento do responsável"
-                                type="date"
                                 :rules="[required]"
                                 :error-messages="
                                     errors.legal_representative_birth_date
@@ -150,7 +149,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <DateField
                         v-model="form.birth_date"
                         label="Nascimento"
                         :rules="[required]"

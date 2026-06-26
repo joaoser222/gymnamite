@@ -54,19 +54,17 @@ const defaults = {
         <template #default="{ form, errors }">
             <v-row class="ma-0">
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <DateField
                         v-model="form.due_date"
                         label="Data de Vencimento"
-                        type="date"
                         :rules="[required]"
                         :error-messages="errors.due_date"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <DateField
                         v-model="form.payment_date"
                         label="Data de Pagamento"
-                        type="date"
                         :error-messages="errors.payment_date"
                     />
                 </v-col>

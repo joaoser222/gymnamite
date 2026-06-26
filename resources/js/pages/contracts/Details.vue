@@ -88,10 +88,9 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <DateField
                         v-model="form.start_date"
                         label="Data de Início"
-                        type="date"
                         :rules="[required]"
                         :error-messages="errors.start_date"
                     />

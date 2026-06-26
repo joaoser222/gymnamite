@@ -73,10 +73,9 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <DateField
                         v-model="form.expiration_date"
                         label="Data de Validade"
-                        type="date"
                         :error-messages="errors.expiration_date"
                     />
                 </v-col>
