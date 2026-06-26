@@ -4,7 +4,7 @@
         v-model="internalValue"
         :type="showPassword ? 'text' : 'password'"
         @input="onInput"
-        @update:modelValue="onUpdateModelValue"
+        @update:model-value="onUpdateModelValue"
     >
         <template #append-inner>
             <v-btn

@@ -2,7 +2,7 @@
     <div>
         <v-text-field
             v-bind="$attrs"
-            v-model="displayValue"
+            :model-value="displayValue"
             readonly
             @click="openDialog"
         >

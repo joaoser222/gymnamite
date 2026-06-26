@@ -2,6 +2,7 @@
     <v-text-field
         v-model="inputValue"
         v-bind="dynamicProps"
+        v-maska="'##/##/####'"
         @blur="handleInput"
     >
         <template #append-inner>
@@ -19,9 +20,10 @@
                     ></v-btn>
                 </template>
                 <v-date-picker
+                    :model-value="pickerValue"
                     elevation="24"
                     color="primary"
-                    @update:modelValue="datePickerInput"
+                    @update:model-value="datePickerInput"
                 ></v-date-picker>
             </v-menu>
         </template>
@@ -65,6 +67,20 @@ const dynamicProps = computed(() => ({
     ...attrs,
 }));
 
+const pickerValue = computed<string | undefined>(() => {
+    if (!props.modelValue) {
+        return undefined;
+    }
+
+    const momentObj = moment(props.modelValue, formatOutput);
+
+    if (!momentObj.isValid()) {
+        return undefined;
+    }
+
+    return momentObj.format('YYYY-MM-DD');
+});
+
 // As helpers isolam conversão e limpeza quando a entrada não representa uma data válida.
 function formatToDisplay(date: string | undefined): string {
     if (!date) return '';
@@ -90,20 +106,29 @@ function formatToOutput(date: string): string {
 
 // O picker trabalha com um valor normalizado e emite no formato esperado pelo backend.
 function datePickerInput(date: unknown): void {
-    if (typeof date !== 'string') return;
+    const momentObj =
+        typeof date === 'string'
+            ? moment(date)
+            : date instanceof Date
+              ? moment(date)
+              : null;
 
-    datePickerMenu.value = false;
-    const formatted = moment(date).format(formatOutput);
+    if (!momentObj || !momentObj.isValid()) {
+        return;
+    }
+
+    const formatted = momentObj.format(formatOutput);
+
+    inputValue.value = formatToDisplay(formatted);
     emit('update:modelValue', formatted);
+    datePickerMenu.value = false;
 }
 
 // Mantém o texto sincronizado quando o valor externo muda por navegação ou preenchimento automático.
 watch(
     () => props.modelValue,
     (newVal: string | undefined) => {
-        if (newVal) {
-            inputValue.value = formatToDisplay(newVal);
-        }
+        inputValue.value = newVal ? formatToDisplay(newVal) : '';
     },
     { immediate: true },
 );

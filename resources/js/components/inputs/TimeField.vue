@@ -19,9 +19,10 @@
                     ></v-btn>
                 </template>
                 <v-time-picker
+                    :model-value="pickerValue"
                     elevation="24"
                     color="primary"
-                    @update:modelValue="timePickerInput"
+                    @update:model-value="timePickerInput"
                 ></v-time-picker>
             </v-menu>
         </template>
@@ -65,12 +66,31 @@ const dynamicProps = computed<Record<string, unknown>>(() => {
     };
 });
 
+const pickerValue = computed<string | undefined>(() => {
+    if (!props.modelValue) {
+        return undefined;
+    }
+
+    const momentObj = moment(props.modelValue, props.formatOutput);
+
+    if (!momentObj.isValid()) {
+        return undefined;
+    }
+
+    return momentObj.format('HH:mm');
+});
+
 // O picker sempre emite no formato de saída, enquanto o input continua amigável ao usuário.
 function timePickerInput(time: string | null): void {
-    if (!time) return;
+    if (!time) {
+        return;
+    }
 
+    const formatted = moment(time, 'HH:mm').format(props.formatOutput);
+
+    inputValue.value = formatToDisplay(formatted);
+    emit('update:modelValue', formatted);
     timePickerMenu.value = false;
-    emit('update:modelValue', moment(time, 'HH:mm').format(props.formatOutput));
 }
 
 function formatToDisplay(time: string): string {
@@ -98,9 +118,7 @@ function formatToOutput(time: string): string {
 watch(
     () => props.modelValue,
     (newVal) => {
-        if (newVal) {
-            inputValue.value = formatToDisplay(newVal);
-        }
+        inputValue.value = newVal ? formatToDisplay(newVal) : '';
     },
     { immediate: true },
 );
