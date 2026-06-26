@@ -11,6 +11,7 @@ metadata:
 ## Project Stack
 
 This project uses Laravel + Inertia v3 + Vue 3 with Vuetify for UI.
+It is a Vue-only frontend codebase. Do not introduce or recommend React patterns, components, or examples here.
 
 - Vuetify is configured in `resources/js/plugins/vuetify.ts`.
 - Vite enables Vuetify through `vite-plugin-vuetify` in `vite.config.ts`.

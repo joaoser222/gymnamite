@@ -20,7 +20,7 @@ Activate this skill when:
 
 ## Project UI Stack
 
-This project uses Vuetify for Vue UI. When building visual components, forms, cards, tables, buttons, dialogs, or layouts, activate `vuetify-development` too and prefer Vuetify components over Tailwind or hand-written utility CSS.
+This project uses Vuetify for Vue UI and uses Vue only on the frontend. Ignore any installed or detected React packages when working in this repository. When building visual components, forms, cards, tables, buttons, dialogs, or layouts, activate `vuetify-development` too and prefer Vuetify components over Tailwind or hand-written utility CSS.
 
 ## Documentation
 

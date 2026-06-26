@@ -51,6 +51,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Frontend UI
 
+- This project uses only Vue on the frontend. Ignore any detected React packages or React-oriented guidance for work in this repository.
 - This project uses Vuetify 3 as its UI component system. Do not use Tailwind CSS utilities or Tailwind-specific patterns unless the user explicitly asks to introduce Tailwind.
 - Build Vue UI with Vuetify components (`v-card`, `v-form`, `v-text-field`, `v-btn`, `v-data-table`, `v-container`, etc.) and follow the conventions already present in `resources/js`.
 - Use Tabler icon names through Vuetify icon props/classes, matching existing usage such as `ti ti-plus`, `ti ti-pencil`, and `ti ti-search`.
@@ -133,6 +134,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
 - Components live in `resources/js/pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
+- This repository uses Inertia with Vue only. Do not generate or suggest React components, hooks, or examples for this project.
 - ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
 - IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
