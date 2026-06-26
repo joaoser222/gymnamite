@@ -1,3 +1,5 @@
+import { onlyAlphanumeric, onlyDigits } from './formatters.ts';
+
 export type MaskToken = {
     pattern: RegExp;
     transform?: (value: string) => string;
@@ -22,38 +24,36 @@ export const masks = {
     phone: '(##) #####-####',
 } as const;
 
-export function onlyDigits(value?: string | number | null): string {
-    return String(value ?? '').replace(/\D/g, '');
-}
-
-export function onlyAlphanumeric(value?: string | number | null): string {
-    return String(value ?? '').replace(/[^a-zA-Z0-9]/g, '');
-}
-
 export function phoneMask(value?: string | number | null): string {
     return onlyDigits(value).length > 10 ? masks.phone : masks.landlinePhone;
+}
+
+export function documentMask(value?: string | number | null): string {
+    return onlyDigits(value).length > 11 ? masks.cnpj : masks.cpf;
 }
 
 export function unmaskValue(
     value?: string | number | null,
     mask = '',
     mode: UnmaskMode = 'mask',
+    limitToMask = true,
 ): string {
     const stringValue = String(value ?? '');
+    const maskLength = countMaskTokens(mask);
 
     if (mode === 'none') {
         return stringValue;
     }
 
     if (mode === 'digits') {
-        return onlyDigits(stringValue);
+        return limitValue(onlyDigits(stringValue), maskLength, limitToMask);
     }
 
     if (mode === 'alphanumeric') {
-        return onlyAlphanumeric(stringValue);
+        return limitValue(onlyAlphanumeric(stringValue), maskLength, limitToMask);
     }
 
-    return unmaskByMask(stringValue, mask);
+    return limitValue(unmaskByMask(stringValue, mask), maskLength, limitToMask);
 }
 
 export function applyMask(
@@ -102,6 +102,8 @@ export const formatMasks = {
         applyMask(value, masks.cnpj),
     cpf: (value?: string | number | null): string =>
         applyMask(value, masks.cpf),
+    document: (value?: string | number | null): string =>
+        applyMask(value, documentMask(value)),
     phone: (value?: string | number | null): string =>
         applyMask(value, phoneMask(value)),
 };
@@ -114,9 +116,6 @@ function unmaskByMask(value: string, mask: string): string {
     const availableTokens = new Set(
         [...mask].filter((char) => maskTokens[char] !== undefined),
     );
-    const tokenCount = [...mask].filter(
-        (char) => maskTokens[char] !== undefined,
-    ).length;
 
     return [...value]
         .filter((char) =>
@@ -124,6 +123,21 @@ function unmaskByMask(value: string, mask: string): string {
                 maskTokens[token].pattern.test(char),
             ),
         )
-        .slice(0, tokenCount)
         .join('');
+}
+
+function countMaskTokens(mask: string): number {
+    return [...mask].filter((char) => maskTokens[char] !== undefined).length;
+}
+
+function limitValue(
+    value: string,
+    maskLength: number,
+    limitToMask: boolean,
+): string {
+    if (!limitToMask || maskLength === 0) {
+        return value;
+    }
+
+    return value.slice(0, maskLength);
 }

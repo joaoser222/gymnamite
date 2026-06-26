@@ -2,10 +2,10 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
-import TablePage from '@/components/TablePage.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
-import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
 import { masks,formatMasks } from '@/plugins/masks';
+import { formatDate } from '@/plugins/formatters';
+import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
 import { findLabel, useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -72,7 +72,7 @@ const { clientStatus } = useSharedOptions(
             </v-chip>
         </template>
         <template #column-created_at="{ item }">
-            {{ new Date(item.created_at).toLocaleDateString('pt-BR') }}
+            {{ formatDate(item.created_at) }}
         </template>
         <template #column-document="{ item }">
             {{ formatMasks.cpf(item.document) }}

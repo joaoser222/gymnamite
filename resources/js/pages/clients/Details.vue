@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import DetailsPage from '@/components/DetailsPage.vue';
 import type { DetailsRoutes } from '@/shared/page';
-import MaskedTextField from '@/components/inputs/MaskedTextField.vue';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { masks, phoneMask } from '@/plugins/masks';
 import { fillAddressFromCep, type AddressForm } from '@/plugins/viacep';
@@ -110,6 +108,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                                 :error-messages="
                                     errors.legal_representative_name
                                 "
+                                v-text-case="'capitalize'"
                             />
                         </v-col>
                         <v-col cols="12" md="6">
@@ -117,7 +116,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                                 v-model="form.legal_representative_document"
                                 label="CPF do responsável"
                                 :mask="masks.cpf"
-                                :rules="[required, exactLength(11)]"
+                                :rules="[required,cpf]"
                                 :error-messages="
                                     errors.legal_representative_document
                                 "
@@ -147,13 +146,13 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         label="Nome"
                         :rules="[required]"
                         :error-messages="errors.name"
+                        v-text-case="'capitalize'"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
                     <v-text-field
                         v-model="form.birth_date"
                         label="Nascimento"
-                        type="date"
                         :rules="[required]"
                         :error-messages="errors.birth_date"
                     />
@@ -183,6 +182,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         type="email"
                         :rules="[required, email]"
                         :error-messages="errors.email"
+                        v-text-case="'lower'"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
@@ -190,7 +190,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         v-model="form.phone"
                         label="Telefone"
                         :mask="phoneMask(form.phone)"
-                        :rules="[required, phone]"
+                        :rules="[required]"
                         :error-messages="errors.phone"
                     />
                 </v-col>
@@ -216,6 +216,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         v-model="form.address"
                         label="Endereço"
                         :error-messages="errors.address"
+                        v-text-case="'capitalize'"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
@@ -223,6 +224,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         v-model="form.address_number"
                         label="Número"
                         :error-messages="errors.address_number"
+                        v-text-case="'upper'"
                     />
                 </v-col>
                 <v-col cols="12" md="8">
@@ -230,6 +232,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         v-model="form.address_complement"
                         label="Complemento"
                         :error-messages="errors.address_complement"
+                        v-text-case="'capitalize'"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
@@ -237,6 +240,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         v-model="form.address_district"
                         label="Bairro"
                         :error-messages="errors.address_district"
+                        v-text-case="'capitalize'"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
@@ -253,6 +257,7 @@ async function fillAddress(form: AddressForm): Promise<void> {
                         v-model="form.address_city"
                         label="Cidade"
                         :error-messages="errors.address_city"
+                        v-text-case="'capitalize'"
                     />
                 </v-col>
             </v-row>

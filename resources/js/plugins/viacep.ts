@@ -1,5 +1,6 @@
 import { inject, type App, type InjectionKey } from 'vue';
-import { onlyDigits } from '@/plugins/masks';
+import { onlyDigits } from '@/plugins/formatters';
+import { capitalize } from '@/directives/textCase';
 
 export type ViaCepResponse = {
     cep: string;
@@ -86,11 +87,11 @@ export async function lookupCep(
 
     return {
         postalCode: onlyDigits(data.cep),
-        street: data.logradouro,
-        complement: data.complemento,
-        district: data.bairro,
-        city: data.localidade,
-        state: data.uf,
+        street: capitalize(`${data.logradouro}`),
+        complement: capitalize(`${data.complemento}`),
+        district: capitalize(`${data.bairro}`),
+        city: capitalize(`${data.localidade}`),
+        state: `${data.uf}`.toLocaleUpperCase(),
     };
 }
 

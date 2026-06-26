@@ -1,4 +1,55 @@
 @use 'vuetify/settings' with (
-    $body-font-family: 'Inter',
-    $border-radius-root: 8px
+    $body-font-family: 'Barlow',
+    $border-radius-root: 0px
 );
+
+// Scrollbar customizada
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--v-theme-primary));
+  border-radius: 2px;
+  
+  &:hover {
+    background: rgb(var(--v-theme-primary-darken-1));
+  }
+}
+
+/* Firefox — @supports isola só para Firefox */
+@supports (-moz-appearance: none) {
+  * {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(var(--v-theme-primary)) rgba(var(--v-theme-surface), 0.1);
+    }
+}
+
+
+
+.clipped-object {
+  clip-path: polygon(
+    10px 0%,        /* corte superior-esquerdo */
+    100% 0%,
+    100% calc(100% - 10px),  /* corte inferior-direito */
+    calc(100% - 10px) 100%,
+    0% 100%,
+    0% 10px
+  );
+  border-radius: 0 !important; /* remove border-radius padrão do Vuetify */
+}
+
+h1, h2, h3{
+    font-family: 'Barlow Condensed' !important;
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px); /* Safari */
+}

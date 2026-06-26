@@ -87,7 +87,12 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 
-// Campo de cor com preview inline e confirmação explícita antes de persistir a escolha.
+/**
+ * Campo de cor com preview inline e seletor em diálogo.
+ *
+ * O valor externo só é atualizado em `confirmColor`, permitindo testar a cor
+ * no diálogo sem persistir alterações parciais.
+ */
 const props = withDefaults(
     defineProps<{
         modelValue?: string;
@@ -97,7 +102,6 @@ const props = withDefaults(
     },
 );
 
-// Emits
 const emit = defineEmits<{
     (e: 'update:modelValue', value: string): void;
 }>();
@@ -107,12 +111,10 @@ const dialog = ref<boolean>(false);
 const internalValue = ref<string>(props.modelValue);
 const originalValue = ref<string>(props.modelValue);
 
-// Computed
 const displayValue = computed<string>(() => {
     return props.modelValue || '#ffffff';
 });
 
-// Watch
 watch(
     () => props.modelValue,
     (newVal: string | undefined) => {

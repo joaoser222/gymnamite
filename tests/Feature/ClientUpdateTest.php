@@ -75,4 +75,32 @@ class ClientUpdateTest extends TestCase
 
         $response->assertSessionHasErrors(['name', 'email', 'phone', 'document', 'gender', 'birth_date']);
     }
+
+    public function test_client_update_can_be_retried_after_validation_failure(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.update');
+        $client = Client::factory()->create([
+            'document' => '12345678901',
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('clients.show', $client))
+            ->put(route('clients.update', $client), [
+                ...$this->validPayload(),
+                'name' => '',
+            ])
+            ->assertRedirect(route('clients.show', $client))
+            ->assertSessionHasErrors(['name']);
+
+        $this->actingAs($user)
+            ->put(route('clients.update', $client), $this->validPayload())
+            ->assertRedirect(route('clients.index'));
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+            'name' => 'Cliente Atualizado',
+            'email' => 'atualizado@teste.com',
+        ]);
+    }
 }

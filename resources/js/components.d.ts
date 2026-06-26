@@ -12,6 +12,7 @@ declare module 'vue' {
     DetailsPage: typeof import('./components/DetailsPage.vue')['default']
     MaskedTextField: typeof import('./components/inputs/MaskedTextField.vue')['default']
     PasswordField: typeof import('./components/inputs/PasswordField.vue')['default']
+    ServerAutocomplete: typeof import('./components/inputs/ServerAutocomplete.vue')['default']
     TablePage: typeof import('./components/TablePage.vue')['default']
     TimeField: typeof import('./components/inputs/TimeField.vue')['default']
   }

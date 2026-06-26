@@ -21,6 +21,7 @@
             "vite/client"
         ],
         "resolveJsonModule": true,
+        "allowImportingTsExtensions": true,
         "allowJs": true,
         "sourceMap": true,
         "noEmit": true,

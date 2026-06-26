@@ -32,7 +32,12 @@
 import { ref, watch, computed, useAttrs } from 'vue';
 import moment from '@/plugins/moment';
 
-// Campo de data reutilizável com suporte a texto e picker, sempre convertendo entre display e persistência.
+/**
+ * Campo de data com entrada manual e `v-date-picker`.
+ *
+ * O componente converte entre um formato amigável para exibição
+ * (`formatDisplay`) e o formato esperado para persistência (`formatOutput`).
+ */
 const props = defineProps<{
     modelValue?: string;
     formatDisplay?: string;

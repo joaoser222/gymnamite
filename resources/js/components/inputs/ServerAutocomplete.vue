@@ -1,0 +1,136 @@
+<template>
+    <v-autocomplete
+        :model-value="modelValue"
+        v-model:search="searchQuery"
+        :items="options"
+        :loading="isLoading"
+        item-title="label"
+        item-value="value"
+        no-filter
+        v-bind="$attrs"
+        @update:model-value="emit('update:modelValue', $event)"
+    />
+</template>
+
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+
+/**
+ * Autocomplete com busca remota no endpoint `/select-box/{objectName}`.
+ *
+ * Fluxo:
+ * - carrega opções iniciais com busca vazia ao montar;
+ * - aplica debounce de 300ms na digitação;
+ * - aborta requisições anteriores para evitar race conditions.
+ *
+ * Props principais:
+ * - `objectName`: recurso consultado no backend;
+ * - `limit`: máximo de opções por requisição;
+ * - `modelValue`: valor selecionado no `v-model`.
+ */
+type SelectOption = {
+    value: string;
+    label: string;
+};
+
+const props = withDefaults(
+    defineProps<{
+        modelValue?: string | number | null;
+        objectName: string;
+        limit?: number;
+    }>(),
+    {
+        modelValue: null,
+        limit: 15,
+    },
+);
+
+const emit = defineEmits<{
+    (e: 'update:modelValue', value: string | number | null): void;
+}>();
+
+const searchQuery = ref('');
+const options = ref<SelectOption[]>([]);
+const isLoading = ref(false);
+
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let activeRequestController: AbortController | null = null;
+
+// Executa a busca imediatamente e garante que apenas a resposta mais recente atualize o estado.
+function runFetch(query: string): void {
+    activeRequestController?.abort();
+
+    const requestController = new AbortController();
+
+    activeRequestController = requestController;
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+    }
+
+    isLoading.value = true;
+
+    const params = new URLSearchParams({
+        search: query,
+        limit: String(props.limit),
+    });
+
+    fetch(`/select-box/${props.objectName}?${params}`, {
+            signal: requestController.signal,
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        })
+            .then((res) => res.json())
+            .then((data: SelectOption[]) => {
+                if (activeRequestController === requestController) {
+                    options.value = data;
+                }
+            })
+            .catch((error: unknown) => {
+                if (error instanceof DOMException && error.name === 'AbortError') {
+                    return;
+                }
+
+                throw error;
+            })
+            .finally(() => {
+                if (activeRequestController === requestController) {
+                    isLoading.value = false;
+                    activeRequestController = null;
+                }
+            });
+}
+
+// Usa debounce nas buscas digitadas e permite carga imediata na montagem inicial.
+function fetchOptions(query: string, immediate = false): void {
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+
+    if (immediate) {
+        runFetch(query);
+
+        return;
+    }
+
+    searchTimeout = setTimeout(() => {
+        runFetch(query);
+    }, 300);
+}
+
+watch(searchQuery, (value) => {
+    fetchOptions(value ?? '');
+});
+
+onMounted(() => {
+    fetchOptions('', true);
+});
+
+onBeforeUnmount(() => {
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+
+    activeRequestController?.abort();
+});
+</script>

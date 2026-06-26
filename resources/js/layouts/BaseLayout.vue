@@ -7,8 +7,8 @@
             color="surface"
             elevation="0"
         >
-            <div class="pa-4 d-flex align-center ga-3">
-                <v-img :src="logo" width="32" height="32" />
+            <div class="py-4 d-flex align-center ga-3">
+                <v-img :src="logo" height="48" />
             </div>
 
             <v-list v-model:opened="openedGroups" nav class="py-2">
@@ -93,16 +93,28 @@
             </template>
         </v-navigation-drawer>
 
-        <v-app-bar flat border="b" density="compact">
-            <v-btn icon="ti ti-menu-2" variant="text" @click="toggleSidebar" />
+        <v-app-bar flat density="compact" border="b" class="glass-dark border-surface-variant" color="transparent">
+            <v-btn-icon icon="ti ti-menu-2" @click="toggleSidebar" size="small"/>
 
-            <v-app-bar-title>{{ currentPageTitle }}</v-app-bar-title>
+            <v-app-bar-title>
+                <h3>{{ currentPageTitle }}</h3>
+            </v-app-bar-title>
         </v-app-bar>
 
         <v-main>
-            <v-container fluid class="pa-4 pa-md-6">
-                <slot />
-            </v-container>
+            <v-img
+                :style="{
+                    backgroundImage: `url(${pattern})`,
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: '500px 500px',
+                    backgroundPosition: '0 0',
+                    minHeight: '100vh !important'
+                }"
+            >
+                <v-container fluid class="pa-4 pa-md-6 bg-transparent">
+                    <slot />
+                </v-container>
+            </v-img>
         </v-main>
     </div>
 </template>
@@ -112,7 +124,8 @@ import { router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useDisplay } from 'vuetify';
 import { usePermissions } from '@/composables/usePermissions';
-import logo from '@/assets/logo.png';
+import logo from '@/assets/logo.webp';
+import pattern from '@/assets/pattern.jpg';
 
 type MenuItem = {
     title: string;

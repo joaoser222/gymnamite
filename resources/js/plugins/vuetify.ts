@@ -1,7 +1,7 @@
 import 'vuetify/styles';
 import '@tabler/icons-webfont/dist/tabler-icons.scss';
 import {tabler} from './tabler';
-import { VBtn, VCard,VIcon } from 'vuetify/components';
+import { VBtn } from 'vuetify/components';
 import { aliases } from 'vuetify/iconsets/mdi'
 import { pt } from 'vuetify/locale';
 import { createVuetify, type ThemeDefinition } from 'vuetify';
@@ -31,9 +31,14 @@ export default createVuetify({
             xl: 1904,
         },
     },
+    aliases:{
+        VClippedButton: VBtn,
+        VBtnIcon: VBtn
+    },
     defaults: {
         global: {
-            elevation: 0
+            elevation: 0,
+            rounded: 0
         },
         VTextField: {
             variant: 'outlined',
@@ -69,6 +74,12 @@ export default createVuetify({
         },
         VBtnIcon: {
             variant: 'text',
+            rounded: 'circle'
+        },
+        VClippedButton: {
+            elevation: 0,
+            variant: 'flat',
+            class: ['clipped-object'],
         },
         VBtnGroup: {
             border: 'sm',
@@ -105,7 +116,7 @@ export default createVuetify({
             hideDetails: 'auto',
             menuProps: {
                 elevation: 2,
-                contentClass: ['rounded-md', 'border-0'],
+                contentClass: ['border-0','rounded-0'],
             },
         },
 
@@ -118,7 +129,7 @@ export default createVuetify({
             hideDetails: 'auto',
             menuProps: {
                 elevation: 2,
-                contentClass: ['rounded-md', 'border-0'],
+                contentClass: ['border-0','rounded-0'],
             },
         },
         VChip: {
@@ -130,7 +141,7 @@ export default createVuetify({
         },
         VTable: {
             density: 'compact',
-            class: ['border-sm', 'border-surface-variant', 'rounded-lg']
+            class: ['border-sm', 'border-surface-variant']
         },
         VAlert: {
             variant: 'tonal',
@@ -172,15 +183,15 @@ export default createVuetify({
         VCheckbox: {
             density: 'compact',
             color: 'accent',
-            falseIcon: 'ti ti-square-rounded',
-            trueIcon: 'ti ti-square-rounded-check',
+            falseIcon: 'ti ti-square',
+            trueIcon: 'ti ti-square-check',
             trueValue: true,
             falseValue: false,
             hideDetails: 'auto',
         },
         VCheckboxBtn: {
-            falseIcon: 'ti ti-square-rounded',
-            trueIcon: 'ti ti-square-rounded-check',
+            falseIcon: 'ti ti-square',
+            trueIcon: 'ti ti-square-check',
         },
         VPagination: {
             activeColor: 'primary',

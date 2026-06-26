@@ -13,9 +13,23 @@ import {
 import { visibilityOptions, type VisibilityValue } from '@/shared/visibility';
 import type { PaginatedResponse } from '@/shared/page';
 
+/**
+ * Tabela genérica para páginas indexadas do sistema.
+ *
+ * Responsabilidades:
+ * - renderizar busca, filtros, seleção, ações e paginação;
+ * - sincronizar filtros com a URL via Inertia;
+ * - aplicar permissões de visualização, criação, exclusão e visibilidade;
+ * - permitir colunas e ações extras via slots.
+ */
+
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type SearchValue = string | number | boolean | null;
+
+type SearchComponentProps =
+    | Record<string, unknown>
+    | ((value: SearchValue) => Record<string, unknown>);
 
 type SearchComponentName =
     | 'VTextField'
@@ -25,7 +39,7 @@ type SearchComponentName =
 
 type SearchableConfig = {
     component?: SearchComponentName;
-    props?: Record<string, unknown>;
+    props?: SearchComponentProps;
 };
 
 export type { PaginatedResponse };
@@ -96,6 +110,7 @@ const props = withDefaults(defineProps<Props>(), {
     customSlots: () => [],
 });
 
+// Eventos para páginas que precisem reagir sem duplicar a lógica da tabela.
 const emit = defineEmits<{
     'update:search': [value: SearchValue];
     'update:page': [value: number];
@@ -184,9 +199,16 @@ const selectedSearchComponentProps = computed(() => {
         base.clearable = true;
     }
 
-    return { ...base, ...(selectedSearchableConfig.value.props ?? {}) };
+    const componentProps = selectedSearchableConfig.value.props;
+    const resolvedProps =
+        typeof componentProps === 'function'
+            ? componentProps(searchInputValue.value)
+            : (componentProps ?? {});
+
+    return { ...base, ...resolvedProps };
 });
 
+// Normaliza o v-model entre componentes de busca com tipos diferentes.
 const searchInputValue = computed<SearchValue>({
     get: () =>
         selectedSearchComponentName.value === 'DateField'
@@ -430,6 +452,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 <v-card-title>Alterar Visibilidade</v-card-title>
                 <v-list density="compact" nav>
                     <v-list-item
+                        class="clipped-object"
                         v-for="item in visibilityOptions"
                         :key="item.value"
                         :prepend-icon="item.icon"
@@ -446,6 +469,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
 
         <!-- Barra de ferramentas -->
         <div class="d-flex justify-start align-center flex-wrap ga-3 my-4">
+            <!-- O campo principal de busca muda dinamicamente conforme o header configurado. -->
             <component
                 :is="selectedSearchComponent"
                 v-model="searchInputValue"
@@ -464,7 +488,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
 
             <div class="flex-grow-1" />
 
-            <v-btn
+            <v-clipped-button
                 v-if="permissions.create"
                 color="primary"
                 prepend-icon="ti ti-plus"
@@ -472,8 +496,8 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 @click="handleCreate"
             >
                 Novo
-            </v-btn>
-            <v-btn
+            </v-clipped-button>
+            <v-clipped-button
                 v-if="permissions.visibility && selectedItems.length > 0"
                 color="secondary"
                 prepend-icon="ti ti-eye"
@@ -481,8 +505,8 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 @click="modalVisibility = true"
             >
                 Alterar Visibilidade
-            </v-btn>
-            <v-btn
+            </v-clipped-button>
+            <v-clipped-button
                 v-if="permissions.delete && selectedItems.length > 0 && internalVisibilityFilter=='archived'"
                 color="error"
                 prepend-icon="ti ti-trash"
@@ -490,12 +514,12 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 @click="handleDelete"
             >
                 Deletar
-            </v-btn>
+            </v-clipped-button>
         </div>
 
         <!-- Filtro de visibilidade -->
         <div class="mb-4">
-            <v-btn-group>
+            <v-btn-group class="bg-secondary" border="0">
                 <v-btn
                     v-for="item in visibilityOptions"
                     :key="item.value"
@@ -540,6 +564,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 #[`item.${slot}`]="{ item }"
                 :key="slot"
             >
+                <!-- `column-{slot}` permite sobrescrever apenas a célula necessária. -->
                 <slot :name="`column-${slot}`" :item="item" />
             </template>
 
@@ -549,12 +574,10 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 #item.actions="{ item }"
             >
                 <div class="d-flex gap-1">
-                    <v-btn
+                    <v-btn-icon
                         v-if="permissions.view"
                         icon="ti ti-pencil"
                         size="small"
-                        color="primary"
-                        variant="tonal"
                         @click="handleEdit(item)"
                     />
                     <slot name="extra-actions" :item="item" />

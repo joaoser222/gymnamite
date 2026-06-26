@@ -32,7 +32,12 @@
 import { ref, watch, computed, useAttrs } from 'vue';
 import moment from '@/plugins/moment';
 
-// Campo de horário com digitação manual e picker compartilhando a mesma regra de formatação.
+/**
+ * Campo de horário com entrada manual e `v-time-picker`.
+ *
+ * O usuário vê `formatDisplay`, enquanto o `v-model` sempre emite em
+ * `formatOutput`, mantendo o valor consistente para persistência.
+ */
 interface Props {
     modelValue?: string;
     formatDisplay?: string;

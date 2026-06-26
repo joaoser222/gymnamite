@@ -14,7 +14,12 @@
 import { computed } from 'vue';
 import { applyMask, unmaskValue, type UnmaskMode } from '@/plugins/masks';
 
-// Wrapper leve sobre `v-text-field` para centralizar exibição mascarada e valor emitido.
+/**
+ * Wrapper leve sobre `v-text-field` para valores mascarados.
+ *
+ * `displayValue` controla apenas a exibição; o valor emitido depende de
+ * `unmask`, permitindo persistir texto mascarado ou limpo no `v-model`.
+ */
 defineOptions({
     inheritAttrs: false,
 });
@@ -24,11 +29,13 @@ const props = withDefaults(
         modelValue?: string | number | null;
         mask?: string;
         unmask?: UnmaskMode;
+        limitToMask?: boolean;
     }>(),
     {
         modelValue: '',
         mask: '',
         unmask: 'mask',
+        limitToMask: true,
     },
 );
 
@@ -42,6 +49,9 @@ const displayValue = computed(() =>
 );
 
 function updateValue(value: string | null): void {
-    emit('update:modelValue', unmaskValue(value, props.mask, props.unmask));
+    emit(
+        'update:modelValue',
+        unmaskValue(value, props.mask, props.unmask, props.limitToMask),
+    );
 }
 </script>

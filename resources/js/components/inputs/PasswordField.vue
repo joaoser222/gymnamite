@@ -21,7 +21,12 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
-// Wrapper simples para alternar visibilidade da senha sem duplicar lógica em formulários.
+/**
+ * Wrapper de `v-text-field` para campos de senha.
+ *
+ * Mantém API compatível com `v-model` e adiciona apenas o toggle de
+ * visibilidade, evitando repetir essa lógica nas páginas.
+ */
 interface Props {
     modelValue?: string;
 }

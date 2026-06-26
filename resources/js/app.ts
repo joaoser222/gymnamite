@@ -2,6 +2,7 @@ import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h, type DefineComponent } from 'vue';
 import { vMaska } from 'maska/vue';
+import { vTextCase } from '@/directives/textCase';
 import RootApp from '@/App.vue';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import viaCep from '@/plugins/viacep';
@@ -42,6 +43,7 @@ createInertiaApp({
         app.use(vuetify);
         app.use(viaCep);
         app.directive('maska', vMaska);
+        app.directive('text-case', vTextCase);
 
         app.mount(el);
     },

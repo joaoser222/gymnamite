@@ -7,6 +7,16 @@ import {
 } from '@/composables/useModulePermissions';
 import type { DetailsRoutes } from '@/shared/page';
 
+/**
+ * Wrapper genérico para telas de criação/edição.
+ *
+ * Responsabilidades:
+ * - montar o `useForm` a partir de `defaults` + `item`;
+ * - alternar automaticamente entre store e update;
+ * - controlar permissão, validação e estado dos botões;
+ * - expor o formulário via slot para a página dona dos campos.
+ */
+
 // O formulário genérico diferencia automaticamente permissões de criação e atualização.
 type DetailsPermissionAction = 'create' | 'update';
 type DetailsPermissionMap = ModulePermissionMap<DetailsPermissionAction>;
@@ -57,17 +67,20 @@ const initialData = computed<FormData>(() => ({
 // `useForm` mantém integração com validação/erros do Inertia sem acoplar o schema ao componente genérico.
 const form = useForm<FormData>({ ...initialData.value });
 
+const formErrors = computed(() => form.errors);
+
 const emit = defineEmits<{
     save: [form: typeof form];
     cancel: [];
 }>();
 
+// Sem identificador, o componente assume fluxo de criação.
 const recordId = computed(() => props.item?.[props.itemKey]);
 const isCreating = computed(
     () => recordId.value === undefined || recordId.value === null,
 );
 const pageTitle = computed(
-    () => `${isCreating.value ? 'Novo' : 'Editar'} ${props.title}`,
+    () => `${isCreating.value ? 'Criar' : 'Editar'} ${props.title}`,
 );
 
 const permissions = computed(() => ({
@@ -151,8 +164,15 @@ watch(
 );
 
 watch(
-    form,
-    () => {
+    () => form.data(),
+    (current, previous) => {
+        // Limpa erro do campo que o usuário acabou de editar.
+        for (const key of Object.keys(current)) {
+            if (key in previous && current[key] !== previous[key] && form.errors[key]) {
+                form.clearErrors(key);
+            }
+        }
+
         // Revalida de forma assíncrona para manter o estado do botão consistente com o formulário atual.
         void nextTick(validate);
     },
@@ -182,9 +202,10 @@ void nextTick(validate);
                     validate-on="input"
                     @submit.prevent="submit"
                 >
+                    <!-- A página consome o form pronto e renderiza apenas os campos específicos do módulo. -->
                     <slot
                         :form="form"
-                        :errors="form.errors"
+                        :errors="formErrors"
                         :is-creating="isCreating"
                         :validate="validate"
                         :canSubmit="permissions.submit"
@@ -195,15 +216,15 @@ void nextTick(validate);
         </v-card>
 
         <div class="d-flex ga-2 pa-3 justify-end">
-            <v-btn
+            <v-clipped-button
                 color="secondary"
                 prepend-icon="ti ti-arrow-left"
                 :disabled="form.processing"
                 @click="cancel"
             >
                 {{ cancelLabel }}
-            </v-btn>
-            <v-btn
+            </v-clipped-button>
+            <v-clipped-button
                 v-if="permissions.submit"
                 color="primary"
                 prepend-icon="ti ti-device-floppy"
@@ -212,7 +233,7 @@ void nextTick(validate);
                 @click="submit"
             >
                 {{ saveLabel }}
-            </v-btn>
+            </v-clipped-button>
         </div>
     </div>
 </template>

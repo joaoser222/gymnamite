@@ -2,19 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Traits\HasVisibility;
+use Illuminate\Database\Eloquent\Model;
 
 class Supplier extends Model
 {
     use HasVisibility;
+
     protected $table = 'suppliers';
 
     protected $fillable = [
         'name',
         'email',
         'document',
-        'birth_date',
         'phone',
         'address',
         'address_number',
@@ -22,6 +22,6 @@ class Supplier extends Model
         'address_state',
         'address_city',
         'address_district',
-        'address_postal_code'
+        'address_postal_code',
     ];
 }

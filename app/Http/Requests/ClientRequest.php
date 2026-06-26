@@ -26,7 +26,7 @@ class ClientRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'phone' => ['required', 'string', 'size:11'],
+            'phone' => ['required', 'string', 'min:10', 'max:11'],
             'document' => [
                 'required',
                 'string',

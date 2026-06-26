@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import PasswordField from '@/components/inputs/PasswordField.vue';
+import logo from '@/assets/logo.webp';
 
 defineOptions({ layout: null });
 
@@ -42,13 +42,7 @@ const submit = () => {
                     <v-card-text class="pa-8">
                         <!-- Logo -->
                         <div class="d-flex justify-center mb-6">
-                            <v-avatar
-                                size="48"
-                                color="primary"
-                                style="font-size: 20px; font-weight: 500"
-                            >
-                                A
-                            </v-avatar>
+                            <v-img :src="logo" height="48" />
                         </div>
 
                         <!-- Título -->

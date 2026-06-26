@@ -12,7 +12,10 @@ export default defineConfig({
             input: ['resources/js/app.ts'],
             refresh: true,
             fonts: [
-                google('Inter', {
+                google('Barlow', {
+                    weights: [400, 500, 600],
+                }),
+                google('Barlow Condensed', {
                     weights: [400, 500, 600],
                 }),
             ],
