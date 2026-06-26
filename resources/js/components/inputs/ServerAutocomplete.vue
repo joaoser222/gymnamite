@@ -2,7 +2,7 @@
     <v-autocomplete
         :model-value="modelValue"
         v-model:search="searchQuery"
-        :items="options"
+        :items="displayedOptions"
         :loading="isLoading"
         item-title="label"
         item-value="value"
@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 /**
  * Autocomplete com busca remota no endpoint `/select-box/{objectName}`.
@@ -53,8 +53,54 @@ const searchQuery = ref('');
 const options = ref<SelectOption[]>([]);
 const isLoading = ref(false);
 
+const displayedOptions = computed<SelectOption[]>(() => {
+    const selected = selectedValue();
+
+    if (selected === '') {
+        return options.value;
+    }
+
+    const prioritizedOptions = [...options.value].sort((first, second) => {
+        if (first.value === selected) {
+            return -1;
+        }
+
+        if (second.value === selected) {
+            return 1;
+        }
+
+        return 0;
+    });
+
+    return prioritizedOptions.filter((option, index, items) => {
+        return items.findIndex((item) => item.value === option.value) === index;
+    });
+});
+
+const selectedOption = computed<SelectOption | undefined>(() => {
+    const selected = selectedValue();
+
+    if (selected === '') {
+        return undefined;
+    }
+
+    return displayedOptions.value.find((option) => option.value === selected);
+});
+
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 let activeRequestController: AbortController | null = null;
+
+function selectedValue(): string {
+    return props.modelValue == null ? '' : String(props.modelValue);
+}
+
+function normalizedSearchQuery(query: string): string {
+    if (selectedOption.value && query === selectedOption.value.label) {
+        return '';
+    }
+
+    return query;
+}
 
 // Executa a busca imediatamente e garante que apenas a resposta mais recente atualize o estado.
 function runFetch(query: string): void {
@@ -74,6 +120,12 @@ function runFetch(query: string): void {
         search: query,
         limit: String(props.limit),
     });
+
+    const selected = selectedValue();
+
+    if (selected !== '') {
+        params.set('selected', selected);
+    }
 
     fetch(`/select-box/${props.objectName}?${params}`, {
             signal: requestController.signal,
@@ -119,8 +171,25 @@ function fetchOptions(query: string, immediate = false): void {
 }
 
 watch(searchQuery, (value) => {
-    fetchOptions(value ?? '');
+    fetchOptions(normalizedSearchQuery(value ?? ''));
 });
+
+watch(
+    () => props.modelValue,
+    (value) => {
+        if (value == null) {
+            return;
+        }
+
+        const valueAsString = String(value);
+
+        if (options.value.some((option) => option.value === valueAsString)) {
+            return;
+        }
+
+        fetchOptions(searchQuery.value ?? '', true);
+    },
+);
 
 onMounted(() => {
     fetchOptions('', true);

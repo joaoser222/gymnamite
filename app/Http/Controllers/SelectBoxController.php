@@ -87,6 +87,7 @@ class SelectBoxController extends Controller
         string $optionValue = 'id'
     ): JsonResponse {
         $search = $request->input('search', '');
+        $selected = $request->input('selected');
         $limit = min((int) $request->input('limit', 15), 50);
 
         $query = $modelClass::query()
@@ -107,8 +108,24 @@ class SelectBoxController extends Controller
                 'value' => (string) $model->getAttribute($optionValue),
                 'label' => (string) $model->getAttribute($optionName),
             ])
-            ->all();
+            ->values();
 
-        return response()->json($options);
+        if ($selected !== null && $selected !== '') {
+            $selectedOption = $modelClass::query()
+                ->select([$optionValue, $optionName])
+                ->where($optionValue, $selected)
+                ->first();
+
+            if ($selectedOption !== null) {
+                $options->prepend([
+                    'value' => (string) $selectedOption->getAttribute($optionValue),
+                    'label' => (string) $selectedOption->getAttribute($optionName),
+                ]);
+
+                $options = $options->unique('value')->values();
+            }
+        }
+
+        return response()->json($options->all());
     }
 }
