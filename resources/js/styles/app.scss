@@ -3,7 +3,47 @@
     $border-radius-root: 0px
 );
 
-// Scrollbar customizada
+// Base da aplicação: garante altura total e aplica o background global cacheável.
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  background-image: url('../assets/bg.webp');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+// Shell do Vuetify: deixa as camadas principais transparentes para o background global aparecer.
+#app,
+.app-transparent-shell,
+.v-application,
+.v-application__wrap {
+  min-height: 100%;
+  background: transparent !important;
+}
+
+// Layout transparente: remove fundos locais do layout principal.
+.layout-transparent-main {
+  background: transparent !important;
+}
+
+.layout-transparent-container {
+  background: transparent !important;
+}
+
+// Tipografia: títulos usam a família condensada da identidade visual.
+h1,
+h2,
+h3 {
+  font-family: 'Barlow Condensed' !important;
+}
+
+// Scrollbar: personalização leve alinhada ao tema.
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -22,16 +62,15 @@
   }
 }
 
-/* Firefox — @supports isola só para Firefox */
+// Scrollbar no Firefox: aplica estilo equivalente sem afetar outros navegadores.
 @supports (-moz-appearance: none) {
   * {
-        scrollbar-width: thin;
-        scrollbar-color: rgb(var(--v-theme-primary)) rgba(var(--v-theme-surface), 0.1);
-    }
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--v-theme-primary)) rgba(var(--v-theme-surface), 0.1);
+  }
 }
 
-
-
+// Utilitários visuais: recorte angular usado em botões e superfícies destacadas.
 .clipped-object {
   clip-path: polygon(
     10px 0%,        /* corte superior-esquerdo */
@@ -44,10 +83,7 @@
   border-radius: 0 !important; /* remove border-radius padrão do Vuetify */
 }
 
-h1, h2, h3{
-    font-family: 'Barlow Condensed' !important;
-}
-
+// Utilitários de superfície: efeito glass escuro para overlays e cards especiais.
 .glass-dark {
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(8px);
