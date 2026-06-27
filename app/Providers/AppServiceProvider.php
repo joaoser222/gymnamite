@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
             $prefix = $controller === $prefixOrController
                 ? Str::of(class_basename($controller))->beforeLast('Controller')->plural()->kebab()->toString()
                 : $prefixOrController;
-            $param = Str::singular($prefix);
+            $param = Str::of($prefix)->replace('-', '_')->singular()->toString();
 
             Route::prefix($prefix)->name("{$prefix}.")->group(function () use ($controller, $param) {
                 Route::get('/', [$controller, 'index'])->name('index');

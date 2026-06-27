@@ -9,6 +9,7 @@ use App\Models\DirectLesson;
 use App\Models\Trainer;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class DirectLessonController extends Controller
 {

@@ -30,4 +30,9 @@ class Product extends Model
     protected $attributes = [
         'product_type' => ProductType::MERCHANDISE,
     ];
+
+    public function productUnity()
+    {
+        return $this->belongsTo(ProductUnity::class, 'product_unity', 'code');
+    }
 }

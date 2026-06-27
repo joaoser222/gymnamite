@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
 import type { DetailsRoutes } from '@/shared/page';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { required } from '@/plugins/validators';
@@ -17,7 +16,7 @@ type FinancialCategory = {
 };
 
 defineProps<{
-    FinancialCategory?: FinancialCategory | null;
+    financialCategory?: FinancialCategory | null;
     routes: DetailsRoutes;
 }>();
 
@@ -30,17 +29,15 @@ const defaults = {
     name: '',
     color: '',
     operation_type: '',
-    cost_center_id: null
+    cost_center_id: null,
 };
-
-const isLoadingAddress = ref(false);
 
 </script>
 
 <template>
     <DetailsPage
         title="Categorias Financeiras"
-        :item="FinancialCategory"
+        :item="financialCategory"
         :defaults="defaults"
         :routes="routes"
         module="financial_categories"

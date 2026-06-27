@@ -17,7 +17,7 @@ class ContractController extends Controller
      */
     protected array $fields = ['id', 'plan_name', 'price', 'start_date', 'duration', 'status', 'created_at'];
 
-    protected array $joins = ['client', 'plan'];
+    protected array $joins = ['client'];
 
     /**
      * @var array<string, string>
@@ -31,7 +31,6 @@ class ContractController extends Controller
         'status' => 'contracts.status',
         'created_at' => 'contracts.created_at',
         'client_name' => 'clients.name',
-        'plan_name_rel' => 'plans.name',
     ];
 
     /**

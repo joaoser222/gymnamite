@@ -64,20 +64,16 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <CurrencyField
                         v-model="form.purchase_price"
-                        label="Preço de Compra"
-                        type="number"
-                        prefix="R$"
+                        label="Preço de Compra (R$)"
                         :error-messages="errors.purchase_price"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <CurrencyField
                         v-model="form.sale_price"
-                        label="Preço de Venda"
-                        type="number"
-                        prefix="R$"
+                        label="Preço de Venda (R$)"
                         :rules="[required]"
                         :error-messages="errors.sale_price"
                     />

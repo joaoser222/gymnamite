@@ -60,11 +60,9 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="6">
-                    <v-text-field
+                    <CurrencyField
                         v-model="form.value"
                         label="Valor"
-                        type="number"
-                        prefix="R$"
                         :rules="[required]"
                         :error-messages="errors.value"
                     />

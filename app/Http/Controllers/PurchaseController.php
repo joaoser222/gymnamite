@@ -9,6 +9,7 @@ use App\Models\Purchase;
 use App\Models\Supplier;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class PurchaseController extends Controller
 {

@@ -71,11 +71,9 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <CurrencyField
                         v-model="form.balance"
                         label="Saldo"
-                        type="number"
-                        prefix="R$"
                         :error-messages="errors.balance"
                     />
                 </v-col>

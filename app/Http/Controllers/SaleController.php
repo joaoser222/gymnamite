@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\Sale;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class SaleController extends Controller
 {

@@ -67,7 +67,7 @@ const { clientStatus } = useSharedOptions(
     >
         <!-- Status personalizado -->
         <template #column-status="{ item }">
-            <v-chip size="small">
+            <v-chip>
                 {{ findLabel(clientStatus, item.status) }}
             </v-chip>
         </template>

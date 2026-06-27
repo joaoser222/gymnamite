@@ -317,7 +317,7 @@ trait HasModule
 
     protected function routeParameterName(): string
     {
-        return Str::singular($this->routePrefix());
+        return Str::of($this->routePrefix())->replace('-', '_')->singular()->toString();
     }
 
     protected function indexComponent(): string

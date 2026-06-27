@@ -101,15 +101,10 @@
             </v-app-bar-title>
         </v-app-bar>
 
-        <v-main>
-            <v-img
-                cover
-                :src="pattern"
-            >
-                <v-container fluid class="pa-4 pa-md-6 bg-transparent">
-                    <slot />
-                </v-container>
-            </v-img>
+        <v-main class="layout-transparent-main">
+            <v-container fluid class="pa-4 pa-md-6 layout-transparent-container">
+                <slot />
+            </v-container>
         </v-main>
     </div>
 </template>
@@ -120,7 +115,6 @@ import { computed, ref, watch } from 'vue';
 import { useDisplay } from 'vuetify';
 import { usePermissions } from '@/composables/usePermissions';
 import logo from '@/assets/logo.webp';
-import pattern from '@/assets/pattern.jpg';
 
 type MenuItem = {
     title: string;

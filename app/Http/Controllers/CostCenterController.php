@@ -7,6 +7,7 @@ use App\Enums\OperationType;
 use App\Models\CostCenter;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class CostCenterController extends Controller
 {
@@ -35,6 +36,15 @@ class CostCenterController extends Controller
     protected function modelClass(): string
     {
         return CostCenter::class;
+    }
+
+    protected function moduleIndexProps(Request $request): array
+    {
+        return [
+            'options' => [
+                'operationTypes' => $this->enumOptions(OperationType::class),
+            ],
+        ];
     }
 
     protected function moduleDetailsProps(?Model $model = null): array

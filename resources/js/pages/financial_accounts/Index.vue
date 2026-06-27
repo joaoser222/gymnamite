@@ -50,7 +50,7 @@ const { accountTypes } = useSharedOptions(sharedProps.options ?? {});
             {{ formatDate(item.created_at) }}
         </template>
         <template #column-account_type="{ item }">
-            <v-chip size="small">
+            <v-chip>
                 {{ findLabel(accountTypes, item.account_type) }}
             </v-chip>
         </template>

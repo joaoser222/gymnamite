@@ -1,6 +1,6 @@
 <template>
     <v-autocomplete
-        :model-value="modelValue"
+        :model-value="normalizedModelValue"
         v-model:search="searchQuery"
         :items="displayedOptions"
         :loading="isLoading"
@@ -52,6 +52,10 @@ const emit = defineEmits<{
 const searchQuery = ref('');
 const options = ref<SelectOption[]>([]);
 const isLoading = ref(false);
+
+const normalizedModelValue = computed<string | null>(() => {
+    return props.modelValue == null ? null : String(props.modelValue);
+});
 
 const displayedOptions = computed<SelectOption[]>(() => {
     const selected = selectedValue();

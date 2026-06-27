@@ -126,7 +126,7 @@ const menuGroups: MenuGroup[] = [
             {
                 title: 'Aula Avulsa',
                 icon: 'ti ti-barbell',
-                href: '/direct-lesson',
+                href: '/direct-lessons',
                 permission: 'direct_lessons.view',
             },
         ],

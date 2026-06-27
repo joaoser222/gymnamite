@@ -68,29 +68,23 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <CurrencyField
                         v-model="form.gross_value"
                         label="Valor Bruto"
-                        type="number"
-                        prefix="R$"
                         :error-messages="errors.gross_value"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <CurrencyField
                         v-model="form.discount_value"
                         label="Desconto"
-                        type="number"
-                        prefix="R$"
                         :error-messages="errors.discount_value"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
-                    <v-text-field
+                    <CurrencyField
                         v-model="form.total"
                         label="Total"
-                        type="number"
-                        prefix="R$"
                         :rules="[required]"
                         :error-messages="errors.total"
                     />

@@ -58,7 +58,7 @@ const { billableStatus } = useSharedOptions(sharedProps.options ?? {});
             {{ formatDate(item.start_date) }}
         </template>
         <template #column-status="{ item }">
-            <v-chip size="small">
+            <v-chip>
                 {{ findLabel(billableStatus, item.status) }}
             </v-chip>
         </template>

@@ -60,7 +60,7 @@ const { invoiceStatus } = useSharedOptions(sharedProps.options ?? {});
             {{ formatDate(item.payment_date) }}
         </template>
         <template #column-status="{ item }">
-            <v-chip size="small">
+            <v-chip>
                 {{ findLabel(invoiceStatus, item.status) }}
             </v-chip>
         </template>

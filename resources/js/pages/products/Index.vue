@@ -17,8 +17,9 @@ const headers: TableHeader[] = [
     { title: 'ID', key: 'id', sortable: true, width: '80px' },
     { title: 'Nome', key: 'name', sortable: true, searchable: true },
     { title: 'Preço', key: 'sale_price', sortable: true },
-    { title: 'Estoque', key: 'quantity', sortable: true },
-    { title: 'Tipo', key: 'product_type', sortable: true },
+    { title: 'Estoque', key: 'quantity', sortable: false },
+    { title: 'Tipo', key: 'product_type', sortable: false },
+    { title: 'Unidade', key: 'product_unity_label', sortable: false },
     { title: 'Criado em', key: 'created_at', sortable: true },
 ];
 
@@ -45,7 +46,7 @@ const { productTypes } = useSharedOptions(sharedProps.options ?? {});
         :routes="routes"
         module="products"
         title="Produtos"
-        :custom-slots="['created_at', 'sale_price', 'product_type']"
+        :custom-slots="['created_at', 'sale_price', 'product_type','product_unity_label']"
     >
         <template #column-created_at="{ item }">
             {{ formatDate(item.created_at) }}
@@ -54,8 +55,13 @@ const { productTypes } = useSharedOptions(sharedProps.options ?? {});
             {{ formatCurrency(item.sale_price) }}
         </template>
         <template #column-product_type="{ item }">
-            <v-chip size="small">
+            <v-chip>
                 {{ findLabel(productTypes, item.product_type) }}
+            </v-chip>
+        </template>
+        <template #column-product_unity_label="{ item }">
+            <v-chip>
+                {{item.product_unity_label}}
             </v-chip>
         </template>
     </TablePage>
