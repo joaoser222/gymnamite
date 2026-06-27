@@ -474,6 +474,8 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 :is="selectedSearchComponent"
                 v-model="searchInputValue"
                 v-bind="selectedSearchComponentProps"
+                variant="solo-filled"
+                elevation="2"
                 class="mw-33"
             />
             <v-select
@@ -519,7 +521,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
 
         <!-- Filtro de visibilidade -->
         <div class="mb-4">
-            <v-btn-group class="bg-secondary" border="0">
+            <v-btn-group class="bg-secondary" elevation="2" border="0">
                 <v-btn
                     v-for="item in visibilityOptions"
                     :key="item.value"

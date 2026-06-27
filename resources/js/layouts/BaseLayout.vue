@@ -93,7 +93,7 @@
             </template>
         </v-navigation-drawer>
 
-        <v-app-bar flat density="compact" border="b" class="glass-dark border-surface-variant" color="transparent">
+        <v-app-bar flat density="compact" border="b" class="border-surface-variant">
             <v-btn-icon icon="ti ti-menu-2" @click="toggleSidebar" size="small"/>
 
             <v-app-bar-title>
@@ -103,13 +103,8 @@
 
         <v-main>
             <v-img
-                :style="{
-                    backgroundImage: `url(${pattern})`,
-                    backgroundRepeat: 'repeat',
-                    backgroundSize: '500px 500px',
-                    backgroundPosition: '0 0',
-                    minHeight: '100vh !important'
-                }"
+                cover
+                :src="pattern"
             >
                 <v-container fluid class="pa-4 pa-md-6 bg-transparent">
                     <slot />
