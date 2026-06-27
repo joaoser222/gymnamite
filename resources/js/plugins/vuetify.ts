@@ -7,7 +7,16 @@ import { pt } from 'vuetify/locale';
 import { createVuetify, type ThemeDefinition } from 'vuetify';
 import themes from '../themes/index';
 
-// Type assertion para temas
+/**
+ * Configuração central do Vuetify da aplicação.
+ *
+ * Este arquivo concentra:
+ * - tema, locale e iconset;
+ * - aliases de componentes usados no projeto;
+ * - defaults visuais para manter consistência entre páginas.
+ */
+
+// Garante tipagem compatível com o shape esperado pelo Vuetify.
 const typedThemes = themes as Record<string, ThemeDefinition>;
 
 export default createVuetify({
@@ -36,6 +45,7 @@ export default createVuetify({
         VBtnIcon: VBtn
     },
     defaults: {
+        // Defaults globais e por componente evitam repetir props visuais nas páginas.
         global: {
             elevation: 0,
             rounded: 0
@@ -133,6 +143,7 @@ export default createVuetify({
             },
         },
         VChip: {
+            color: 'success',
             variant: 'flat',
             size: 'small',
             density: 'comfortable',

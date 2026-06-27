@@ -1,5 +1,12 @@
 import { onlyDigits } from './formatters.ts';
 
+/**
+ * Validadores reutilizáveis para formulários Vuetify.
+ *
+ * Mantém regras simples e síncronas, retornando `true` ou a mensagem de erro
+ * esperada pelos componentes de input.
+ */
+
 export const required = (value: unknown) => !!value || 'É obrigatório';
 export const email = (value: string) => /.+@.+\..+/.test(value) || 'E-mail inválido';
 
@@ -12,6 +19,7 @@ export const cpf = (value: string) => {
     }
 
     const n = d.split('').map(Number);
+    // Reaproveita a regra oficial dos dígitos verificadores.
     const calc = (len: number) => {
         const sum = n
             .slice(0, len)
@@ -33,6 +41,7 @@ export const cnpj = (value: string) => {
     }
 
     const n = d.split('').map(Number);
+    // Reaproveita a regra oficial dos dígitos verificadores.
     const calc = (len: number) => {
         let weight = len - 7;
         const sum = n.slice(0, len).reduce((acc, v) => {
@@ -54,6 +63,7 @@ export const cnpj = (value: string) => {
 
 export function cpfCnpj(value: string): true | string {
     const d = onlyDigits(value);
+
     return d.length > 11 ? cnpj(d) : cpf(d);
 }
 

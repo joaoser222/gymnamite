@@ -2,6 +2,15 @@ import { inject, type App, type InjectionKey } from 'vue';
 import { onlyDigits } from '@/plugins/formatters';
 import { capitalize } from '@/directives/textCase';
 
+/**
+ * Integração compartilhada com ViaCEP.
+ *
+ * O plugin expõe helpers para:
+ * - consultar CEP;
+ * - preencher formulários com os campos de endereço do projeto;
+ * - reutilizar a integração via `useViaCep()` ou injeção global.
+ */
+
 export type ViaCepResponse = {
     cep: string;
     logradouro: string;
@@ -116,6 +125,7 @@ export function fillAddressFields(
     address: ViaCepAddress,
     options: FillAddressOptions = {},
 ): void {
+    // Permite mapear o retorno do ViaCEP para nomes de campos diferentes por tela.
     const fields = {
         ...defaultAddressFields,
         ...options.fields,
@@ -163,6 +173,7 @@ export function useViaCep(): ViaCepPlugin {
 
 export default {
     install(app: App): void {
+        // Disponibiliza a integração tanto por inject quanto por propriedade global.
         app.provide(viaCepKey, viaCep);
         app.config.globalProperties.$viaCep = viaCep;
     },

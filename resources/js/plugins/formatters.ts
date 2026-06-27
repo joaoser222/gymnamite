@@ -1,3 +1,10 @@
+/**
+ * Helpers de formatação e sanitização leves usados pela UI.
+ *
+ * A ideia aqui é centralizar formatos comuns sem acoplar a aplicação a
+ * componentes específicos.
+ */
+
 export function onlyDigits(value?: string | number | null): string {
     return String(value ?? '').replace(/\D/g, '');
 }
@@ -48,6 +55,7 @@ export function formatCurrency(
 }
 
 function normalizeDate(value?: string | number | Date | null): Date | null {
+    // Normaliza entradas heterogêneas antes da formatação de data.
     if (value === null || value === undefined || value === '') {
         return null;
     }
