@@ -1,9 +1,29 @@
 import { onlyAlphanumeric, onlyDigits } from './formatters.ts';
 
+/**
+ * Engine simples de máscaras da aplicação.
+ *
+ * Suporta tokens fixos (`#`, `A`, `X`, `Z`) e quantificadores de repetição,
+ * permitindo montar máscaras reutilizáveis sem depender do input nativo.
+ */
+
 export type MaskToken = {
     pattern: RegExp;
     transform?: (value: string) => string;
 };
+
+type ParsedMaskPart =
+    | {
+          type: 'literal';
+          value: string;
+      }
+    | {
+          type: 'token';
+          symbol: string;
+          token: MaskToken;
+          min: number;
+          max: number;
+      };
 
 export type UnmaskMode = 'mask' | 'digits' | 'alphanumeric' | 'none';
 
@@ -14,6 +34,7 @@ export const maskTokens: Record<string, MaskToken> = {
         transform: (value: string) => value.toUpperCase(),
     },
     X: { pattern: /[a-zA-Z0-9]/ },
+    Z: { pattern: /[a-zA-Z0-9-]/ },
 };
 
 export const masks = {
@@ -65,30 +86,41 @@ export function applyMask(
         return String(value ?? '');
     }
 
+    // Primeiro normaliza o valor bruto; depois reconstrói a saída conforme a máscara.
     const rawValue = unmaskValue(value, mask, mode);
+    const parsedMask = parseMask(mask);
     let rawIndex = 0;
     let formattedValue = '';
 
-    for (const maskChar of mask) {
-        const token = maskTokens[maskChar];
-
-        if (!token) {
+    for (const part of parsedMask) {
+        if (part.type === 'literal') {
             if (rawIndex < rawValue.length) {
-                formattedValue += maskChar;
+                formattedValue += part.value;
             }
 
             continue;
         }
 
-        const rawChar = rawValue[rawIndex];
-
-        if (!rawChar) {
+        if (!rawValue[rawIndex]) {
             break;
         }
 
-        if (token.pattern.test(rawChar)) {
-            formattedValue += token.transform?.(rawChar) ?? rawChar;
+        let matched = 0;
+
+        while (rawIndex < rawValue.length && matched < part.max) {
+            const rawChar = rawValue[rawIndex];
+
+            if (!part.token.pattern.test(rawChar)) {
+                break;
+            }
+
+            formattedValue += part.token.transform?.(rawChar) ?? rawChar;
             rawIndex++;
+            matched++;
+        }
+
+        if (matched < part.min) {
+            break;
         }
     }
 
@@ -113,8 +145,11 @@ function unmaskByMask(value: string, mask: string): string {
         return value;
     }
 
+    // Filtra apenas caracteres compatíveis com os tokens declarados na máscara.
     const availableTokens = new Set(
-        [...mask].filter((char) => maskTokens[char] !== undefined),
+        parseMask(mask)
+            .filter((part): part is Extract<ParsedMaskPart, { type: 'token' }> => part.type === 'token')
+            .map((part) => part.symbol),
     );
 
     return [...value]
@@ -127,7 +162,22 @@ function unmaskByMask(value: string, mask: string): string {
 }
 
 function countMaskTokens(mask: string): number {
-    return [...mask].filter((char) => maskTokens[char] !== undefined).length;
+    const parsedMask = parseMask(mask);
+    const hasUnlimitedToken = parsedMask.some(
+        (part) => part.type === 'token' && !Number.isFinite(part.max),
+    );
+
+    if (hasUnlimitedToken) {
+        return 0;
+    }
+
+    return parsedMask.reduce((count, part) => {
+        if (part.type !== 'token') {
+            return count;
+        }
+
+        return count + part.max;
+    }, 0);
 }
 
 function limitValue(
@@ -140,4 +190,82 @@ function limitValue(
     }
 
     return value.slice(0, maskLength);
+}
+
+function parseMask(mask: string): ParsedMaskPart[] {
+    // Converte a máscara textual em partes tokenizadas para facilitar aplicação e unmask.
+    const parts: ParsedMaskPart[] = [];
+
+    for (let index = 0; index < mask.length; index++) {
+        const symbol = mask[index];
+        const token = maskTokens[symbol];
+
+        if (!token) {
+            parts.push({ type: 'literal', value: symbol });
+
+            continue;
+        }
+
+        const quantifier = parseQuantifier(mask, index + 1);
+
+        parts.push({
+            type: 'token',
+            symbol,
+            token,
+            min: quantifier?.min ?? 1,
+            max: quantifier?.max ?? 1,
+        });
+
+        if (quantifier) {
+            index = quantifier.endIndex;
+        }
+    }
+
+    return parts;
+}
+
+function parseQuantifier(
+    mask: string,
+    index: number,
+): { min: number; max: number; endIndex: number } | null {
+    // Quantificadores suportados: *, +, ? e {min,max}.
+    const char = mask[index];
+
+    if (char === '*') {
+        return { min: 0, max: Number.POSITIVE_INFINITY, endIndex: index };
+    }
+
+    if (char === '+') {
+        return { min: 1, max: Number.POSITIVE_INFINITY, endIndex: index };
+    }
+
+    if (char === '?') {
+        return { min: 0, max: 1, endIndex: index };
+    }
+
+    if (char !== '{') {
+        return null;
+    }
+
+    const endIndex = mask.indexOf('}', index);
+
+    if (endIndex === -1) {
+        return null;
+    }
+
+    const range = mask.slice(index + 1, endIndex).trim();
+
+    if (!/^\d+(,\d*)?$/.test(range)) {
+        return null;
+    }
+
+    const [minText, maxText] = range.split(',');
+    const min = Number(minText);
+    const max = maxText === undefined || maxText === '' ? min : Number(maxText);
+
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min < 0 || max < min) {
+        return null;
+    }
+
+    return { min, max, endIndex };
 }
