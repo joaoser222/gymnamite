@@ -17,6 +17,7 @@ type Purchase = {
     annotations?: string;
     disable_stock?: boolean;
     supplier_id?: number;
+    items?: Array<Record<string, unknown>>;
 };
 
 defineProps<{
@@ -24,8 +25,7 @@ defineProps<{
     routes: DetailsRoutes;
 }>();
 
-const sharedProps = usePage().props;
-const { suppliers, paymentMethods } = useSharedOptions(sharedProps.options ?? {});
+const { paymentMethods } = useSharedOptions(usePage().props.options ?? {});
 
 const defaults = {
     total: 0,
@@ -36,7 +36,33 @@ const defaults = {
     annotations: '',
     disable_stock: false,
     supplier_id: null,
+    items: [],
 };
+
+function normalizeCurrencyValue(value: unknown): number {
+    const numberValue = Number(value ?? 0);
+
+    return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function recalculateTotals(form: Record<string, unknown>, grossValue?: number): void {
+    const resolvedGrossValue = normalizeCurrencyValue(grossValue ?? form.gross_value);
+
+    form.gross_value = resolvedGrossValue;
+    form.total = resolvedGrossValue - normalizeCurrencyValue(form.discount_value);
+}
+
+function validateBillableItems(value: unknown): true | string {
+    if (!Array.isArray(value) || value.length === 0) {
+        return 'Adicione pelo menos um item.';
+    }
+
+    if (value.some((item) => !item || !('product_id' in item) || !item.product_id)) {
+        return 'Preencha o produto de todos os itens.';
+    }
+
+    return true;
+}
 </script>
 
 <template>
@@ -49,6 +75,19 @@ const defaults = {
     >
         <template #default="{ form, errors }">
             <v-row class="ma-0">
+                <v-col cols="12" class="ma-0 py-0">
+                    <v-switch
+                        v-model="form.disable_stock"
+                        label="Atualizar estoque"
+                        :true-value="false"
+                        :false-value="true"
+                        color="primary"
+                        hide-details
+                    />
+                    <div class="text-caption text-medium-emphasis">
+                        Quando desativado, esta compra não altera o estoque dos produtos.
+                    </div>
+                </v-col>
                 <v-col cols="12" md="6">
                     <ServerAutocomplete
                         v-model="form.supplier_id"
@@ -67,10 +106,29 @@ const defaults = {
                         :error-messages="errors.payment_method"
                     />
                 </v-col>
+                <v-col cols="12">
+                    <BillableItemsTable
+                        v-model="form.items"
+                        title="Itens da Compra"
+                        description="Adicione os produtos e ajuste quantidade e preço de cada item."
+                        add-label="Adicionar Item"
+                        price-label="Preço de Compra"
+                        default-price-field="purchase_price"
+                        :errors="errors"
+                        @gross-updated="recalculateTotals(form, $event)"
+                    />
+                    <v-input
+                        :model-value="form.items"
+                        :rules="[validateBillableItems]"
+                        :error-messages="errors.items"
+                        class="mt-2"
+                    />
+                </v-col>
                 <v-col cols="12" md="4">
                     <CurrencyField
                         v-model="form.gross_value"
                         label="Valor Bruto"
+                        readonly
                         :error-messages="errors.gross_value"
                     />
                 </v-col>
@@ -79,12 +137,14 @@ const defaults = {
                         v-model="form.discount_value"
                         label="Desconto"
                         :error-messages="errors.discount_value"
+                        @update:model-value="recalculateTotals(form)"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
                     <CurrencyField
                         v-model="form.total"
                         label="Total"
+                        readonly
                         :rules="[required]"
                         :error-messages="errors.total"
                     />

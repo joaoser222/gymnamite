@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\ClientStatus;
+use App\Enums\ProductType;
 use App\Models\Client;
+use App\Models\Product;
+use App\Models\ProductUnity;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -76,5 +79,37 @@ class SelectBoxControllerTest extends TestCase
             ->assertJsonCount(16)
             ->assertJsonPath('0.value', (string) $selectedClient->id)
             ->assertJsonPath('0.label', 'Cliente 18');
+    }
+
+    public function test_product_options_include_purchase_price_metadata(): void
+    {
+        $user = User::factory()->create();
+
+        ProductUnity::query()->create([
+            'name' => 'Unidade',
+            'code' => 'UN',
+        ]);
+
+        $product = Product::query()->create([
+            'name' => 'Produto Teste',
+            'purchase_price' => 12.5,
+            'sale_price' => 20,
+            'quantity' => 0,
+            'product_type' => ProductType::MERCHANDISE->value,
+            'product_unity' => 'UN',
+            'visibility' => 'visible',
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('select-box', [
+            'objectName' => 'product',
+            'selected' => $product->id,
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('0.value', (string) $product->id)
+            ->assertJsonPath('0.label', 'Produto Teste')
+            ->assertJsonPath('0.purchase_price', 12.5)
+            ->assertJsonPath('0.sale_price', 20);
     }
 }

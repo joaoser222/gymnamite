@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\BillableStatus;
 use App\Enums\PaymentMethod;
 use App\Traits\HasVisibility;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sale extends Model
 {
@@ -31,11 +34,17 @@ class Sale extends Model
     ];
 
     protected $attributes = [
+        'status' => BillableStatus::OPEN,
         'payment_method' => PaymentMethod::CASH,
     ];
 
-    public function client()
+    public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
     }
 }

@@ -56,7 +56,7 @@ class SelectBoxController extends Controller
 
     private function selectProduct(Request $request): JsonResponse
     {
-        return $this->search(Product::class, $request);
+        return $this->search(Product::class, $request, null, 'name', 'id', ['purchase_price', 'sale_price']);
     }
 
     private function selectProductUnity(Request $request): JsonResponse
@@ -84,14 +84,15 @@ class SelectBoxController extends Controller
         Request $request,
         ?\Closure $extraFilters = null,
         string $optionName = 'name',
-        string $optionValue = 'id'
+        string $optionValue = 'id',
+        array $extraAttributes = []
     ): JsonResponse {
         $search = $request->input('search', '');
         $selected = $request->input('selected');
         $limit = min((int) $request->input('limit', 15), 50);
 
         $query = $modelClass::query()
-            ->select([$optionValue, $optionName])
+            ->select([$optionValue, $optionName, ...$extraAttributes])
             ->orderBy($optionName);
 
         if ($extraFilters !== null) {
@@ -107,12 +108,17 @@ class SelectBoxController extends Controller
             ->map(fn (mixed $model): array => [
                 'value' => (string) $model->getAttribute($optionValue),
                 'label' => (string) $model->getAttribute($optionName),
+                ...collect($extraAttributes)
+                    ->mapWithKeys(fn (string $attribute): array => [
+                        $attribute => $model->getAttribute($attribute),
+                    ])
+                    ->all(),
             ])
             ->values();
 
         if ($selected !== null && $selected !== '') {
             $selectedOption = $modelClass::query()
-                ->select([$optionValue, $optionName])
+                ->select([$optionValue, $optionName, ...$extraAttributes])
                 ->where($optionValue, $selected)
                 ->first();
 
@@ -120,6 +126,11 @@ class SelectBoxController extends Controller
                 $options->prepend([
                     'value' => (string) $selectedOption->getAttribute($optionValue),
                     'label' => (string) $selectedOption->getAttribute($optionName),
+                    ...collect($extraAttributes)
+                        ->mapWithKeys(fn (string $attribute): array => [
+                            $attribute => $selectedOption->getAttribute($attribute),
+                        ])
+                        ->all(),
                 ]);
 
                 $options = $options->unique('value')->values();
