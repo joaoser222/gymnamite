@@ -8,7 +8,7 @@
         item-value="value"
         no-filter
         v-bind="$attrs"
-        @update:model-value="emit('update:modelValue', $event)"
+        @update:model-value="emitSelection($event)"
     />
 </template>
 
@@ -31,7 +31,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 type SelectOption = {
     value: string;
     label: string;
-};
+} & Record<string, unknown>;
 
 const props = withDefaults(
     defineProps<{
@@ -47,6 +47,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     (e: 'update:modelValue', value: string | number | null): void;
+    (e: 'selected-item', value: SelectOption | null): void;
 }>();
 
 const searchQuery = ref('');
@@ -104,6 +105,20 @@ function normalizedSearchQuery(query: string): string {
     }
 
     return query;
+}
+
+function emitSelection(value: string | number | null): void {
+    emit('update:modelValue', value);
+
+    if (value == null) {
+        emit('selected-item', null);
+
+        return;
+    }
+
+    const selected = displayedOptions.value.find((option) => option.value === String(value));
+
+    emit('selected-item', selected ?? null);
 }
 
 // Executa a busca imediatamente e garante que apenas a resposta mais recente atualize o estado.
