@@ -13,8 +13,8 @@ class Plan extends Model
 
     protected $fillable = [
         'name',
-        'modality_quantity',
         'description',
+        'plan_category_id',
     ];
 
     public function tiers()
