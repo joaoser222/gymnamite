@@ -7,6 +7,7 @@ use App\Models\CostCenter;
 use App\Models\FinancialCategory;
 use App\Models\Modality;
 use App\Models\Plan;
+use App\Models\PlanCategory;
 use App\Models\Product;
 use App\Models\ProductUnity;
 use App\Models\Supplier;
@@ -52,6 +53,11 @@ class SelectBoxController extends Controller
     private function selectPlan(Request $request): JsonResponse
     {
         return $this->search(Plan::class, $request);
+    }
+
+    private function selectPlanCategory(Request $request): JsonResponse
+    {
+        return $this->search(PlanCategory::class, $request);
     }
 
     private function selectProduct(Request $request): JsonResponse
