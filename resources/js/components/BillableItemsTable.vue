@@ -1,92 +1,54 @@
 <template>
     <div>
-        <div class="d-flex align-center justify-space-between mb-3 ga-3 flex-wrap">
-            <div>
-                <h3 class="text-h6">{{ title }}</h3>
-                <p class="text-body-2 text-medium-emphasis">
-                    {{ description }}
-                </p>
-            </div>
-            <v-clipped-button
-                color="primary"
-                prepend-icon="ti ti-plus"
-                @click="addItem"
-            >
-                {{ addLabel }}
-            </v-clipped-button>
-        </div>
-
-        <v-alert
-            v-if="localItems.length === 0"
-            color="secondary"
-            variant="tonal"
-            border="start"
+        <EditableRowsTable
+            :items="localItems as Record<string, unknown>[]"
+            :columns="columns"
+            :title="title"
+            :description="description"
+            :add-label="addLabel"
+            :empty-message="`Nenhum item adicionado. Clique em ${addLabel} para continuar.`"
+            @add="addItem"
+            @remove="removeItem"
         >
-            Nenhum item adicionado. Clique em <strong>{{ addLabel }}</strong> para continuar.
-        </v-alert>
-
-        <v-table
-            v-else
-            class="border-sm border-surface-variant billable-items-table"
-        >
-            <thead>
-                <tr>
-                    <th>Produto</th>
-                    <th class="text-right" style="width: 140px">Quantidade</th>
-                    <th class="text-right" style="width: 180px">{{ priceLabel }}</th>
-                    <th class="text-right" style="width: 180px">Total</th>
-                    <th style="width: 72px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(item, index) in localItems" :key="item.id ?? `new-${index}`">
-                    <td>
-                        <ServerAutocomplete
-                            :ref="(element) => setProductRef(index, element)"
-                            v-model="item.product_id"
-                            object-name="product"
-                            label="Produto"
-                            :error-messages="itemError(index, 'product_id')"
-                            @selected-item="applySelectedProduct(index, $event)"
-                        />
-                    </td>
-                    <td>
-                        <v-text-field
-                            v-model.number="item.quantity"
-                            type="number"
-                            min="1"
-                            label="Quantidade"
-                            hide-details="auto"
-                            :error-messages="itemError(index, 'quantity')"
-                            @update:model-value="handleQuantityChange"
-                        />
-                    </td>
-                    <td>
-                        <CurrencyField
-                            v-model="item.price"
-                            :label="priceLabel"
-                            :error-messages="itemError(index, 'price')"
-                            @update:model-value="handlePriceChange"
-                        />
-                    </td>
-                    <td>
-                        <CurrencyField
-                            :model-value="item.total ?? 0"
-                            label="Total"
-                            readonly
-                        />
-                    </td>
-                    <td class="text-right">
-                        <v-btn-icon
-                            icon="ti ti-trash"
-                            color="error"
-                            size="small"
-                            @click="removeItem(index)"
-                        />
-                    </td>
-                </tr>
-            </tbody>
-        </v-table>
+            <template #row="{ item, index }">
+                <td>
+                    <ServerAutocomplete
+                        :ref="(element) => setProductRef(index, element)"
+                        v-model="item.product_id"
+                        object-name="product"
+                        label="Produto"
+                        :error-messages="itemError(index, 'product_id')"
+                        @selected-item="applySelectedProduct(index, $event)"
+                    />
+                </td>
+                <td>
+                    <v-text-field
+                        v-model.number="item.quantity"
+                        type="number"
+                        min="1"
+                        label="Quantidade"
+                        hide-details="auto"
+                        :error-messages="itemError(index, 'quantity')"
+                        @update:model-value="handleQuantityChange"
+                    />
+                </td>
+                <td>
+                    <CurrencyField
+                        v-model="item.price"
+                        :label="priceLabel"
+                        :error-messages="itemError(index, 'price')"
+                        @update:model-value="handlePriceChange"
+                    />
+                </td>
+                <td>
+                    <CurrencyField
+                        :model-value="item.total ?? 0"
+                        label="Total"
+                        readonly
+                    />
+                </td>
+            </template>
+        </EditableRowsTable>
     </div>
 </template>
 
@@ -126,7 +88,8 @@ const props = withDefaults(
         modelValue: () => [],
         errors: () => ({}),
         title: 'Itens',
-        description: 'Adicione os produtos e ajuste quantidade e preço de cada item.',
+        description:
+            'Adicione os produtos e ajuste quantidade e preço de cada item.',
         addLabel: 'Adicionar Item',
         priceLabel: 'Preço',
         defaultPriceField: 'purchase_price',
@@ -137,6 +100,13 @@ const emit = defineEmits<{
     (e: 'update:modelValue', value: BillableItem[]): void;
     (e: 'gross-updated', value: number): void;
 }>();
+
+const columns = [
+    { title: 'Produto' },
+    { title: 'Quantidade', width: '140px', align: 'right' as const },
+    { title: props.priceLabel, width: '180px', align: 'right' as const },
+    { title: 'Total', width: '180px', align: 'right' as const },
+];
 
 const localItems = ref<BillableItem[]>([]);
 const productRefs = ref<unknown[]>([]);
@@ -206,7 +176,8 @@ function addItem(): void {
     if (pendingIndex !== -1) {
         show({
             type: 'warning',
-            message: 'Preencha o produto do item atual antes de adicionar outro.',
+            message:
+                'Preencha o produto do item atual antes de adicionar outro.',
         });
         focusProductField(pendingIndex);
 
@@ -224,7 +195,10 @@ function removeItem(index: number): void {
     recalculateTotals();
 }
 
-function applySelectedProduct(index: number, selectedItem: ProductAutocompleteItem | null): void {
+function applySelectedProduct(
+    index: number,
+    selectedItem: ProductAutocompleteItem | null,
+): void {
     const item = localItems.value[index];
 
     if (!item) {
@@ -257,7 +231,9 @@ function setProductRef(index: number, element: unknown): void {
 }
 
 function focusProductField(index: number): void {
-    const component = productRefs.value[index] as { $el?: Element; focus?: () => void } | undefined;
+    const component = productRefs.value[index] as
+        | { $el?: Element; focus?: () => void }
+        | undefined;
 
     if (!component) {
         return;
@@ -280,15 +256,3 @@ function itemError(index: number, field: string): string | undefined {
     return props.errors[`items.${index}.${field}`];
 }
 </script>
-
-<style scoped>
-.billable-items-table :deep(th),
-.billable-items-table :deep(td) {
-    padding-top: 16px !important;
-    padding-bottom: 16px !important;
-}
-
-.billable-items-table :deep(td) {
-    vertical-align: top;
-}
-</style>
