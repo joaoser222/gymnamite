@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     BillableItemsTable: typeof import('./components/BillableItemsTable.vue')['default']
+    ClientFormFields: typeof import('./components/clients/ClientFormFields.vue')['default']
     ColorField: typeof import('./components/inputs/ColorField.vue')['default']
     CurrencyField: typeof import('./components/inputs/CurrencyField.vue')['default']
     DateField: typeof import('./components/inputs/DateField.vue')['default']

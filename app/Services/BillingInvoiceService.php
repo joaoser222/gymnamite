@@ -1,0 +1,104 @@
+<?php
+
+namespace App\Services;
+
+use App\Contracts\BillingInvoiceSource;
+use App\Enums\InvoiceStatus;
+use App\Models\Contract;
+use App\Models\Invoice;
+use App\Models\Purchase;
+use App\Models\Sale;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
+
+class BillingInvoiceService
+{
+    public function generate(BillingInvoiceSource&Model $source): Collection
+    {
+        $installments = $source->billingInstallments();
+        $firstDueDate = $source->billingFirstDueDate();
+
+        if ($installments < 1) {
+            throw new InvalidArgumentException('Billing installments must be greater than zero.');
+        }
+
+        if ($firstDueDate === null) {
+            throw new InvalidArgumentException('Billing first due date is required to generate invoices.');
+        }
+
+        $source->loadMissing($this->sourceRelations($source));
+
+        $grossValueInstallments = $this->splitAmount(
+            $source->billingGrossValue(),
+            $installments,
+        );
+
+        $discountValueInstallments = $this->splitAmount(
+            $source->billingDiscountValue(),
+            $installments,
+        );
+
+        $holder = $source->billingHolder();
+        $baseDueDate = CarbonImmutable::instance($firstDueDate);
+        $invoices = new Collection;
+
+        for ($installmentNumber = 1; $installmentNumber <= $installments; $installmentNumber++) {
+            $invoice = new Invoice;
+            $invoice->fill([
+                'operation_type' => $source->billingOperationType(),
+                'due_date' => $baseDueDate->addMonthsNoOverflow($installmentNumber - 1)->format('Y-m-d'),
+                'payment_method' => $source->billingPaymentMethod(),
+                'gross_value' => $grossValueInstallments[$installmentNumber - 1],
+                'discount_value' => $discountValueInstallments[$installmentNumber - 1],
+                'interest_value' => 0,
+                'fine_value' => 0,
+                'paid_value' => 0,
+                'installment_number' => $installmentNumber,
+                'status' => InvoiceStatus::PENDING,
+                'annotations' => $source->billingAnnotations(),
+                'financial_account_id' => $source->billingFinancialAccountId(),
+                'financial_category_id' => $source->billingFinancialCategoryId(),
+                'visibility' => 'visible',
+            ]);
+            $invoice->holder()->associate($holder);
+            $invoice->billable()->associate($source);
+            $invoice->save();
+
+            $invoices->push($invoice);
+        }
+
+        return $invoices;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function splitAmount(float $amount, int $installments): array
+    {
+        $scale = 10000;
+        $total = (int) round($amount * $scale);
+        $baseInstallmentValue = intdiv($total, $installments);
+        $remainder = $total % $installments;
+        $parts = [];
+
+        for ($index = 0; $index < $installments; $index++) {
+            $parts[] = ($baseInstallmentValue + ($index < $remainder ? 1 : 0)) / $scale;
+        }
+
+        return $parts;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function sourceRelations(Model $source): array
+    {
+        return match ($source::class) {
+            Contract::class, Sale::class => ['client'],
+            Purchase::class => ['supplier'],
+            default => [],
+        };
+    }
+}

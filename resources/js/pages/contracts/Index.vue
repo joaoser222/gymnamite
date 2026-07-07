@@ -16,9 +16,9 @@ const props = defineProps<{
 const headers: TableHeader[] = [
     { title: 'ID', key: 'id', sortable: true, width: '80px' },
     { title: 'Plano', key: 'plan_name', sortable: true, searchable: true },
-    { title: 'Preço', key: 'price', sortable: true },
-    { title: 'Início', key: 'start_date', sortable: true },
-    { title: 'Duração', key: 'duration' },
+    { title: 'Total', key: 'total', sortable: true },
+    { title: '1o vencimento', key: 'first_due_date', sortable: true },
+    { title: 'Parcelas', key: 'installments' },
     { title: 'Status', key: 'status', sortable: true, align: 'center' },
     { title: 'Criado em', key: 'created_at', sortable: true },
 ];
@@ -46,16 +46,16 @@ const { billableStatus } = useSharedOptions(sharedProps.options ?? {});
         :routes="routes"
         module="contracts"
         title="Contratos"
-        :custom-slots="['created_at', 'price', 'start_date', 'status']"
+        :custom-slots="['created_at', 'total', 'first_due_date', 'status']"
     >
         <template #column-created_at="{ item }">
             {{ formatDate(item.created_at) }}
         </template>
-        <template #column-price="{ item }">
-            {{ formatCurrency(item.price) }}
+        <template #column-total="{ item }">
+            {{ formatCurrency(item.total) }}
         </template>
-        <template #column-start_date="{ item }">
-            {{ formatDate(item.start_date) }}
+        <template #column-first_due_date="{ item }">
+            {{ formatDate(item.first_due_date) }}
         </template>
         <template #column-status="{ item }">
             <v-chip>

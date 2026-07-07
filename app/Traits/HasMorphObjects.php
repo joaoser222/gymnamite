@@ -33,7 +33,9 @@ trait HasMorphObjects
 
         // Registra maps da propriedade $morphMaps
         if (property_exists($class, 'morphMaps')) {
-            foreach ((array) static::$morphMaps as $field => $map) {
+            $morphMaps = get_class_vars($class)['morphMaps'] ?? [];
+
+            foreach ((array) $morphMaps as $field => $map) {
                 if (! empty($map)) {
                     Relation::morphMap($map);
                 }
@@ -72,7 +74,7 @@ trait HasMorphObjects
 
         // Pega os maps definidos
         $morphMaps = property_exists($class, 'morphMaps')
-            ? static::$morphMaps
+            ? (get_class_vars($class)['morphMaps'] ?? [])
             : [];
 
         // Pega as permissões definidas
@@ -83,6 +85,8 @@ trait HasMorphObjects
         // Para cada campo definido no morphMaps
         foreach ($morphMaps as $field => $map) {
             $configs[$field] = [
+                'field' => $field,
+                'map' => $map,
                 'options' => array_keys($map),
                 'allowed' => $allowedTypes[$field] ?? array_keys($map),
             ];

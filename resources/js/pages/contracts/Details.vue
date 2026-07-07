@@ -11,9 +11,9 @@ type Contract = {
     id?: number;
     plan_name?: string;
     modality_quantity?: number;
-    price?: number;
-    start_date?: string;
-    duration?: number;
+    total?: number;
+    first_due_date?: string | null;
+    installments?: number;
     accepted_terms?: boolean;
     annotations?: string;
     plan_id?: number;
@@ -28,9 +28,9 @@ defineProps<{
 const sharedProps = usePage().props;
 
 const defaults = {
-    price: 0,
-    start_date: '',
-    duration: 0,
+    total: 0,
+    first_due_date: '',
+    installments: 1,
     accepted_terms: false,
     annotations: '',
     plan_id: null,
@@ -71,26 +71,25 @@ const defaults = {
                 </v-col>
                 <v-col cols="12" md="4">
                     <CurrencyField
-                        v-model="form.price"
-                        label="Preço"
+                        v-model="form.total"
+                        label="Total"
                         :rules="[required]"
-                        :error-messages="errors.price"
+                        :error-messages="errors.total"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
                     <v-text-field
-                        v-model="form.duration"
-                        label="Duração (meses)"
+                        v-model="form.installments"
+                        label="Parcelas"
                         type="number"
-                        :error-messages="errors.duration"
+                        :error-messages="errors.installments"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
                     <DateField
-                        v-model="form.start_date"
-                        label="Data de Início"
-                        :rules="[required]"
-                        :error-messages="errors.start_date"
+                        v-model="form.first_due_date"
+                        label="Primeiro vencimento"
+                        :error-messages="errors.first_due_date"
                     />
                 </v-col>
                 <v-col cols="12" md="4">
