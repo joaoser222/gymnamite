@@ -14,6 +14,7 @@ class Plan extends Model
     protected $fillable = [
         'name',
         'description',
+        'modality_quantity',
         'plan_category_id',
     ];
 

@@ -16,6 +16,7 @@ type Plan = {
     id?: number;
     name?: string;
     plan_category_id?: number;
+    modality_quantity?: number;
     description?: string;
     tiers?: PlanTier[];
     plan_modalities?: number[];
@@ -31,6 +32,7 @@ const { modalities } = useSharedOptions(usePage().props.options ?? {});
 const defaults = {
     name: '',
     plan_category_id: null,
+    modality_quantity: 1,
     description: '',
     tiers: [],
     plan_modalities: [],
@@ -78,7 +80,7 @@ function validateTiers(value: unknown): true | string {
     >
         <template #default="{ form, errors }">
             <v-row class="ma-0">
-                <v-col cols="12" md="8">
+                <v-col cols="12" md="6">
                     <v-text-field
                         v-model="form.name"
                         label="Nome"
@@ -87,13 +89,22 @@ function validateTiers(value: unknown): true | string {
                         v-text-case="'capitalize'"
                     />
                 </v-col>
-                <v-col cols="12" md="4">
+                <v-col cols="12" md="3">
                     <ServerAutocomplete
                         v-model="form.plan_category_id"
                         object-name="plan-category"
                         label="Categoria de Plano"
                         :rules="[required]"
                         :error-messages="errors.plan_category_id"
+                    />
+                </v-col>
+                <v-col cols="12" md="3">
+                    <v-text-field
+                        v-model="form.modality_quantity"
+                        label="Qtd. Modalidades"
+                        :rules="[required]"
+                        type="number"
+                        :error-messages="errors.modality_quantity"
                     />
                 </v-col>
                 <v-col cols="12">
@@ -151,7 +162,7 @@ function validateTiers(value: unknown): true | string {
                 <v-col cols="12">
                     <v-autocomplete
                         v-model="form.plan_modalities"
-                        label="Modalidades específicas"
+                        label="Modalidades disponíveis"
                         :items="modalities"
                         multiple
                         chips
@@ -160,7 +171,7 @@ function validateTiers(value: unknown): true | string {
                         item-title="title"
                         item-value="value"
                         :error-messages="errors.plan_modalities"
-                        hint="Se não preencher, o plano ficará disponível para todas as modalidades."
+                        hint="Se não preencher, todas as modalidades estão disponíveis"
                         persistent-hint
                     />
                 </v-col>

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name', 255);
             $table->string('description', 500)->nullable();
             $table->string('visibility', 10);
+            $table->integer('modality_quantity')->default(1);
             $table->foreignId('plan_category_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
         });
