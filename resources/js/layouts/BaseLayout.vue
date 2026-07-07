@@ -103,7 +103,9 @@
 
         <v-main class="layout-transparent-main">
             <v-container fluid class="pa-4 pa-md-6 layout-transparent-container">
-                <slot />
+                <div class="page-content-host">
+                    <slot />
+                </div>
             </v-container>
         </v-main>
     </div>

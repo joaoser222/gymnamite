@@ -36,6 +36,13 @@ body {
     background: transparent !important;
 }
 
+.page-content-host {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    contain: paint;
+}
+
 // Tipografia: títulos usam a família condensada da identidade visual.
 h1,
 h2,
