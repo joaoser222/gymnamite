@@ -27,7 +27,7 @@ defineProps<{
 }>();
 
 const sharedProps = usePage().props;
-const { invoiceStatus, paymentMethods, financialAccounts, financialCategories } = useSharedOptions(sharedProps.options ?? {});
+const { invoiceStatus, paymentMethods } = useSharedOptions(sharedProps.options ?? {});
 
 const defaults = {
     due_date: '',
@@ -99,18 +99,20 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="6">
-                    <v-select
+                    <ServerAutocomplete
                         v-model="form.financial_account_id"
-                        label="Conta Financeira"
-                        :items="financialAccounts"
+                        object-name="financial-account"
+                        label="Conta"
+                        :rules="[required]"
                         :error-messages="errors.financial_account_id"
                     />
                 </v-col>
                 <v-col cols="12" md="6">
-                    <v-select
+                    <ServerAutocomplete
                         v-model="form.financial_category_id"
+                        object-name="financial-category"
                         label="Categoria Financeira"
-                        :items="financialCategories"
+                        :rules="[required]"
                         :error-messages="errors.financial_category_id"
                     />
                 </v-col>
