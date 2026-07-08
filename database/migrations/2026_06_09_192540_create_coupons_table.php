@@ -17,7 +17,7 @@ return new class extends Migration
             $table->decimal('percent', 13, 4);
             $table->decimal('discount_limit', 13, 4)->default(0);
             $table->integer('duration')->default(1);
-            $table->date('expiration_date');
+            $table->date('expiration_date')->nullable();
             $table->string('visibility', 10);
             $table->timestamps();
         });
