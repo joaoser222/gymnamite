@@ -50,6 +50,12 @@ export function useModulePermissions<TAction extends string>(
     };
 
     const hasPermission = (action: TAction): boolean => {
+        const override = options.permissionMap()?.[action];
+
+        if (override === false) {
+            return false;
+        }
+
         const permission = resolvePermission(action);
 
         if (permission === null) {
