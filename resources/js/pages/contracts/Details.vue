@@ -18,6 +18,7 @@ type Contract = {
     installments?: number;
     accepted_terms?: boolean;
     annotations?: string;
+    status?: string;
     plan_id?: number;
     client_id?: number;
 };
@@ -135,7 +136,7 @@ onMounted(() => {
         </template>
         <template #actions>
             <v-clipped-button
-                v-if="contract && cancelRoute && hasPermission('cancel')"
+                v-if="contract && cancelRoute && contract.status !== 'canceled' && hasPermission('cancel')"
                 color="error"
                 prepend-icon="ti ti-x"
                 @click="cancelContract(cancelRoute)"
