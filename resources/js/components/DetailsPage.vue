@@ -46,7 +46,7 @@ const props = withDefaults(
         defaults: () => ({}),
         itemKey: 'id',
         saveLabel: 'Salvar',
-        cancelLabel: 'Cancelar',
+        cancelLabel: 'Voltar',
     },
 );
 

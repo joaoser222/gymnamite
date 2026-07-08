@@ -552,8 +552,8 @@ function splitAmount(amount: number, installments: number): number[] {
                     <v-divider />
 
                     <v-card-actions class="pa-4 d-flex justify-space-between flex-wrap ga-2">
-                        <v-clipped-button color="secondary" prepend-icon="ti ti-x" :disabled="form.processing" @click="router.get(props.routes.index)">
-                            Cancelar
+                        <v-clipped-button color="secondary" prepend-icon="ti ti-arrow-left" :disabled="form.processing" @click="router.get(props.routes.index)">
+                            Voltar
                         </v-clipped-button>
 
                         <div class="d-flex ga-2 flex-wrap">
