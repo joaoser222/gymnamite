@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\SaleRequest;
 use App\Models\Sale;
 use App\Services\BillableItemService;
+use App\Services\BillingInvoiceService;
 use App\Services\StockRecalculationService;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,7 @@ class SaleController extends Controller
 
     public function __construct(
         private readonly BillableItemService $billableItemService,
+        private readonly BillingInvoiceService $billingInvoiceService,
         private readonly StockRecalculationService $stockRecalculationService,
     ) {}
 
@@ -133,6 +135,9 @@ class SaleController extends Controller
                 $items,
                 (float) ($data['discount_value'] ?? 0),
             );
+
+            $sale = $sale->refresh();
+            $this->billingInvoiceService->generate($sale);
 
             return $sale->load('items');
         });

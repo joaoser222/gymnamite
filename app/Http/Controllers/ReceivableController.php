@@ -10,6 +10,7 @@ use App\Models\FinancialCategory;
 use App\Models\Receivable;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class ReceivableController extends Controller
 {

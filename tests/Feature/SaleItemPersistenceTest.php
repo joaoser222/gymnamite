@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\ProductType;
 use App\Enums\Visibility;
 use App\Models\Client;
+use App\Models\Invoice;
 use App\Models\Permission;
 use App\Models\Product;
 use App\Models\ProductUnity;
@@ -45,6 +46,8 @@ class SaleItemPersistenceTest extends TestCase
             'client_id' => $client->id,
             'status' => BillableStatus::OPEN->value,
             'payment_method' => PaymentMethod::CASH->value,
+            'first_due_date' => '2026-07-10',
+            'installments' => 2,
             'discount_value' => 8,
             'annotations' => 'Venda de teste',
             'disable_stock' => false,
@@ -71,9 +74,17 @@ class SaleItemPersistenceTest extends TestCase
         $this->assertSame(75.0, $sale->gross_value);
         $this->assertSame(8.0, $sale->discount_value);
         $this->assertSame(67.0, $sale->total);
+        $this->assertSame('2026-07-10', $sale->first_due_date?->format('Y-m-d'));
+        $this->assertSame(2, $sale->installments);
         $this->assertCount(2, $sale->items);
+        $this->assertDatabaseCount('invoices', 2);
         $this->assertSame(-2, $firstProduct->quantity);
         $this->assertSame(-1, $secondProduct->quantity);
+
+        $firstInvoice = Invoice::query()->orderBy('installment_number')->firstOrFail();
+
+        $this->assertSame($sale->id, $firstInvoice->billable_id);
+        $this->assertSame('sale', $firstInvoice->billable_type);
 
         $this->assertDatabaseHas('sale_items', [
             'sale_id' => $sale->id,
@@ -96,6 +107,8 @@ class SaleItemPersistenceTest extends TestCase
             'client_id' => $client->id,
             'status' => BillableStatus::OPEN->value,
             'payment_method' => PaymentMethod::CASH->value,
+            'first_due_date' => '2026-07-10',
+            'installments' => 1,
             'gross_value' => 20,
             'discount_value' => 0,
             'total' => 20,
@@ -116,6 +129,8 @@ class SaleItemPersistenceTest extends TestCase
             'client_id' => $client->id,
             'status' => BillableStatus::OPEN->value,
             'payment_method' => PaymentMethod::PIX->value,
+            'first_due_date' => '2026-08-10',
+            'installments' => 3,
             'discount_value' => 10,
             'annotations' => 'Atualizada',
             'disable_stock' => true,
@@ -138,6 +153,8 @@ class SaleItemPersistenceTest extends TestCase
         $this->assertSame(10.0, $sale->discount_value);
         $this->assertSame(40.0, $sale->total);
         $this->assertSame(PaymentMethod::PIX, $sale->payment_method);
+        $this->assertSame('2026-08-10', $sale->first_due_date?->format('Y-m-d'));
+        $this->assertSame(3, $sale->installments);
         $this->assertSame(0, $firstProduct->quantity);
         $this->assertSame(0, $secondProduct->quantity);
 
@@ -166,6 +183,8 @@ class SaleItemPersistenceTest extends TestCase
             'client_id' => $client->id,
             'status' => BillableStatus::OPEN->value,
             'payment_method' => PaymentMethod::CASH->value,
+            'first_due_date' => '2026-07-10',
+            'installments' => 1,
             'discount_value' => 0,
             'annotations' => null,
             'disable_stock' => true,

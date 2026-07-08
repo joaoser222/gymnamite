@@ -5,12 +5,15 @@ namespace Tests\Feature;
 use App\Enums\GenderType;
 use App\Models\Client;
 use App\Models\Contract;
+use App\Models\Coupon;
+use App\Models\Invoice;
 use App\Models\Permission;
 use App\Models\Plan;
 use App\Models\PlanCategory;
 use App\Models\PlanTier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Date;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -84,6 +87,7 @@ class HiringFlowTest extends TestCase
             'address_district' => 'Centro',
             'address_state' => 'SP',
             'address_city' => 'Sao Paulo',
+            'coupon_code' => '',
             'plan_id' => $plan->id,
             'installments' => 12,
             'annotations' => 'Contratacao criada pelo wizard.',
@@ -113,8 +117,19 @@ class HiringFlowTest extends TestCase
         $user = User::factory()->create();
         $this->grantHiringPermissions($user);
         $plan = $this->createPlan();
+        $coupon = Coupon::query()->create([
+            'code' => 'BEMVINDO',
+            'percent' => 10,
+            'discount_limit' => 100,
+            'duration' => 30,
+            'expiration_date' => '2026-12-31',
+            'visibility' => 'visible',
+        ]);
 
-        $response = $this->actingAs($user)->post(route('contracts.store'), $this->validPayload($plan));
+        $payload = $this->validPayload($plan);
+        $payload['coupon_code'] = $coupon->code;
+
+        $response = $this->actingAs($user)->post(route('contracts.store'), $payload);
 
         $response->assertRedirect(route('contracts.index'));
 
@@ -127,10 +142,21 @@ class HiringFlowTest extends TestCase
         $this->assertSame($plan->id, $contract->plan_id);
         $this->assertSame('Plano Performance', $contract->plan_name);
         $this->assertSame('3', $contract->modality_quantity);
+        $this->assertSame($coupon->id, $contract->coupon_id);
         $this->assertSame(12, $contract->installments);
-        $this->assertNull($contract->first_due_date);
+        $this->assertSame(Date::today()->format('Y-m-d'), $contract->first_due_date?->format('Y-m-d'));
         $this->assertSame('accepted', $contract->accepted_terms);
-        $this->assertEquals(699.9, $contract->total);
+        $this->assertEquals(699.9, $contract->gross_value);
+        $this->assertEquals(69.99, $contract->discount_value);
+        $this->assertEquals(629.91, $contract->total);
+        $this->assertDatabaseCount('invoices', 12);
+
+        $firstInvoice = Invoice::query()->orderBy('installment_number')->firstOrFail();
+
+        $this->assertSame('contract', $firstInvoice->billable_type);
+        $this->assertSame($contract->id, $firstInvoice->billable_id);
+        $this->assertSame(Date::today()->format('Y-m-d'), $firstInvoice->due_date?->format('Y-m-d'));
+        $this->assertEquals(5.8325, $firstInvoice->discount_value);
     }
 
     public function test_contract_wizard_updates_existing_client_when_document_is_found(): void
@@ -189,6 +215,33 @@ class HiringFlowTest extends TestCase
                     'id' => $client->id,
                     'name' => 'Cliente Localizado',
                     'document' => '12345678901',
+                ],
+            ]);
+    }
+
+    public function test_coupon_can_be_loaded_by_code_for_contract_wizard(): void
+    {
+        $user = User::factory()->create();
+        $this->grantHiringPermissions($user);
+
+        $coupon = Coupon::query()->create([
+            'code' => 'BEMVINDO',
+            'percent' => 10,
+            'discount_limit' => 100,
+            'duration' => 30,
+            'expiration_date' => '2026-12-31',
+            'visibility' => 'visible',
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('contracts.find-coupon', [
+            'code' => 'BEMVINDO',
+        ]));
+
+        $response->assertOk()
+            ->assertJson([
+                'coupon' => [
+                    'id' => $coupon->id,
+                    'code' => 'BEMVINDO',
                 ],
             ]);
     }

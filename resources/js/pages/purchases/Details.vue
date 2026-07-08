@@ -12,6 +12,8 @@ type Purchase = {
     total?: number;
     gross_value?: number;
     discount_value?: number;
+    first_due_date?: string;
+    installments?: number;
     status?: string;
     payment_method?: string;
     annotations?: string;
@@ -26,11 +28,14 @@ defineProps<{
 }>();
 
 const { paymentMethods } = useSharedOptions(usePage().props.options ?? {});
+const today = new Date().toISOString().slice(0, 10);
 
 const defaults = {
     total: 0,
     gross_value: 0,
     discount_value: 0,
+    first_due_date: today,
+    installments: 1,
     status: 'open',
     payment_method: 'cash',
     annotations: '',
@@ -104,6 +109,24 @@ function validateBillableItems(value: unknown): true | string {
                         :items="paymentMethods"
                         :rules="[required]"
                         :error-messages="errors.payment_method"
+                    />
+                </v-col>
+                <v-col cols="12" md="3">
+                    <DateField
+                        v-model="form.first_due_date"
+                        label="Primeiro vencimento"
+                        :rules="[required]"
+                        :error-messages="errors.first_due_date"
+                    />
+                </v-col>
+                <v-col cols="12" md="3">
+                    <v-text-field
+                        v-model="form.installments"
+                        label="Parcelas"
+                        type="number"
+                        min="1"
+                        :rules="[required]"
+                        :error-messages="errors.installments"
                     />
                 </v-col>
                 <v-col cols="12">

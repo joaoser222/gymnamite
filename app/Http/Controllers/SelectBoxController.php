@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\CostCenter;
+use App\Models\Coupon;
 use App\Models\FinancialCategory;
 use App\Models\Modality;
 use App\Models\Plan;
@@ -43,6 +44,18 @@ class SelectBoxController extends Controller
     private function selectCostCenter(Request $request): JsonResponse
     {
         return $this->search(CostCenter::class, $request, fn (Builder $q) => $q->where('visibility', 'visible'));
+    }
+
+    private function selectCoupon(Request $request): JsonResponse
+    {
+        return $this->search(
+            Coupon::class,
+            $request,
+            fn (Builder $q) => $q->where('visibility', 'visible'),
+            'code',
+            'id',
+            ['percent', 'discount_limit', 'expiration_date'],
+        );
     }
 
     private function selectModality(Request $request): JsonResponse

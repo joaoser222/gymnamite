@@ -50,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
     Route::inertia('dashboard', 'Home')->name('dashboard');
     Route::get('select-box/{objectName}', SelectBoxController::class)->name('select-box');
     Route::get('contracts/find-client', [ContractController::class, 'findClient'])->name('contracts.find-client');
+    Route::get('contracts/find-coupon', [ContractController::class, 'findCoupon'])->name('contracts.find-coupon');
 
     // Pessoas
     Route::module(ClientController::class);

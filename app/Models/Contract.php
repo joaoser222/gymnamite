@@ -28,8 +28,8 @@ class Contract extends Model implements BillingInvoiceSource
         'installments',
         'accepted_terms',
         'annotations',
+        'coupon_id',
         'plan_id',
-        'plan_category_id',
         'client_id',
         'status',
     ];
@@ -57,11 +57,6 @@ class Contract extends Model implements BillingInvoiceSource
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
-    }
-
-    public function planCategory(): BelongsTo
-    {
-        return $this->belongsTo(PlanCategory::class);
     }
 
     public function coupon(): BelongsTo

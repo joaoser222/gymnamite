@@ -48,6 +48,7 @@ class ContractWizardRequest extends FormRequest
             'address_district' => ['nullable', 'string', 'max:100'],
             'address_state' => ['nullable', 'string', 'size:2'],
             'address_city' => ['nullable', 'string', 'max:100'],
+            'coupon_code' => ['nullable', 'string', 'max:255'],
             'plan_id' => [
                 'required',
                 'integer',

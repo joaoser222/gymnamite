@@ -10,15 +10,18 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\ContractWizardRequest;
 use App\Models\Client;
 use App\Models\Contract;
+use App\Models\Coupon;
 use App\Models\Plan;
 use App\Models\PlanTier;
 use App\Models\Uf;
+use App\Services\BillingInvoiceService;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -27,6 +30,10 @@ use Inertia\Response;
 class ContractController extends Controller
 {
     use HasModule;
+
+    public function __construct(
+        private readonly BillingInvoiceService $billingInvoiceService,
+    ) {}
 
     /**
      * @var array<int, string>
@@ -78,6 +85,7 @@ class ContractController extends Controller
                 'index' => route('contracts.index'),
                 'store' => route('contracts.store'),
                 'findClient' => route('contracts.find-client'),
+                'findCoupon' => route('contracts.find-coupon'),
             ],
             'options' => [
                 'genderTypes' => $this->enumOptions(GenderType::class),
@@ -109,7 +117,33 @@ class ContractController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($validated, $plan, $tier): void {
+        $coupon = null;
+
+        if (! empty($validated['coupon_code'])) {
+            /** @var Coupon|null $coupon */
+            $coupon = Coupon::query()
+                ->where('code', mb_strtoupper((string) $validated['coupon_code']))
+                ->where('visibility', 'visible')
+                ->first();
+
+            if ($coupon === null) {
+                throw ValidationException::withMessages([
+                    'coupon_code' => 'O cupom informado nao esta disponivel.',
+                ]);
+            }
+
+            if ($coupon->expiration_date !== null && $coupon->expiration_date->isBefore(Date::today())) {
+                throw ValidationException::withMessages([
+                    'coupon_code' => 'O cupom informado esta expirado.',
+                ]);
+            }
+        }
+
+        $grossValue = (float) $tier->price;
+        $discountValue = $this->resolveCouponDiscount($coupon, $grossValue);
+        $totalValue = max(0, round($grossValue - $discountValue, 4));
+
+        DB::transaction(function () use ($validated, $plan, $coupon, $grossValue, $discountValue, $totalValue): void {
             $clientData = Arr::only($validated, [
                 'name',
                 'email',
@@ -141,22 +175,24 @@ class ContractController extends Controller
                 $client = Client::query()->create($clientData);
             }
 
-            Contract::query()->create([
+            $contract = Contract::query()->create([
                 'plan_name' => $plan->name,
                 'modality_quantity' => (string) $plan->modality_quantity,
-                'gross_value' => $tier->price,
-                'discount_value' => 0,
-                'total' => $tier->price,
+                'gross_value' => $grossValue,
+                'discount_value' => $discountValue,
+                'total' => $totalValue,
                 'payment_method' => PaymentMethod::CASH,
-                'first_due_date' => null,
+                'first_due_date' => Date::today()->format('Y-m-d'),
                 'installments' => (int) $validated['installments'],
                 'accepted_terms' => 'accepted',
                 'annotations' => $validated['annotations'] ?? null,
+                'coupon_id' => $coupon?->id,
                 'plan_id' => $plan->id,
-                'plan_category_id' => $plan->plan_category_id,
                 'client_id' => $client->id,
                 'visibility' => 'visible',
             ]);
+
+            $this->billingInvoiceService->generate($contract);
         });
 
         Inertia::flash('toast', [
@@ -203,6 +239,33 @@ class ContractController extends Controller
                 'address_state',
                 'address_city',
                 'status',
+            ]),
+        ]);
+    }
+
+    public function findCoupon(Request $request): JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::CREATE);
+
+        $code = mb_strtoupper((string) $request->query('code', ''));
+
+        if ($code === '') {
+            return response()->json(['coupon' => null]);
+        }
+
+        /** @var Coupon|null $coupon */
+        $coupon = Coupon::query()
+            ->where('code', $code)
+            ->where('visibility', 'visible')
+            ->first();
+
+        return response()->json([
+            'coupon' => $coupon?->only([
+                'id',
+                'code',
+                'percent',
+                'discount_limit',
+                'expiration_date',
             ]),
         ]);
     }
@@ -259,5 +322,20 @@ class ContractController extends Controller
                 ];
             })
             ->all();
+    }
+
+    private function resolveCouponDiscount(?Coupon $coupon, float $grossValue): float
+    {
+        if ($coupon === null) {
+            return 0;
+        }
+
+        $discountValue = round($grossValue * ($coupon->percent / 100), 4);
+
+        if ($coupon->discount_limit !== null) {
+            $discountValue = min($discountValue, (float) $coupon->discount_limit);
+        }
+
+        return max(0, $discountValue);
     }
 }

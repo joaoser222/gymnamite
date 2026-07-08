@@ -23,6 +23,8 @@ class PurchaseRequest extends FormRequest
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
             'status' => ['required', Rule::enum(BillableStatus::class)],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
+            'first_due_date' => ['required', 'date'],
+            'installments' => ['required', 'integer', 'min:1'],
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'annotations' => ['nullable', 'string', 'max:500'],
             'disable_stock' => ['boolean'],

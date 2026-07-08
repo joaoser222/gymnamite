@@ -45,6 +45,14 @@ type ClientLookup = {
     status?: string | null;
 };
 
+type CouponOption = {
+    id: number;
+    code: string;
+    percent?: number | string | null;
+    discount_limit?: number | string | null;
+    expiration_date?: string | null;
+};
+
 type VForm = {
     validate: () => Promise<{ valid: boolean }>;
 };
@@ -54,6 +62,7 @@ const props = defineProps<{
         index: string;
         store: string;
         findClient: string;
+        findCoupon: string;
     };
     options: {
         genderTypes: LabeledOption<string>[];
@@ -73,6 +82,7 @@ const clientLookupState = ref<'idle' | 'found' | 'missing'>('idle');
 const clientFormRef = ref<VForm | null>(null);
 const contractFormRef = ref<VForm | null>(null);
 const lastLoadedDocument = ref('');
+const selectedCoupon = ref<CouponOption | null>(null);
 
 const form = useForm({
     client_id: null as number | null,
@@ -93,6 +103,7 @@ const form = useForm({
     address_district: '',
     address_state: '',
     address_city: '',
+    coupon_code: '',
     plan_id: null as number | null,
     installments: null as number | null,
     annotations: '',
@@ -120,6 +131,28 @@ const selectedTier = computed<PlanTier | null>(() => {
     );
 });
 
+const grossValuePreview = computed(() => selectedTier.value?.price ?? 0);
+
+const discountValuePreview = computed(() => {
+    if (selectedCoupon.value === null || selectedTier.value === null) {
+        return 0;
+    }
+
+    const percent = Number(selectedCoupon.value.percent ?? 0);
+    const discountLimit = Number(selectedCoupon.value.discount_limit ?? 0);
+    const rawDiscount = grossValuePreview.value * (percent / 100);
+
+    if (Number.isFinite(discountLimit) && discountLimit > 0) {
+        return Math.min(rawDiscount, discountLimit);
+    }
+
+    return rawDiscount;
+});
+
+const totalValuePreview = computed(() => {
+    return Math.max(0, grossValuePreview.value - discountValuePreview.value);
+});
+
 const acceptedTermsRule = (value: boolean) => {
     return value || 'Você precisa aceitar os termos da contratação.';
 };
@@ -144,6 +177,15 @@ watch(
         if (normalized !== lastLoadedDocument.value) {
             form.client_id = null;
             clientLookupState.value = 'idle';
+        }
+    },
+);
+
+watch(
+    () => form.coupon_code,
+    (value) => {
+        if (value !== selectedCoupon.value?.code) {
+            selectedCoupon.value = null;
         }
     },
 );
@@ -244,6 +286,7 @@ async function submit(): Promise<void> {
         preserveScroll: true,
         onError: (errors) => {
             const contractFields = [
+                'coupon_code',
                 'plan_id',
                 'installments',
                 'annotations',
@@ -255,6 +298,27 @@ async function submit(): Promise<void> {
                 : 1;
         },
     });
+}
+
+async function searchCoupon(): Promise<void> {
+    const code = String(form.coupon_code ?? '').trim().toUpperCase();
+
+    form.coupon_code = code;
+
+    if (code === '') {
+        selectedCoupon.value = null;
+
+        return;
+    }
+
+    const params = new URLSearchParams({ code });
+    const response = await fetch(`${props.routes.findCoupon}?${params}`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+    });
+    const payload = (await response.json()) as { coupon: CouponOption | null };
+
+    selectedCoupon.value = payload.coupon;
 }
 </script>
 
@@ -338,7 +402,7 @@ async function submit(): Promise<void> {
                                 <v-stepper-window-item :value="2">
                                     <v-form ref="contractFormRef">
                                         <v-row class="ma-0 mt-4">
-                                            <v-col cols="12" md="8">
+                                            <v-col cols="12" md="6">
                                                 <v-select
                                                     v-model="form.plan_id"
                                                     label="Plano"
@@ -348,12 +412,6 @@ async function submit(): Promise<void> {
                                                     :rules="[required]"
                                                     :error-messages="form.errors.plan_id"
                                                 />
-                                            </v-col>
-                                            <v-col cols="12" md="4">
-                                                <v-text-field :model-value="selectedPlan?.modality_quantity ?? '-'" label="Qtd. modalidades" readonly />
-                                            </v-col>
-                                            <v-col cols="12" md="6">
-                                                <v-text-field :model-value="selectedPlan?.category ?? '-'" label="Categoria do plano" readonly />
                                             </v-col>
                                             <v-col cols="12" md="6">
                                                 <v-select
@@ -367,8 +425,25 @@ async function submit(): Promise<void> {
                                                     :error-messages="form.errors.installments"
                                                 />
                                             </v-col>
-                                            <v-col cols="12" md="6">
-                                                <v-text-field :model-value="selectedTier ? formatCurrency(selectedTier.price) : '-'" label="Preço da contratação" readonly />
+                                            <v-col cols="12">
+                                                <MaskedTextField
+                                                    v-model="form.coupon_code"
+                                                    label="Cupom"
+                                                    :mask="'X*'"
+                                                    clearable
+                                                    :error-messages="form.errors.coupon_code"
+                                                    v-text-case="'upper'"
+                                                    @blur="searchCoupon"
+                                                />
+                                            </v-col>
+                                            <v-col cols="12" md="4">
+                                                <CurrencyField :model-value="grossValuePreview" label="Valor bruto" readonly />
+                                            </v-col>
+                                            <v-col cols="12" md="4">
+                                                <CurrencyField :model-value="discountValuePreview" label="Desconto" readonly />
+                                            </v-col>
+                                            <v-col cols="12" md="4">
+                                                <CurrencyField :model-value="totalValuePreview" label="Preço final da contratação" readonly />
                                             </v-col>
                                             <v-col cols="12">
                                                 <v-textarea
@@ -431,7 +506,16 @@ async function submit(): Promise<void> {
                         <div>
                             <div class="text-caption text-medium-emphasis">Plano</div>
                             <div class="text-body-1 font-weight-medium">{{ selectedPlan?.title || 'Selecione um plano' }}</div>
+                        </div>
+
+                        <div>
+                            <div class="text-caption text-medium-emphasis">Categoria</div>
                             <div class="text-body-2 text-medium-emphasis">{{ selectedPlan?.category || 'Sem categoria' }}</div>
+                        </div>
+
+                        <div>
+                            <div class="text-caption text-medium-emphasis">Qtd. modalidades</div>
+                            <div class="text-body-2 text-medium-emphasis">{{ selectedPlan?.modality_quantity ?? '-' }}</div>
                         </div>
 
                         <div>
@@ -442,13 +526,26 @@ async function submit(): Promise<void> {
                         <div>
                             <div class="text-caption text-medium-emphasis">Início do contrato</div>
                             <div class="text-body-2 text-medium-emphasis">
-                                Será preenchido automaticamente quando o pagamento inicial for confirmado.
+                                As parcelas serão geradas a partir de hoje.
                             </div>
                         </div>
 
                         <div>
-                            <div class="text-caption text-medium-emphasis">Preço</div>
-                            <div class="text-h6 font-weight-bold">{{ selectedTier ? formatCurrency(selectedTier.price) : '-' }}</div>
+                            <div class="text-caption text-medium-emphasis">Valor bruto</div>
+                            <div class="text-body-1 font-weight-medium">{{ selectedTier ? formatCurrency(grossValuePreview) : '-' }}</div>
+                        </div>
+
+                        <div>
+                            <div class="text-caption text-medium-emphasis">Desconto</div>
+                            <div class="text-body-1 font-weight-medium">{{ selectedTier ? formatCurrency(discountValuePreview) : '-' }}</div>
+                            <div v-if="selectedCoupon" class="text-body-2 text-medium-emphasis">
+                                Cupom {{ selectedCoupon.code }} aplicado.
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-caption text-medium-emphasis">Total final</div>
+                            <div class="text-h6 font-weight-bold">{{ selectedTier ? formatCurrency(totalValuePreview) : '-' }}</div>
                         </div>
                     </v-card-text>
                 </v-card>
