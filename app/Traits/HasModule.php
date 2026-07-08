@@ -492,7 +492,7 @@ trait HasModule
 
     /**
      * @param  class-string<BackedEnum>  $enumClass
-     * @return array<int, array{value: string, label: string}>
+     * @return array<int, array{value: string, label: string, color: string}>
      */
     protected function enumOptions(string $enumClass): array
     {
@@ -500,6 +500,7 @@ trait HasModule
             fn (BackedEnum $case): array => [
                 'value' => (string) $case->value,
                 'label' => method_exists($case, 'label') ? $case->label() : (string) $case->value,
+                'color' => method_exists($case, 'color') ? $case->color() : 'secondary',
             ],
             $enumClass::cases(),
         );

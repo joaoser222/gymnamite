@@ -13,6 +13,11 @@ enum ClientStatus: string
     case OVERDUED = 'overdued';
     case LOCKED = 'locked';
 
+    protected static function fields(): array
+    {
+        return ['label', 'value', 'color'];
+    }
+
     public function label(): string
     {
         return match ($this) {
@@ -20,6 +25,16 @@ enum ClientStatus: string
             self::INACTIVE => 'Inativo',
             self::OVERDUED => 'Em atraso',
             self::LOCKED => 'Bloqueado'
+        };
+    }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::ACTIVE => 'success',
+            self::INACTIVE => 'secondary',
+            self::OVERDUED => 'warning',
+            self::LOCKED => 'error',
         };
     }
 }

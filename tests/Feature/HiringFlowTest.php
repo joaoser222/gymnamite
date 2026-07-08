@@ -146,9 +146,9 @@ class HiringFlowTest extends TestCase
         $this->assertSame(12, $contract->installments);
         $this->assertSame(Date::today()->format('Y-m-d'), $contract->first_due_date?->format('Y-m-d'));
         $this->assertSame('accepted', $contract->accepted_terms);
-        $this->assertEquals(699.9, $contract->gross_value);
-        $this->assertEquals(69.99, $contract->discount_value);
-        $this->assertEquals(629.91, $contract->total);
+        $this->assertEquals(8398.8, $contract->gross_value);
+        $this->assertEquals(100.0, $contract->discount_value);
+        $this->assertEquals(8298.8, $contract->total);
         $this->assertDatabaseCount('invoices', 12);
 
         $firstInvoice = Invoice::query()->orderBy('installment_number')->firstOrFail();
@@ -156,7 +156,7 @@ class HiringFlowTest extends TestCase
         $this->assertSame('contract', $firstInvoice->billable_type);
         $this->assertSame($contract->id, $firstInvoice->billable_id);
         $this->assertSame(Date::today()->format('Y-m-d'), $firstInvoice->due_date?->format('Y-m-d'));
-        $this->assertEquals(5.8325, $firstInvoice->discount_value);
+        $this->assertEquals(8.3334, $firstInvoice->discount_value);
     }
 
     public function test_contract_wizard_updates_existing_client_when_document_is_found(): void
@@ -242,6 +242,7 @@ class HiringFlowTest extends TestCase
                 'coupon' => [
                     'id' => $coupon->id,
                     'code' => 'BEMVINDO',
+                    'duration' => 30,
                 ],
             ]);
     }
@@ -260,5 +261,120 @@ class HiringFlowTest extends TestCase
         $response->assertSessionHasErrors(['installments']);
         $this->assertDatabaseCount('clients', 0);
         $this->assertDatabaseCount('contracts', 0);
+    }
+
+    public function test_contract_wizard_applies_coupon_only_to_the_first_installments_allowed_by_coupon_duration(): void
+    {
+        $user = User::factory()->create();
+        $this->grantHiringPermissions($user);
+        $plan = $this->createPlan();
+
+        Coupon::query()->create([
+            'code' => 'CURTO',
+            'percent' => 10,
+            'discount_limit' => 100,
+            'duration' => 6,
+            'expiration_date' => '2026-12-31',
+            'visibility' => 'visible',
+        ]);
+
+        $payload = $this->validPayload($plan);
+        $payload['coupon_code'] = 'CURTO';
+
+        $response = $this->actingAs($user)->post(route('contracts.store'), $payload);
+
+        $response->assertRedirect(route('contracts.index'));
+
+        $contract = Contract::query()->firstOrFail();
+        $invoices = Invoice::query()->orderBy('installment_number')->get();
+
+        $this->assertCount(12, $invoices);
+        $this->assertEquals(100.0, $contract->discount_value);
+        $this->assertEquals(8298.8, $contract->total);
+        $this->assertEquals(16.6667, $invoices[0]->discount_value);
+        $this->assertEquals(16.6666, $invoices[5]->discount_value);
+        $this->assertEquals(0.0, $invoices[6]->discount_value);
+        $this->assertEquals(0.0, $invoices[11]->discount_value);
+    }
+
+    public function test_users_can_cancel_contract_and_non_paid_invoices_with_permission(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'contracts.cancel');
+
+        $client = Client::factory()->create();
+        $contract = Contract::query()->create([
+            'plan_name' => 'Plano Teste',
+            'modality_quantity' => '1',
+            'gross_value' => 300,
+            'discount_value' => 0,
+            'total' => 300,
+            'payment_method' => 'cash',
+            'first_due_date' => '2026-07-10',
+            'installments' => 3,
+            'accepted_terms' => 'accepted',
+            'visibility' => 'visible',
+            'status' => 'open',
+            'client_id' => $client->id,
+        ]);
+
+        Invoice::query()->create([
+            'operation_type' => 'receivable',
+            'invoice_type' => 'standard',
+            'due_date' => '2026-07-10',
+            'payment_method' => 'cash',
+            'gross_value' => 100,
+            'discount_value' => 0,
+            'interest_value' => 0,
+            'fine_value' => 0,
+            'paid_value' => 0,
+            'installment_number' => 1,
+            'status' => 'pending',
+            'visibility' => 'visible',
+            'holder_type' => 'client',
+            'holder_id' => $client->id,
+            'billable_type' => 'contract',
+            'billable_id' => $contract->id,
+        ]);
+
+        Invoice::query()->create([
+            'operation_type' => 'receivable',
+            'invoice_type' => 'standard',
+            'due_date' => '2026-08-10',
+            'payment_date' => '2026-08-10',
+            'payment_method' => 'cash',
+            'gross_value' => 100,
+            'discount_value' => 0,
+            'interest_value' => 0,
+            'fine_value' => 0,
+            'paid_value' => 100,
+            'installment_number' => 2,
+            'status' => 'paid',
+            'visibility' => 'visible',
+            'holder_type' => 'client',
+            'holder_id' => $client->id,
+            'billable_type' => 'contract',
+            'billable_id' => $contract->id,
+        ]);
+
+        $response = $this->actingAs($user)->patch(route('contracts.cancel', $contract));
+
+        $response->assertRedirect(route('contracts.index'));
+        $this->assertDatabaseHas('contracts', [
+            'id' => $contract->id,
+            'status' => 'canceled',
+        ]);
+        $this->assertDatabaseHas('invoices', [
+            'billable_type' => 'contract',
+            'billable_id' => $contract->id,
+            'installment_number' => 1,
+            'status' => 'canceled',
+        ]);
+        $this->assertDatabaseHas('invoices', [
+            'billable_type' => 'contract',
+            'billable_id' => $contract->id,
+            'installment_number' => 2,
+            'status' => 'paid',
+        ]);
     }
 }

@@ -7,6 +7,7 @@ use App\Enums\GenderType;
 use App\Enums\PaymentMethod;
 use App\Models\Client;
 use App\Models\Contract;
+use App\Models\Coupon;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
@@ -130,5 +131,44 @@ class BillingInvoiceServiceTest extends TestCase
         $this->assertSame(6, $contract->billingInstallments());
         $this->assertSame('receivable', $contract->billingOperationType()->value);
         $this->assertSame(PaymentMethod::CASH, $contract->billingPaymentMethod());
+    }
+
+    public function test_it_applies_contract_coupon_discount_only_to_the_first_allowed_installments(): void
+    {
+        $client = Client::factory()->create();
+        $coupon = Coupon::query()->create([
+            'code' => 'CURTO',
+            'percent' => 10,
+            'discount_limit' => 100,
+            'duration' => 2,
+            'expiration_date' => '2026-12-31',
+            'visibility' => 'visible',
+        ]);
+
+        $contract = Contract::query()->create([
+            'plan_name' => 'Plano Parcial',
+            'modality_quantity' => '1',
+            'gross_value' => 120,
+            'discount_value' => 0,
+            'total' => 120,
+            'first_due_date' => '2026-07-10',
+            'installments' => 4,
+            'accepted_terms' => 'accepted',
+            'status' => BillableStatus::OPEN,
+            'payment_method' => PaymentMethod::CASH,
+            'visibility' => 'visible',
+            'coupon_id' => $coupon->id,
+            'client_id' => $client->id,
+        ]);
+
+        $service = app(BillingInvoiceService::class);
+        $invoices = $service->generate($contract);
+
+        $this->assertCount(4, $invoices);
+        $this->assertEquals(3.0, $invoices[0]->discount_value);
+        $this->assertEquals(3.0, $invoices[1]->discount_value);
+        $this->assertEquals(0.0, $invoices[2]->discount_value);
+        $this->assertEquals(0.0, $invoices[3]->discount_value);
+        $this->assertEquals(6.0, $invoices->sum('discount_value'));
     }
 }

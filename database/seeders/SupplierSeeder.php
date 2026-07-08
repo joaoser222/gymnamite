@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Visibility;
+use App\Models\Supplier;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Supplier;
-use App\Enums\Visibility;
 
 class SupplierSeeder extends Seeder
 {
@@ -21,7 +21,7 @@ class SupplierSeeder extends Seeder
             'name' => 'FORNECEDOR PADRÃO',
             'document' => '00000000000000',
             'phone' => '99999999999',
-            'visibility' => Visibility::VISIBLE->value
-        ]],['id'],['name','document','phone']);
+            'visibility' => Visibility::VISIBLE->value,
+        ]], ['id'], ['name', 'document', 'phone']);
     }
 }

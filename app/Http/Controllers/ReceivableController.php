@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Enums\InvoiceStatus;
+use App\Enums\OperationType;
 use App\Enums\PaymentMethod;
-use App\Models\FinancialAccount;
-use App\Models\FinancialCategory;
 use App\Models\Receivable;
 use App\Traits\HasModule;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
@@ -41,6 +41,11 @@ class ReceivableController extends Controller
         return Receivable::class;
     }
 
+    protected function newModelQuery(): Builder
+    {
+        return Receivable::query()->where('operation_type', OperationType::RECEIVABLE->value);
+    }
+
     protected function moduleIndexProps(Request $request): array
     {
         return [
@@ -56,8 +61,6 @@ class ReceivableController extends Controller
             'options' => [
                 'invoiceStatus' => $this->enumOptions(InvoiceStatus::class),
                 'paymentMethods' => $this->enumOptions(PaymentMethod::class),
-                'financialAccounts' => $this->modelOptions(FinancialAccount::class),
-                'financialCategories' => $this->modelOptions(FinancialCategory::class),
             ],
         ];
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\CostCenter;
 use App\Models\Coupon;
+use App\Models\FinancialAccount;
 use App\Models\FinancialCategory;
 use App\Models\Modality;
 use App\Models\Plan;
@@ -76,6 +77,11 @@ class SelectBoxController extends Controller
     private function selectProduct(Request $request): JsonResponse
     {
         return $this->search(Product::class, $request, null, 'name', 'id', ['purchase_price', 'sale_price']);
+    }
+
+    private function selectFinancialAccount(Request $request): JsonResponse
+    {
+        return $this->search(FinancialAccount::class, $request, null, 'name', 'id');
     }
 
     private function selectProductUnity(Request $request): JsonResponse

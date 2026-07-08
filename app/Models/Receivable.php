@@ -23,14 +23,4 @@ class Receivable extends Invoice
             $model->setAttribute('operation_type', OperationType::RECEIVABLE);
         });
     }
-
-    public function setOperationTypeAttribute($value)
-    {
-        $this->attributes['operation_type'] = OperationType::RECEIVABLE;
-    }
-
-    public function getOperationTypeAttribute()
-    {
-        return OperationType::RECEIVABLE;
-    }
 }

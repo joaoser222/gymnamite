@@ -10,6 +10,7 @@ use App\Traits\HasVisibility;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Contract extends Model implements BillingInvoiceSource
 {
@@ -64,6 +65,11 @@ class Contract extends Model implements BillingInvoiceSource
         return $this->belongsTo(Coupon::class);
     }
 
+    public function invoices(): MorphMany
+    {
+        return $this->morphMany(Invoice::class, 'billable');
+    }
+
     public function billingHolder(): Model
     {
         return $this->client;
@@ -82,6 +88,21 @@ class Contract extends Model implements BillingInvoiceSource
     public function billingDiscountValue(): float
     {
         return (float) ($this->discount_value ?? 0);
+    }
+
+    public function billingDiscountPercent(): ?float
+    {
+        return $this->coupon?->percent;
+    }
+
+    public function billingDiscountLimit(): ?float
+    {
+        return $this->coupon?->discount_limit;
+    }
+
+    public function billingDiscountedInstallments(): ?int
+    {
+        return $this->coupon?->duration;
     }
 
     public function billingTotalValue(): float

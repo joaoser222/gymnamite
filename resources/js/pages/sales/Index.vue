@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
 import { formatCurrency, formatDate } from '@/plugins/formatters';
 import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
-import { findLabel, useSharedOptions } from '@/shared/options';
+import { findLabel, findOption, useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -53,7 +53,7 @@ const { billableStatus, paymentMethods } = useSharedOptions(sharedProps.options 
             {{ formatCurrency(item.total) }}
         </template>
         <template #column-status="{ item }">
-            <v-chip>
+            <v-chip :color="findOption(billableStatus, item.status)?.color" variant="tonal">
                 {{ findLabel(billableStatus, item.status) }}
             </v-chip>
         </template>

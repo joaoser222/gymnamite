@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
+import { useModulePermissions } from '@/composables/useModulePermissions';
 import type { DetailsRoutes } from '@/shared/page';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { required } from '@/plugins/validators';
@@ -23,9 +25,15 @@ type Contract = {
 defineProps<{
     contract?: Contract | null;
     routes: DetailsRoutes;
+    cancelRoute?: string | null;
 }>();
 
 const sharedProps = usePage().props;
+const { hasPermission, ensurePermissionsLoaded } = useModulePermissions<'cancel'>({
+    module: () => 'contracts',
+    permissions: () => undefined,
+    permissionMap: () => undefined,
+});
 
 const defaults = {
     total: 0,
@@ -36,6 +44,20 @@ const defaults = {
     plan_id: null,
     client_id: null
 };
+
+function cancelContract(route: string): void {
+    if (!confirm('Tem certeza que deseja cancelar este contrato?')) {
+        return;
+    }
+
+    router.patch(route, {}, {
+        preserveScroll: true,
+    });
+}
+
+onMounted(() => {
+    void ensurePermissionsLoaded();
+});
 </script>
 
 <template>
@@ -45,6 +67,7 @@ const defaults = {
         :defaults="defaults"
         :routes="routes"
         module="contracts"
+        :permission-map="{ update: false }"
     >
         <template #default="{ form, errors }">
             <v-divider class="my-4">
@@ -109,6 +132,16 @@ const defaults = {
                     />
                 </v-col>
             </v-row>
+        </template>
+        <template #actions>
+            <v-clipped-button
+                v-if="contract && cancelRoute && hasPermission('cancel')"
+                color="error"
+                prepend-icon="ti ti-x"
+                @click="cancelContract(cancelRoute)"
+            >
+                Cancelar contrato
+            </v-clipped-button>
         </template>
     </DetailsPage>
 </template>

@@ -6,7 +6,7 @@ import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
 import { masks,formatMasks } from '@/plugins/masks';
 import { formatDate } from '@/plugins/formatters';
 import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
-import { findLabel, useSharedOptions } from '@/shared/options';
+import { findLabel, findOption, useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -67,7 +67,7 @@ const { clientStatus } = useSharedOptions(
     >
         <!-- Status personalizado -->
         <template #column-status="{ item }">
-            <v-chip>
+            <v-chip :color="findOption(clientStatus, item.status)?.color">
                 {{ findLabel(clientStatus, item.status) }}
             </v-chip>
         </template>

@@ -35,9 +35,9 @@ class BillingInvoiceService
             $installments,
         );
 
-        $discountValueInstallments = $this->splitAmount(
-            $source->billingDiscountValue(),
-            $installments,
+        $discountValueInstallments = $this->resolveDiscountInstallments(
+            $source,
+            $grossValueInstallments,
         );
 
         $holder = $source->billingHolder();
@@ -73,6 +73,52 @@ class BillingInvoiceService
     }
 
     /**
+     * @param  array<int, float>  $grossValueInstallments
+     * @return array<int, float>
+     */
+    public function resolveDiscountInstallments(
+        BillingInvoiceSource $source,
+        array $grossValueInstallments,
+    ): array {
+        $discountPercent = $source->billingDiscountPercent();
+        $discountedInstallments = $source->billingDiscountedInstallments();
+
+        if ($discountPercent === null || $discountedInstallments === null) {
+            return $this->splitAmount(
+                $source->billingDiscountValue(),
+                count($grossValueInstallments),
+            );
+        }
+
+        $eligibleInstallments = min(count($grossValueInstallments), max(0, $discountedInstallments));
+        $discounts = array_fill(0, count($grossValueInstallments), 0.0);
+
+        if ($eligibleInstallments === 0 || $discountPercent <= 0) {
+            return $discounts;
+        }
+
+        $rawEligibleDiscounts = [];
+
+        for ($index = 0; $index < $eligibleInstallments; $index++) {
+            $rawEligibleDiscounts[] = round(
+                $grossValueInstallments[$index] * ($discountPercent / 100),
+                4,
+            );
+        }
+
+        $resolvedEligibleDiscounts = $this->applyDiscountLimit(
+            $rawEligibleDiscounts,
+            $source->billingDiscountLimit(),
+        );
+
+        foreach ($resolvedEligibleDiscounts as $index => $discountValue) {
+            $discounts[$index] = $discountValue;
+        }
+
+        return $discounts;
+    }
+
+    /**
      * @return array<int, string>
      */
     private function splitAmount(float $amount, int $installments): array
@@ -91,12 +137,32 @@ class BillingInvoiceService
     }
 
     /**
+     * @param  array<int, float>  $discounts
+     * @return array<int, float>
+     */
+    private function applyDiscountLimit(array $discounts, ?float $discountLimit): array
+    {
+        if ($discountLimit === null || $discountLimit <= 0) {
+            return $discounts;
+        }
+
+        $rawDiscountTotal = array_sum($discounts);
+
+        if ($rawDiscountTotal <= $discountLimit) {
+            return $discounts;
+        }
+
+        return $this->splitAmount($discountLimit, count($discounts));
+    }
+
+    /**
      * @return array<int, string>
      */
     private function sourceRelations(Model $source): array
     {
         return match ($source::class) {
-            Contract::class, Sale::class => ['client'],
+            Contract::class => ['client', 'coupon'],
+            Sale::class => ['client'],
             Purchase::class => ['supplier'],
             default => [],
         };

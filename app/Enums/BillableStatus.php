@@ -22,4 +22,19 @@ enum BillableStatus: string
             self::RETURNED => 'Devolvido',
         };
     }
+
+    protected static function fields(): array
+    {
+        return ['label', 'value', 'color'];
+    }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::OPEN => 'warning',
+            self::COMPLETED => 'success',
+            self::CANCELED => 'error',
+            self::RETURNED => 'info',
+        };
+    }
 }

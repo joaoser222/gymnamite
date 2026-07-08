@@ -75,6 +75,21 @@ class Sale extends Model implements BillingInvoiceSource
         return (float) $this->discount_value;
     }
 
+    public function billingDiscountPercent(): ?float
+    {
+        return null;
+    }
+
+    public function billingDiscountLimit(): ?float
+    {
+        return null;
+    }
+
+    public function billingDiscountedInstallments(): ?int
+    {
+        return null;
+    }
+
     public function billingTotalValue(): float
     {
         return (float) $this->total;

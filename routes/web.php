@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('select-box/{objectName}', SelectBoxController::class)->name('select-box');
     Route::get('contracts/find-client', [ContractController::class, 'findClient'])->name('contracts.find-client');
     Route::get('contracts/find-coupon', [ContractController::class, 'findCoupon'])->name('contracts.find-coupon');
+    Route::patch('contracts/{contract}/cancel', [ContractController::class, 'cancel'])->name('contracts.cancel');
 
     // Pessoas
     Route::module(ClientController::class);

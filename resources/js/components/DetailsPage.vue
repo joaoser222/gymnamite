@@ -216,6 +216,7 @@ void nextTick(validate);
         </v-card>
 
         <div class="d-flex ga-2 pa-3 justify-end">
+            <slot name="actions" :form="form" :is-creating="isCreating" />
             <v-clipped-button
                 color="secondary"
                 prepend-icon="ti ti-arrow-left"

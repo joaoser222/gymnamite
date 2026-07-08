@@ -24,7 +24,7 @@ class PlanController extends Controller
     /**
      * @var array<int, string>
      */
-    protected array $fields = ['id', 'name', 'description','modality_quantity', 'created_at'];
+    protected array $fields = ['id', 'name', 'description', 'modality_quantity', 'created_at'];
 
     /**
      * @var array<int, string>

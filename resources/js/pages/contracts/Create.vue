@@ -50,6 +50,7 @@ type CouponOption = {
     code: string;
     percent?: number | string | null;
     discount_limit?: number | string | null;
+    duration?: number | string | null;
     expiration_date?: string | null;
 };
 
@@ -131,26 +132,86 @@ const selectedTier = computed<PlanTier | null>(() => {
     );
 });
 
-const grossValuePreview = computed(() => selectedTier.value?.price ?? 0);
+const grossValuePreview = computed(() => {
+    if (selectedTier.value === null || form.installments === null) {
+        return 0;
+    }
+
+    return selectedTier.value.price * Number(form.installments);
+});
+
+const grossInstallmentValues = computed(() => {
+    const installments = Number(form.installments ?? 0);
+
+    if (!selectedTier.value || installments < 1) {
+        return [];
+    }
+
+    return splitAmount(grossValuePreview.value, installments);
+});
 
 const discountValuePreview = computed(() => {
-    if (selectedCoupon.value === null || selectedTier.value === null) {
+    if (selectedCoupon.value === null || grossInstallmentValues.value.length === 0) {
         return 0;
     }
 
     const percent = Number(selectedCoupon.value.percent ?? 0);
     const discountLimit = Number(selectedCoupon.value.discount_limit ?? 0);
-    const rawDiscount = grossValuePreview.value * (percent / 100);
+    const couponDuration = Number(selectedCoupon.value.duration ?? grossInstallmentValues.value.length);
+    const eligibleInstallments = Math.min(
+        grossInstallmentValues.value.length,
+        Number.isFinite(couponDuration) && couponDuration > 0
+            ? couponDuration
+            : grossInstallmentValues.value.length,
+    );
+
+    const rawDiscounts = grossInstallmentValues.value
+        .slice(0, eligibleInstallments)
+        .map((value) => value * (percent / 100));
 
     if (Number.isFinite(discountLimit) && discountLimit > 0) {
-        return Math.min(rawDiscount, discountLimit);
+        return Math.min(rawDiscounts.reduce((sum, value) => sum + value, 0), discountLimit);
     }
 
-    return rawDiscount;
+    return rawDiscounts.reduce((sum, value) => sum + value, 0);
 });
 
 const totalValuePreview = computed(() => {
     return Math.max(0, grossValuePreview.value - discountValuePreview.value);
+});
+
+const couponPartialDurationMessage = computed(() => {
+    if (selectedCoupon.value === null || form.installments === null) {
+        return null;
+    }
+
+    const couponDuration = Number(selectedCoupon.value.duration ?? 0);
+
+    if (!Number.isFinite(couponDuration) || couponDuration <= 0) {
+        return null;
+    }
+
+    if (Number(form.installments) <= couponDuration) {
+        return null;
+    }
+
+    return `O cupom ${selectedCoupon.value.code} será aplicado nas primeiras ${selectedCoupon.value.duration} parcelas.`;
+});
+
+const discountedInstallmentsSummary = computed(() => {
+    if (selectedCoupon.value === null || form.installments === null) {
+        return null;
+    }
+
+    const couponDuration = Number(selectedCoupon.value.duration ?? 0);
+
+    if (!Number.isFinite(couponDuration) || couponDuration <= 0) {
+        return `${form.installments} de ${form.installments} parcelas com desconto.`;
+    }
+
+    const discountedInstallments = Math.min(Number(form.installments), couponDuration);
+
+    return `${discountedInstallments} de ${form.installments} parcelas com desconto.`;
 });
 
 const acceptedTermsRule = (value: boolean) => {
@@ -320,6 +381,17 @@ async function searchCoupon(): Promise<void> {
 
     selectedCoupon.value = payload.coupon;
 }
+
+function splitAmount(amount: number, installments: number): number[] {
+    const scale = 10000;
+    const total = Math.round(amount * scale);
+    const baseInstallmentValue = Math.floor(total / installments);
+    const remainder = total % installments;
+
+    return Array.from({ length: installments }, (_, index) => {
+        return (baseInstallmentValue + (index < remainder ? 1 : 0)) / scale;
+    });
+}
 </script>
 
 <template>
@@ -436,14 +508,23 @@ async function searchCoupon(): Promise<void> {
                                                     @blur="searchCoupon"
                                                 />
                                             </v-col>
-                                            <v-col cols="12" md="4">
-                                                <CurrencyField :model-value="grossValuePreview" label="Valor bruto" readonly />
-                                            </v-col>
-                                            <v-col cols="12" md="4">
-                                                <CurrencyField :model-value="discountValuePreview" label="Desconto" readonly />
-                                            </v-col>
-                                            <v-col cols="12" md="4">
-                                                <CurrencyField :model-value="totalValuePreview" label="Preço final da contratação" readonly />
+                                            <v-col v-if="selectedCoupon" cols="12">
+                                                <v-alert color="info" variant="tonal" border="start">
+                                                    <div class="d-flex flex-column ga-1">
+                                                        <div>
+                                                            Desconto: {{ formatCurrency(discountValuePreview) }}
+                                                        </div>
+                                                        <div>
+                                                            Valor final: {{ formatCurrency(totalValuePreview) }}
+                                                        </div>
+                                                        <div>
+                                                            {{ discountedInstallmentsSummary }}
+                                                        </div>
+                                                        <div v-if="couponPartialDurationMessage">
+                                                            {{ couponPartialDurationMessage }}
+                                                        </div>
+                                                    </div>
+                                                </v-alert>
                                             </v-col>
                                             <v-col cols="12">
                                                 <v-textarea
@@ -540,6 +621,12 @@ async function searchCoupon(): Promise<void> {
                             <div class="text-body-1 font-weight-medium">{{ selectedTier ? formatCurrency(discountValuePreview) : '-' }}</div>
                             <div v-if="selectedCoupon" class="text-body-2 text-medium-emphasis">
                                 Cupom {{ selectedCoupon.code }} aplicado.
+                            </div>
+                            <div v-if="discountedInstallmentsSummary" class="text-body-2 text-medium-emphasis">
+                                {{ discountedInstallmentsSummary }}
+                            </div>
+                            <div v-if="couponPartialDurationMessage" class="text-body-2 text-info">
+                                {{ couponPartialDurationMessage }}
                             </div>
                         </div>
 

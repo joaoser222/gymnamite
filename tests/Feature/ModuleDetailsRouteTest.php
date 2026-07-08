@@ -7,12 +7,14 @@ use App\Enums\FinancialAccountType;
 use App\Enums\GenderType;
 use App\Enums\OperationType;
 use App\Models\Client;
+use App\Models\Contract;
 use App\Models\CostCenter;
 use App\Models\DirectLesson;
 use App\Models\FinancialAccount;
 use App\Models\FinancialCategory;
-use App\Models\PlanCategory;
 use App\Models\Permission;
+use App\Models\Plan;
+use App\Models\PlanCategory;
 use App\Models\Trainer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -159,6 +161,50 @@ class ModuleDetailsRouteTest extends TestCase
             ->component('plan_categories/Details')
             ->where('plan-category.id', $planCategory->id)
             ->where('plan-category.name', 'Premium')
+        );
+    }
+
+    public function test_authenticated_users_can_visit_contract_details_with_cancel_route(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'contracts.view');
+        $this->grantPermission($user, 'contracts.cancel');
+
+        $client = Client::factory()->create();
+        $planCategory = PlanCategory::query()->create([
+            'name' => 'Premium',
+            'visibility' => 'visible',
+        ]);
+        $plan = Plan::query()->create([
+            'name' => 'Plano Teste',
+            'modality_quantity' => 1,
+            'plan_category_id' => $planCategory->id,
+            'visibility' => 'visible',
+        ]);
+
+        $contract = Contract::query()->create([
+            'plan_name' => 'Plano Teste',
+            'modality_quantity' => '1',
+            'gross_value' => 120,
+            'discount_value' => 0,
+            'total' => 120,
+            'payment_method' => 'cash',
+            'first_due_date' => '2026-07-10',
+            'installments' => 1,
+            'accepted_terms' => 'accepted',
+            'visibility' => 'visible',
+            'status' => BillableStatus::OPEN->value,
+            'plan_id' => $plan->id,
+            'client_id' => $client->id,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('contracts.show', $contract));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('contracts/Details')
+            ->where('contract.id', $contract->id)
+            ->where('cancelRoute', route('contracts.cancel', $contract))
         );
     }
 }

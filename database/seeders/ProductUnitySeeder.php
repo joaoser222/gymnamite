@@ -1,14 +1,15 @@
 <?php
 
 namespace Database\Seeders;
+
+use App\Models\ProductUnity;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\ProductUnity;
 
 class ProductUnitySeeder extends Seeder
 {
     use WithoutModelEvents;
-    
+
     /**
      * Run the database seeds.
      */
@@ -65,7 +66,7 @@ class ProductUnitySeeder extends Seeder
             ['code' => 'TUBO', 'name' => 'Tubo'],
             ['code' => 'UN', 'name' => 'Unidade'],
             ['code' => 'VASIL', 'name' => 'Vasilhame'],
-            ['code' => 'VIDRO', 'name' => 'Vidro']
-        ],['code'],['name']);
+            ['code' => 'VIDRO', 'name' => 'Vidro'],
+        ], ['code'], ['name']);
     }
 }

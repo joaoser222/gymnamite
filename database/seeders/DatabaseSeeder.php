@@ -1,6 +1,7 @@
 <?php
 
 namespace Database\Seeders;
+
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -18,7 +19,7 @@ class DatabaseSeeder extends Seeder
             ProductUnitySeeder::class,
             BankSeeder::class,
             CostCenterSeeder::class,
-            FinancialCategorySeeder::class
+            FinancialCategorySeeder::class,
         ]);
     }
 }

@@ -23,8 +23,8 @@ defineProps<{
 const defaults = {
     code: '',
     percent: 0,
-    discount_limit: null,
-    duration: null,
+    discount_limit: 0,
+    duration: 1,
     expiration_date: '',
 };
 </script>

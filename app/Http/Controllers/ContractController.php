@@ -6,6 +6,7 @@ use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
 use App\Enums\BillableStatus;
 use App\Enums\GenderType;
+use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\ContractWizardRequest;
 use App\Models\Client;
@@ -137,13 +138,12 @@ class ContractController extends Controller
                     'coupon_code' => 'O cupom informado esta expirado.',
                 ]);
             }
+
         }
 
-        $grossValue = (float) $tier->price;
-        $discountValue = $this->resolveCouponDiscount($coupon, $grossValue);
-        $totalValue = max(0, round($grossValue - $discountValue, 4));
+        $grossValue = round((float) $tier->price * (int) $validated['installments'], 4);
 
-        DB::transaction(function () use ($validated, $plan, $coupon, $grossValue, $discountValue, $totalValue): void {
+        DB::transaction(function () use ($validated, $plan, $coupon, $grossValue): void {
             $clientData = Arr::only($validated, [
                 'name',
                 'email',
@@ -179,8 +179,8 @@ class ContractController extends Controller
                 'plan_name' => $plan->name,
                 'modality_quantity' => (string) $plan->modality_quantity,
                 'gross_value' => $grossValue,
-                'discount_value' => $discountValue,
-                'total' => $totalValue,
+                'discount_value' => 0,
+                'total' => $grossValue,
                 'payment_method' => PaymentMethod::CASH,
                 'first_due_date' => Date::today()->format('Y-m-d'),
                 'installments' => (int) $validated['installments'],
@@ -192,7 +192,13 @@ class ContractController extends Controller
                 'visibility' => 'visible',
             ]);
 
-            $this->billingInvoiceService->generate($contract);
+            $invoices = $this->billingInvoiceService->generate($contract);
+            $discountTotal = round($invoices->sum('discount_value'), 4);
+
+            $contract->update([
+                'discount_value' => $discountTotal,
+                'total' => round($grossValue - $discountTotal, 4),
+            ]);
         });
 
         Inertia::flash('toast', [
@@ -265,9 +271,43 @@ class ContractController extends Controller
                 'code',
                 'percent',
                 'discount_limit',
+                'duration',
                 'expiration_date',
             ]),
         ]);
+    }
+
+    public function cancel(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::CANCEL);
+
+        /** @var Contract $contract */
+        $contract = $this->modelFromRoute($request);
+
+        DB::transaction(function () use ($contract): void {
+            $contract->update([
+                'status' => BillableStatus::CANCELED,
+            ]);
+
+            $contract->loadMissing('invoices');
+
+            $contract->invoices()
+                ->where('status', '!=', InvoiceStatus::PAID->value)
+                ->update(['status' => InvoiceStatus::CANCELED->value]);
+        });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Contrato cancelado com sucesso.',
+            ]);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Contrato cancelado com sucesso.',
+        ]);
+
+        return redirect()->route('contracts.index');
     }
 
     protected function moduleIndexProps(Request $request): array
@@ -276,6 +316,15 @@ class ContractController extends Controller
             'options' => [
                 'billableStatus' => $this->enumOptions(BillableStatus::class),
             ],
+        ];
+    }
+
+    protected function moduleDetailsProps(?Model $model = null): array
+    {
+        return [
+            'cancelRoute' => $model instanceof Contract
+                ? route('contracts.cancel', ['contract' => $model])
+                : null,
         ];
     }
 
@@ -322,20 +371,5 @@ class ContractController extends Controller
                 ];
             })
             ->all();
-    }
-
-    private function resolveCouponDiscount(?Coupon $coupon, float $grossValue): float
-    {
-        if ($coupon === null) {
-            return 0;
-        }
-
-        $discountValue = round($grossValue * ($coupon->percent / 100), 4);
-
-        if ($coupon->discount_limit !== null) {
-            $discountValue = min($discountValue, (float) $coupon->discount_limit);
-        }
-
-        return max(0, $discountValue);
     }
 }

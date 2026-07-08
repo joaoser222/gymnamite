@@ -23,14 +23,4 @@ class Payable extends Invoice
             $model->setAttribute('operation_type', OperationType::PAYABLE);
         });
     }
-
-    public function setOperationTypeAttribute($value)
-    {
-        $this->attributes['operation_type'] = OperationType::PAYABLE;
-    }
-
-    public function getOperationTypeAttribute()
-    {
-        return OperationType::PAYABLE;
-    }
 }

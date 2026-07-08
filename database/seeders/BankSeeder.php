@@ -2,14 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Models\Bank;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Bank;
-
 
 class BankSeeder extends Seeder
 {
     use WithoutModelEvents;
+
     /**
      * Run the database seeds.
      */
@@ -137,7 +137,7 @@ class BankSeeder extends Seeder
             ['code' => '748', 'name' => 'Banco Cooperativo Sicredi S.A.'],
             ['code' => '752', 'name' => 'Banco BNP Paribas Brasil S.A.'],
             ['code' => '756', 'name' => 'Banco Cooperativo do Brasil S.A. – BANCOOB'],
-            ['code' => '757', 'name' => 'Banco KEB HANA do Brasil S.A.']
-        ],['code'],['name']);
+            ['code' => '757', 'name' => 'Banco KEB HANA do Brasil S.A.'],
+        ], ['code'], ['name']);
     }
 }

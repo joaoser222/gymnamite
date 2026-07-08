@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use App\Models\Trainer;
 use App\Enums\GenderType;
 use App\Enums\Visibility;
+use App\Models\Trainer;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
 
 class TrainerSeeder extends Seeder
 {
@@ -23,7 +23,7 @@ class TrainerSeeder extends Seeder
             'document' => '000000000000',
             'phone' => '99999999999',
             'gender' => GenderType::MALE->value,
-            'visibility' => Visibility::VISIBLE->value
-        ]],['id'],['name','document','phone']);
+            'visibility' => Visibility::VISIBLE->value,
+        ]], ['id'], ['name', 'document', 'phone']);
     }
 }

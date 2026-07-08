@@ -17,6 +17,12 @@ interface BillingInvoiceSource
 
     public function billingDiscountValue(): float;
 
+    public function billingDiscountPercent(): ?float;
+
+    public function billingDiscountLimit(): ?float;
+
+    public function billingDiscountedInstallments(): ?int;
+
     public function billingTotalValue(): float;
 
     public function billingInstallments(): int;

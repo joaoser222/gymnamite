@@ -7,6 +7,15 @@ trait HasMetadata
     abstract public function label(): string;
 
     /**
+     * Lista de campos que serão retornados em options().
+     * Pode ser sobrescrita no enum que usa o trait.
+     */
+    protected static function fields(): array
+    {
+        return ['label', 'value'];
+    }
+
+    /**
      * Retorna todos os valores como array
      */
     public static function values(): array
@@ -15,13 +24,22 @@ trait HasMetadata
     }
 
     /**
-     * Retorna array para selects (value => label)
+     * Retorna array para selects (value => [campos definidos em fields()])
      */
     public static function options(): array
     {
         $options = [];
+
         foreach (self::cases() as $case) {
-            $options[$case->value] = $case->label();
+            $data = [];
+
+            foreach (static::fields() as $field) {
+                $data[$field] = $field === 'value'
+                    ? $case->value
+                    : $case->{$field}();
+            }
+
+            $options[$case->value] = $data;
         }
 
         return $options;

@@ -2,12 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User;
+use App\AccessControl\AccessRole;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use App\AccessControl\AccessRole;
 
 class CreateAdminUser extends Command
 {
@@ -39,7 +39,7 @@ class CreateAdminUser extends Command
         $name = $this->option('name') ?? $this->ask('Nome do administrador');
         $email = $this->option('email') ?? $this->ask('E-mail do administrador');
         $password = $this->option('password') ?? $this->secret('Senha do administrador');
-        $role = Role::where('name',AccessRole::ADMINISTRATOR->value)->first();
+        $role = Role::where('name', AccessRole::ADMINISTRATOR->value)->first();
         // Validação
         $validator = Validator::make([
             'name' => $name,
@@ -55,6 +55,7 @@ class CreateAdminUser extends Command
             foreach ($validator->errors()->all() as $error) {
                 $this->error($error);
             }
+
             return Command::FAILURE;
         }
 
@@ -62,28 +63,29 @@ class CreateAdminUser extends Command
         $existingUser = User::where('email', $email)->first();
 
         if ($existingUser) {
-            if (!$this->option('force')) {
+            if (! $this->option('force')) {
                 $this->warn("Usuário com e-mail {$email} já existe!");
-                
-                if (!$this->confirm('Deseja atualizar este usuário para administrador?')) {
+
+                if (! $this->confirm('Deseja atualizar este usuário para administrador?')) {
                     $this->error('Operação cancelada.');
+
                     return Command::FAILURE;
                 }
             }
-            
+
             // Atualiza usuário existente
             $existingUser->update([
                 'name' => $name,
                 'password' => Hash::make($password),
-                'role_id'=>$role->id
+                'role_id' => $role->id,
             ]);
-            
+
             $this->info('Usuário atualizado para administrador com sucesso!');
             $this->table(
                 ['ID', 'Nome', 'E-mail', 'Admin'],
                 [[$existingUser->id, $existingUser->name, $existingUser->email, 'Sim']]
             );
-            
+
             return Command::SUCCESS;
         }
 
@@ -92,12 +94,12 @@ class CreateAdminUser extends Command
             'name' => $name,
             'email' => $email,
             'password' => Hash::make($password),
-            'role_id'=>$role->id
+            'role_id' => $role->id,
         ]);
 
         $this->info('Usuário administrador criado com sucesso!');
         $this->newLine();
-        
+
         $this->table(
             ['ID', 'Nome', 'E-mail', 'Admin'],
             [[$user->id, $user->name, $user->email, 'Sim']]

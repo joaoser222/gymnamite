@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
 import { formatCurrency, formatDate } from '@/plugins/formatters';
 import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
-import { findLabel, useSharedOptions } from '@/shared/options';
+import { findLabel, findOption, useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -60,7 +60,7 @@ const { invoiceStatus } = useSharedOptions(sharedProps.options ?? {});
             {{ formatDate(item.payment_date) }}
         </template>
         <template #column-status="{ item }">
-            <v-chip>
+            <v-chip :color="findOption(invoiceStatus, item.status)?.color" variant="tonal">
                 {{ findLabel(invoiceStatus, item.status) }}
             </v-chip>
         </template>
