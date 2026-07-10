@@ -20,6 +20,10 @@ class DatabaseSeeder extends Seeder
             BankSeeder::class,
             CostCenterSeeder::class,
             FinancialCategorySeeder::class,
+            FinancialAccountSeeder::class,
+            SupplierSeeder::class,
+            TrainerSeeder::class,
+            SettingSeeder::class
         ]);
     }
 }

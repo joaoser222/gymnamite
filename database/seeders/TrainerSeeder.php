@@ -19,8 +19,8 @@ class TrainerSeeder extends Seeder
     {
         Trainer::upsert([[
             'id' => 1,
-            'name' => 'TREINADOR PADRÃO',
-            'document' => '000000000000',
+            'name' => 'Treinador Padrão',
+            'document' => '00000000000',
             'phone' => '99999999999',
             'gender' => GenderType::MALE->value,
             'visibility' => Visibility::VISIBLE->value,

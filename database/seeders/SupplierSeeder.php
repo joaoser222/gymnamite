@@ -18,7 +18,7 @@ class SupplierSeeder extends Seeder
     {
         Supplier::upsert([[
             'id' => 1,
-            'name' => 'FORNECEDOR PADRÃO',
+            'name' => 'Fornecedor Padrão',
             'document' => '00000000000000',
             'phone' => '99999999999',
             'visibility' => Visibility::VISIBLE->value,
