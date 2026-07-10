@@ -82,5 +82,6 @@ Route::middleware(['auth'])->group(function () {
     // Avançado
     Route::module(FinancialAccountController::class);
     Route::module(RoleController::class);
-    Route::module(SettingController::class);
+    Route::get('settings', [SettingController::class, 'index'])->name('settings.show');
+    Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 });

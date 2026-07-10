@@ -40,6 +40,8 @@ const props = withDefaults(
         module?: string;
         permissions?: string[];
         permissionMap?: DetailsPermissionMap;
+        hideSaveAction?: boolean;
+        canSaveOverride?: boolean | null;
     }>(),
     {
         item: null,
@@ -47,6 +49,8 @@ const props = withDefaults(
         itemKey: 'id',
         saveLabel: 'Salvar',
         cancelLabel: 'Voltar',
+        hideSaveAction: false,
+        canSaveOverride: null,
     },
 );
 
@@ -87,9 +91,13 @@ const permissions = computed(() => ({
     submit: isCreating.value ? hasPermission('create') : hasPermission('update'),
 }));
 
+const canSubmit = computed(
+    () => permissions.value.submit && props.canSaveOverride !== false,
+);
+
 const canSave = computed(
     () =>
-        permissions.value.submit &&
+        canSubmit.value &&
         formState.value.validated &&
         formState.value.valid === true &&
         !form.processing,
@@ -112,8 +120,8 @@ const validate = async (): Promise<boolean> => {
 };
 
 // O submit escolhe automaticamente entre criação e atualização a partir da presença do identificador.
-const submit = async (): Promise<void> => {
-    if (!permissions.value.submit) {
+const submit = async (overrides: FormData = {}): Promise<void> => {
+    if (!canSubmit.value) {
         return;
     }
 
@@ -121,14 +129,20 @@ const submit = async (): Promise<void> => {
         return;
     }
 
+    const payload = {
+        ...form.data(),
+        ...overrides,
+    };
+
     const options = {
         preserveScroll: true,
         onSuccess: () => emit('save', form),
+        onFinish: () => form.transform((data) => data),
     };
 
     if (isCreating.value) {
         if (props.routes.store) {
-            form.post(props.routes.store, options);
+            form.transform(() => payload).post(props.routes.store, options);
         }
 
         return;
@@ -137,7 +151,7 @@ const submit = async (): Promise<void> => {
     const updateRoute = props.routes.update?.replace(':id', String(recordId.value));
 
     if (updateRoute) {
-        form.put(updateRoute, options);
+        form.transform(() => payload).put(updateRoute, options);
     }
 };
 
@@ -208,15 +222,23 @@ void nextTick(validate);
                         :errors="formErrors"
                         :is-creating="isCreating"
                         :validate="validate"
-                        :canSubmit="permissions.submit"
-                        :readonly="!permissions.submit"
+                        :canSubmit="canSubmit"
+                        :readonly="!canSubmit"
+                        :submit="submit"
                     />
                 </v-form>
             </v-card-text>
         </v-card>
 
         <div class="d-flex ga-2 pa-3 justify-end">
-            <slot name="actions" :form="form" :is-creating="isCreating" />
+            <slot
+                name="actions"
+                :form="form"
+                :is-creating="isCreating"
+                :can-save="canSave"
+                :can-submit="canSubmit"
+                :submit="submit"
+            />
             <v-clipped-button
                 color="secondary"
                 prepend-icon="ti ti-arrow-left"
@@ -226,7 +248,7 @@ void nextTick(validate);
                 {{ cancelLabel }}
             </v-clipped-button>
             <v-clipped-button
-                v-if="permissions.submit"
+                v-if="canSubmit && !hideSaveAction"
                 color="primary"
                 prepend-icon="ti ti-device-floppy"
                 :loading="form.processing"
