@@ -23,6 +23,7 @@ class ContractWizardRequest extends FormRequest
     {
         $clientId = $this->integer('client_id') ?: null;
         $client = $clientId !== null ? Client::query()->find($clientId) : null;
+        $shouldGenerateInvoices = ! $this->has('generate_invoices') || $this->boolean('generate_invoices');
 
         return [
             'client_id' => ['nullable', 'integer', 'exists:clients,id'],
@@ -65,7 +66,8 @@ class ContractWizardRequest extends FormRequest
                 ),
             ],
             'annotations' => ['nullable', 'string', 'max:500'],
-            'accepted_terms' => ['accepted'],
+            'accepted_terms' => [Rule::requiredIf($shouldGenerateInvoices), 'boolean', 'accepted_if:generate_invoices,1'],
+            'generate_invoices' => ['boolean'],
         ];
     }
 }

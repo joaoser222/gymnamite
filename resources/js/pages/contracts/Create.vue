@@ -84,6 +84,7 @@ const clientFormRef = ref<VForm | null>(null);
 const contractFormRef = ref<VForm | null>(null);
 const lastLoadedDocument = ref('');
 const selectedCoupon = ref<CouponOption | null>(null);
+const requiresAcceptedTerms = ref(false);
 
 const form = useForm({
     client_id: null as number | null,
@@ -109,6 +110,7 @@ const form = useForm({
     installments: null as number | null,
     annotations: '',
     accepted_terms: false,
+    generate_invoices: false,
 });
 
 const selectedPlan = computed<PlanOption | null>(() => {
@@ -215,7 +217,7 @@ const discountedInstallmentsSummary = computed(() => {
 });
 
 const acceptedTermsRule = (value: boolean) => {
-    return value || 'Você precisa aceitar os termos da contratação.';
+    return !requiresAcceptedTerms.value || value || 'Você precisa aceitar os termos da contratação.';
 };
 
 watch(selectedPlan, (plan) => {
@@ -336,14 +338,19 @@ async function goToContractStep(): Promise<void> {
     }
 }
 
-async function submit(): Promise<void> {
+async function submit(generateInvoices: boolean): Promise<void> {
+    requiresAcceptedTerms.value = generateInvoices;
+
     const result = await contractFormRef.value?.validate();
 
     if (!result?.valid) {
         return;
     }
 
-    form.post(props.routes.store, {
+    form.transform((data) => ({
+        ...data,
+        generate_invoices: generateInvoices,
+    })).post(props.routes.store, {
         preserveScroll: true,
         onError: (errors) => {
             const contractFields = [
@@ -358,6 +365,7 @@ async function submit(): Promise<void> {
                 ? 2
                 : 1;
         },
+        onFinish: () => form.transform((data) => data),
     });
 }
 
@@ -563,9 +571,14 @@ function splitAmount(amount: number, installments: number): number[] {
                             <v-clipped-button v-if="step === 1" color="primary" append-icon="ti ti-arrow-right" @click="goToContractStep">
                                 Continuar
                             </v-clipped-button>
-                            <v-clipped-button v-else color="primary" prepend-icon="ti ti-device-floppy" :loading="form.processing" @click="submit">
-                                Concluir contratação
-                            </v-clipped-button>
+                            <template v-else>
+                                <v-clipped-button color="primary" prepend-icon="ti ti-device-floppy" :loading="form.processing" @click="submit(false)">
+                                    Salvar
+                                </v-clipped-button>
+                                <v-clipped-button color="success" prepend-icon="ti ti-receipt-2" :loading="form.processing" @click="submit(true)">
+                                    Finalizar
+                                </v-clipped-button>
+                            </template>
                         </div>
                     </v-card-actions>
                 </v-card>

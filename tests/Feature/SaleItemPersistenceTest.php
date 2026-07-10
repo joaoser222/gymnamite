@@ -48,6 +48,7 @@ class SaleItemPersistenceTest extends TestCase
             'payment_method' => PaymentMethod::CASH->value,
             'first_due_date' => '2026-07-10',
             'installments' => 2,
+            'generate_invoices' => true,
             'discount_value' => 8,
             'annotations' => 'Venda de teste',
             'disable_stock' => false,
@@ -92,6 +93,38 @@ class SaleItemPersistenceTest extends TestCase
             'product_name' => 'Produto A',
             'quantity' => 2,
         ]);
+    }
+
+    public function test_authenticated_users_can_create_sale_without_generating_installments(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'sales.create');
+
+        $client = $this->createClient();
+        $product = $this->createProduct('Produto Sem Parcelas');
+
+        $response = $this->actingAs($user)->post(route('sales.store'), [
+            'client_id' => $client->id,
+            'status' => BillableStatus::OPEN->value,
+            'payment_method' => PaymentMethod::CASH->value,
+            'generate_invoices' => false,
+            'discount_value' => 0,
+            'annotations' => 'Venda sem parcelas',
+            'disable_stock' => true,
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => 1,
+                'price' => 42,
+            ]],
+        ]);
+
+        $response->assertRedirect(route('sales.index'));
+
+        $sale = Sale::query()->firstOrFail();
+
+        $this->assertNull($sale->first_due_date);
+        $this->assertSame(1, $sale->installments);
+        $this->assertDatabaseCount('invoices', 0);
     }
 
     public function test_authenticated_users_can_update_sale_items(): void
@@ -169,6 +202,60 @@ class SaleItemPersistenceTest extends TestCase
             'product_name' => 'Produto B',
             'quantity' => 2,
         ]);
+    }
+
+    public function test_finalized_sales_cannot_be_updated(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'sales.update');
+
+        $client = $this->createClient();
+        $product = $this->createProduct('Produto Finalizado');
+
+        $sale = Sale::query()->create([
+            'client_id' => $client->id,
+            'status' => BillableStatus::COMPLETED->value,
+            'payment_method' => PaymentMethod::CASH->value,
+            'first_due_date' => '2026-07-10',
+            'installments' => 1,
+            'gross_value' => 20,
+            'discount_value' => 0,
+            'total' => 20,
+            'annotations' => null,
+            'disable_stock' => false,
+            'visibility' => Visibility::VISIBLE->value,
+        ]);
+
+        SaleItem::query()->create([
+            'sale_id' => $sale->id,
+            'product_id' => $product->id,
+            'product_name' => 'Produto Finalizado',
+            'quantity' => 1,
+            'price' => 20,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('sales.update', $sale), [
+            'client_id' => $client->id,
+            'status' => BillableStatus::OPEN->value,
+            'payment_method' => PaymentMethod::PIX->value,
+            'first_due_date' => '2026-08-10',
+            'installments' => 3,
+            'discount_value' => 10,
+            'annotations' => 'Nao deveria atualizar',
+            'disable_stock' => true,
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => 2,
+                'price' => 25,
+            ]],
+        ]);
+
+        $response->assertForbidden();
+
+        $sale->refresh();
+
+        $this->assertSame(BillableStatus::COMPLETED->value, $sale->status);
+        $this->assertSame(20.0, $sale->total);
     }
 
     public function test_sale_with_disable_stock_does_not_recalculate_product_quantity(): void

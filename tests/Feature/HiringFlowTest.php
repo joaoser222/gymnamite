@@ -128,6 +128,7 @@ class HiringFlowTest extends TestCase
 
         $payload = $this->validPayload($plan);
         $payload['coupon_code'] = $coupon->code;
+        $payload['generate_invoices'] = true;
 
         $response = $this->actingAs($user)->post(route('contracts.store'), $payload);
 
@@ -157,6 +158,38 @@ class HiringFlowTest extends TestCase
         $this->assertSame($contract->id, $firstInvoice->billable_id);
         $this->assertSame(Date::today()->format('Y-m-d'), $firstInvoice->due_date?->format('Y-m-d'));
         $this->assertEquals(8.3334, $firstInvoice->discount_value);
+    }
+
+    public function test_contract_wizard_can_save_without_generating_invoices(): void
+    {
+        $user = User::factory()->create();
+        $this->grantHiringPermissions($user);
+        $plan = $this->createPlan();
+        $coupon = Coupon::query()->create([
+            'code' => 'BEMVINDO',
+            'percent' => 10,
+            'discount_limit' => 100,
+            'duration' => 30,
+            'expiration_date' => '2026-12-31',
+            'visibility' => 'visible',
+        ]);
+
+        $payload = $this->validPayload($plan);
+        $payload['accepted_terms'] = false;
+        $payload['coupon_code'] = $coupon->code;
+        $payload['generate_invoices'] = false;
+
+        $response = $this->actingAs($user)->post(route('contracts.store'), $payload);
+
+        $response->assertRedirect(route('contracts.index'));
+
+        $contract = Contract::query()->firstOrFail();
+
+        $this->assertSame('pending', $contract->accepted_terms);
+        $this->assertSame(Date::today()->format('Y-m-d'), $contract->first_due_date?->format('Y-m-d'));
+        $this->assertEquals(100.0, $contract->discount_value);
+        $this->assertEquals(8298.8, $contract->total);
+        $this->assertDatabaseCount('invoices', 0);
     }
 
     public function test_contract_wizard_updates_existing_client_when_document_is_found(): void

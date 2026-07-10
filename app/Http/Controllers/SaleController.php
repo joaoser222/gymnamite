@@ -126,6 +126,7 @@ class SaleController extends Controller
         $sale = DB::transaction(function () use ($request): Sale {
             $data = $this->validatedRequestData($request, $this->storeRequestClass());
             $items = Arr::pull($data, 'items', []);
+            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
 
             /** @var Sale $sale */
             $sale = $this->newModelQuery()->create($data);
@@ -137,7 +138,10 @@ class SaleController extends Controller
             );
 
             $sale = $sale->refresh();
-            $this->billingInvoiceService->generate($sale);
+
+            if ($generateInvoices) {
+                $this->billingInvoiceService->generate($sale);
+            }
 
             return $sale->load('items');
         });
@@ -165,9 +169,17 @@ class SaleController extends Controller
         $sale = DB::transaction(function () use ($request): Sale {
             /** @var Sale $sale */
             $sale = $this->modelFromRoute($request);
+
+            abort_if(
+                $sale->status !== BillableStatus::OPEN->value,
+                403,
+                'Somente vendas pendentes podem ser atualizadas.',
+            );
+
             $productIdsBeforeUpdate = $sale->items()->pluck('product_id')->filter()->all();
             $data = $this->validatedRequestData($request, $this->updateRequestClass());
             $items = Arr::pull($data, 'items', []);
+            Arr::pull($data, 'generate_invoices');
 
             $sale->update($data);
 

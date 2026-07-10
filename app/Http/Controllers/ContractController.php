@@ -101,6 +101,8 @@ class ContractController extends Controller
         $this->authorizeAccess(AccessAction::CREATE);
 
         $validated = $request->validated();
+        $generateInvoices = ! array_key_exists('generate_invoices', $validated)
+            || (bool) $validated['generate_invoices'];
 
         /** @var Plan $plan */
         $plan = Plan::query()
@@ -143,7 +145,7 @@ class ContractController extends Controller
 
         $grossValue = round((float) $tier->price * (int) $validated['installments'], 4);
 
-        DB::transaction(function () use ($validated, $plan, $coupon, $grossValue): void {
+        DB::transaction(function () use ($validated, $plan, $coupon, $grossValue, $generateInvoices): void {
             $clientData = Arr::only($validated, [
                 'name',
                 'email',
@@ -184,7 +186,7 @@ class ContractController extends Controller
                 'payment_method' => PaymentMethod::CASH,
                 'first_due_date' => Date::today()->format('Y-m-d'),
                 'installments' => (int) $validated['installments'],
-                'accepted_terms' => 'accepted',
+                'accepted_terms' => $generateInvoices ? 'accepted' : 'pending',
                 'annotations' => $validated['annotations'] ?? null,
                 'coupon_id' => $coupon?->id,
                 'plan_id' => $plan->id,
@@ -192,8 +194,23 @@ class ContractController extends Controller
                 'visibility' => 'visible',
             ]);
 
-            $invoices = $this->billingInvoiceService->generate($contract);
-            $discountTotal = round($invoices->sum('discount_value'), 4);
+            if ($generateInvoices) {
+                $invoices = $this->billingInvoiceService->generate($contract);
+                $discountTotal = round($invoices->sum('discount_value'), 4);
+
+                $contract->update([
+                    'discount_value' => $discountTotal,
+                    'total' => round($grossValue - $discountTotal, 4),
+                ]);
+
+                return;
+            }
+
+            $grossInstallments = $this->splitAmount($grossValue, (int) $validated['installments']);
+            $discountTotal = round(array_sum($this->billingInvoiceService->resolveDiscountInstallments(
+                $contract->loadMissing('coupon'),
+                $grossInstallments,
+            )), 4);
 
             $contract->update([
                 'discount_value' => $discountTotal,
@@ -321,10 +338,27 @@ class ContractController extends Controller
 
     protected function moduleDetailsProps(?Model $model = null): array
     {
+        $clientInfo = null;
+        $couponInfo = null;
+
+        if ($model instanceof Contract) {
+            $model->load(['client', 'coupon']);
+            $clientInfo = $model->client
+                ? "{$model->client->name} - {$model->client->document}"
+                : null;
+            $couponInfo = $model->coupon?->code;
+        }
+
         return [
             'cancelRoute' => $model instanceof Contract
                 ? route('contracts.cancel', ['contract' => $model])
                 : null,
+            'clientInfo' => $clientInfo,
+            'couponInfo' => $couponInfo,
+            'options' => [
+                'billableStatus' => $this->enumOptions(BillableStatus::class),
+                'paymentMethods' => $this->enumOptions(PaymentMethod::class),
+            ],
         ];
     }
 
@@ -371,5 +405,23 @@ class ContractController extends Controller
                 ];
             })
             ->all();
+    }
+
+    /**
+     * @return array<int, float>
+     */
+    private function splitAmount(float $amount, int $installments): array
+    {
+        $scale = 10000;
+        $total = (int) round($amount * $scale);
+        $baseInstallmentValue = intdiv($total, $installments);
+        $remainder = $total % $installments;
+        $parts = [];
+
+        for ($index = 0; $index < $installments; $index++) {
+            $parts[] = ($baseInstallmentValue + ($index < $remainder ? 1 : 0)) / $scale;
+        }
+
+        return $parts;
     }
 }

@@ -126,6 +126,7 @@ class PurchaseController extends Controller
         $purchase = DB::transaction(function () use ($request): Purchase {
             $data = $this->validatedRequestData($request, $this->storeRequestClass());
             $items = Arr::pull($data, 'items', []);
+            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
 
             /** @var Purchase $purchase */
             $purchase = $this->newModelQuery()->create($data);
@@ -137,7 +138,10 @@ class PurchaseController extends Controller
             );
 
             $purchase = $purchase->refresh();
-            $this->billingInvoiceService->generate($purchase);
+
+            if ($generateInvoices) {
+                $this->billingInvoiceService->generate($purchase);
+            }
 
             return $purchase->load('items');
         });
@@ -165,9 +169,17 @@ class PurchaseController extends Controller
         $purchase = DB::transaction(function () use ($request): Purchase {
             /** @var Purchase $purchase */
             $purchase = $this->modelFromRoute($request);
+
+            abort_if(
+                $purchase->status !== BillableStatus::OPEN->value,
+                403,
+                'Somente compras pendentes podem ser atualizadas.',
+            );
+
             $productIdsBeforeUpdate = $purchase->items()->pluck('product_id')->filter()->all();
             $data = $this->validatedRequestData($request, $this->updateRequestClass());
             $items = Arr::pull($data, 'items', []);
+            Arr::pull($data, 'generate_invoices');
 
             $purchase->update($data);
 

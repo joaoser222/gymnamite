@@ -19,15 +19,18 @@ class SaleRequest extends FormRequest
      */
     public function rules(): array
     {
+        $shouldGenerateInvoices = ! $this->has('generate_invoices') || $this->boolean('generate_invoices');
+
         return [
             'client_id' => ['required', 'integer', 'exists:clients,id'],
             'status' => ['required', Rule::enum(BillableStatus::class)],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
-            'first_due_date' => ['required', 'date'],
-            'installments' => ['required', 'integer', 'min:1'],
+            'first_due_date' => [Rule::requiredIf($shouldGenerateInvoices), 'nullable', 'date'],
+            'installments' => [Rule::requiredIf($shouldGenerateInvoices), 'nullable', 'integer', 'min:1'],
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'annotations' => ['nullable', 'string', 'max:500'],
             'disable_stock' => ['boolean'],
+            'generate_invoices' => ['boolean'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],

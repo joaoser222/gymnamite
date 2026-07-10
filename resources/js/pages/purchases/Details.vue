@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import type { DetailsRoutes } from '@/shared/page';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
@@ -22,7 +23,7 @@ type Purchase = {
     items?: Array<Record<string, unknown>>;
 };
 
-defineProps<{
+const props = defineProps<{
     purchase?: Purchase | null;
     routes: DetailsRoutes;
 }>();
@@ -40,9 +41,14 @@ const defaults = {
     payment_method: 'cash',
     annotations: '',
     disable_stock: false,
+    generate_invoices: false,
     supplier_id: null,
     items: [],
 };
+
+const canUpdatePurchase = computed(() => {
+    return props.purchase?.id === undefined || props.purchase.status === 'open';
+});
 
 function normalizeCurrencyValue(value: unknown): number {
     const numberValue = Number(value ?? 0);
@@ -77,9 +83,16 @@ function validateBillableItems(value: unknown): true | string {
         :defaults="defaults"
         :routes="routes"
         module="purchases"
+        hide-save-action
+        :can-save-override="canUpdatePurchase"
     >
         <template #default="{ form, errors }">
             <v-row class="ma-0">
+                <v-col v-if="purchase?.id && purchase.status !== 'open'" cols="12">
+                    <v-alert type="warning" variant="tonal" border="start">
+                        Compras finalizadas nao podem ser atualizadas.
+                    </v-alert>
+                </v-col>
                 <v-col cols="12" class="ma-0 py-0">
                     <v-switch
                         v-model="form.disable_stock"
@@ -181,6 +194,26 @@ function validateBillableItems(value: unknown): true | string {
                     />
                 </v-col>
             </v-row>
+        </template>
+
+        <template #actions="{ isCreating, canSave, submit }">
+            <v-clipped-button
+                color="primary"
+                prepend-icon="ti ti-device-floppy"
+                :disabled="!canSave"
+                @click="isCreating ? submit({ generate_invoices: false }) : submit()"
+            >
+                Salvar
+            </v-clipped-button>
+            <v-clipped-button
+                v-if="isCreating"
+                color="success"
+                prepend-icon="ti ti-receipt-2"
+                :disabled="!canSave"
+                @click="submit({ generate_invoices: true })"
+            >
+                Finalizar
+            </v-clipped-button>
         </template>
     </DetailsPage>
 </template>

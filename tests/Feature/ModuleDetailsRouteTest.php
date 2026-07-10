@@ -9,12 +9,14 @@ use App\Enums\OperationType;
 use App\Models\Client;
 use App\Models\Contract;
 use App\Models\CostCenter;
+use App\Models\Coupon;
 use App\Models\DirectLesson;
 use App\Models\FinancialAccount;
 use App\Models\FinancialCategory;
 use App\Models\Permission;
 use App\Models\Plan;
 use App\Models\PlanCategory;
+use App\Models\Setting;
 use App\Models\Trainer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -181,19 +183,29 @@ class ModuleDetailsRouteTest extends TestCase
             'plan_category_id' => $planCategory->id,
             'visibility' => 'visible',
         ]);
+        $coupon = Coupon::query()->create([
+            'code' => 'DETALHE10',
+            'percent' => 10,
+            'discount_limit' => 10,
+            'duration' => 1,
+            'expiration_date' => '2026-12-31',
+            'visibility' => 'visible',
+        ]);
 
         $contract = Contract::query()->create([
             'plan_name' => 'Plano Teste',
             'modality_quantity' => '1',
             'gross_value' => 120,
-            'discount_value' => 0,
-            'total' => 120,
+            'discount_value' => 10,
+            'total' => 110,
             'payment_method' => 'cash',
             'first_due_date' => '2026-07-10',
             'installments' => 1,
             'accepted_terms' => 'accepted',
+            'annotations' => 'Observacao do contrato',
             'visibility' => 'visible',
             'status' => BillableStatus::OPEN->value,
+            'coupon_id' => $coupon->id,
             'plan_id' => $plan->id,
             'client_id' => $client->id,
         ]);
@@ -204,7 +216,91 @@ class ModuleDetailsRouteTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('contracts/Details')
             ->where('contract.id', $contract->id)
+            ->where('contract.gross_value', 120)
+            ->where('contract.discount_value', 10)
+            ->where('contract.total', 110)
+            ->where('contract.payment_method', 'cash')
+            ->where('contract.coupon_id', $coupon->id)
+            ->where('clientInfo', $client->name.' - '.$client->document)
+            ->where('couponInfo', $coupon->code)
+            ->has('options.billableStatus', 4)
+            ->has('options.paymentMethods', 4)
             ->where('cancelRoute', route('contracts.cancel', $contract))
         );
+    }
+
+    public function test_authenticated_users_can_visit_the_custom_settings_page(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'settings.view');
+        $this->grantPermission($user, 'settings.update');
+
+        Setting::query()->create([
+            'name' => 'contract_default_category',
+            'label' => 'Categoria de Contratos',
+            'content' => 'Mensalidades',
+            'object_type' => 'string',
+        ]);
+
+        Setting::query()->create([
+            'name' => 'sale_default_category',
+            'label' => 'Categoria de Vendas',
+            'content' => 'Produtos',
+            'object_type' => 'string',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('settings.show'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('settings/Details')
+            ->where('routes.update', route('settings.update'))
+            ->has('settings', 2)
+            ->where('settings.0.name', 'contract_default_category')
+            ->where('settings.0.label', 'Categoria de Contratos')
+            ->where('settings.0.content', 'Mensalidades')
+            ->where('settings.1.name', 'sale_default_category')
+            ->where('settings.1.label', 'Categoria de Vendas')
+            ->where('settings.1.content', 'Produtos')
+        );
+    }
+
+    public function test_authenticated_users_can_update_settings_in_a_single_request(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'settings.update');
+
+        $contractSetting = Setting::query()->create([
+            'name' => 'contract_default_category',
+            'label' => 'Categoria de Contratos',
+            'content' => '',
+            'object_type' => 'string',
+        ]);
+
+        $saleSetting = Setting::query()->create([
+            'name' => 'sale_default_category',
+            'label' => 'Categoria de Vendas',
+            'content' => '',
+            'object_type' => 'string',
+        ]);
+
+        $response = $this->actingAs($user)->put(route('settings.update'), [
+            'settings' => [
+                'contract_default_category' => 'Mensalidades',
+                'sale_default_category' => 'Produtos',
+            ],
+        ]);
+
+        $response->assertRedirect(route('settings.show'));
+
+        $this->assertDatabaseHas('settings', [
+            'id' => $contractSetting->id,
+            'content' => 'Mensalidades',
+        ]);
+
+        $this->assertDatabaseHas('settings', [
+            'id' => $saleSetting->id,
+            'content' => 'Produtos',
+        ]);
     }
 }
