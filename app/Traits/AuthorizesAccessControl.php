@@ -27,18 +27,7 @@ trait AuthorizesAccessControl
 
         $permissionName = $this->accessPermissionName($action);
 
-        if ($user->permissions()
-            ->where('name', $permissionName)
-            ->exists()) {
-            return true;
-        }
-
-        if ($user->role === null) {
-            return false;
-        }
-
-        return $user->role
-            ->permissions()
+        return $user->permissions()
             ->where('name', $permissionName)
             ->exists();
     }

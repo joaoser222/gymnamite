@@ -30,16 +30,27 @@ class CreateAdminUser extends Command
     /**
      * Execute o comando.
      */
-    public function handle()
+    public function handle(): int
     {
         $this->info('Criando usuário administrador...');
         $this->newLine();
+
+        $this->callSilently('access-control:sync', [
+            '--without-users' => true,
+        ]);
 
         // Coleta os dados
         $name = $this->option('name') ?? $this->ask('Nome do administrador');
         $email = $this->option('email') ?? $this->ask('E-mail do administrador');
         $password = $this->option('password') ?? $this->secret('Senha do administrador');
-        $role = Role::where('name', AccessRole::ADMINISTRATOR->value)->first();
+        $role = Role::query()->where('name', AccessRole::ADMINISTRATOR->value)->first();
+
+        if ($role === null) {
+            $this->error('Perfil de administrador nao encontrado apos sincronizacao.');
+
+            return Command::FAILURE;
+        }
+
         // Validação
         $validator = Validator::make([
             'name' => $name,
@@ -79,6 +90,7 @@ class CreateAdminUser extends Command
                 'password' => Hash::make($password),
                 'role_id' => $role->id,
             ]);
+            $existingUser->permissions()->sync($role->permissions()->pluck('permissions.id')->all());
 
             $this->info('Usuário atualizado para administrador com sucesso!');
             $this->table(
@@ -96,6 +108,7 @@ class CreateAdminUser extends Command
             'password' => Hash::make($password),
             'role_id' => $role->id,
         ]);
+        $user->permissions()->sync($role->permissions()->pluck('permissions.id')->all());
 
         $this->info('Usuário administrador criado com sucesso!');
         $this->newLine();

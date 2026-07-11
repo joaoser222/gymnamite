@@ -49,9 +49,40 @@ class UserPermissionsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('version', $user->updated_at?->toISOString());
 
-        $this->assertEqualsCanonicalizing(
-            ['clients.view', 'users.view'],
-            $response->json('permissions'),
-        );
+        $this->assertSame(['clients.view'], $response->json('permissions'));
+    }
+
+    public function test_role_permissions_are_not_returned_in_cached_payload(): void
+    {
+        $role = Role::query()->create([
+            'name' => 'manager',
+            'description' => 'Manager',
+        ]);
+
+        $rolePermission = Permission::query()->create([
+            'name' => 'users.view',
+            'description' => 'users.view',
+        ]);
+
+        $customPermission = Permission::query()->create([
+            'name' => 'clients.view',
+            'description' => 'clients.view',
+        ]);
+
+        $role->permissions()->attach($rolePermission);
+
+        $user = User::factory()->create([
+            'role_id' => $role->id,
+        ]);
+
+        $user->permissions()->attach($customPermission);
+
+        $response = $this->actingAs($user)->getJson(route('auth.permissions'));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('permissions.0', 'clients.view');
+
+        $this->assertSame(['clients.view'], $response->json('permissions'));
     }
 }

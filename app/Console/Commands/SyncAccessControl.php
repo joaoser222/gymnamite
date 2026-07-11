@@ -39,6 +39,8 @@ class SyncAccessControl extends Command
             if ($assignUsers) {
                 $this->assignDefaultRoleToUsers($roles[$defaultRole]);
             }
+
+            $this->syncUserPermissions();
         });
 
         $this->components->info('Access control synchronized successfully.');
@@ -122,5 +124,20 @@ class SyncAccessControl extends Command
             ->update(['role_id' => $defaultRole->id]);
 
         $this->components->twoColumnDetail('Users updated', (string) $updatedUsers);
+    }
+
+    private function syncUserPermissions(): void
+    {
+        User::query()
+            ->with('role.permissions:id')
+            ->whereNotNull('role_id')
+            ->get()
+            ->each(function (User $user): void {
+                $user->permissions()->sync(
+                    $user->role?->permissions->pluck('id')->all() ?? []
+                );
+            });
+
+        $this->components->twoColumnDetail('User permissions', 'synced');
     }
 }

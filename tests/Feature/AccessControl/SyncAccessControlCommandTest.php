@@ -41,6 +41,11 @@ class SyncAccessControlCommandTest extends TestCase
             $administrator->id,
             $user->fresh()->role_id,
         );
+
+        $this->assertEqualsCanonicalizing(
+            $administrator->permissions()->pluck('permissions.id')->all(),
+            $user->fresh()->permissions()->pluck('permissions.id')->all(),
+        );
     }
 
     public function test_it_is_idempotent(): void
@@ -50,12 +55,14 @@ class SyncAccessControlCommandTest extends TestCase
         $roleCount = Role::query()->count();
         $permissionCount = Permission::query()->count();
         $permissionRoleCount = $this->permissionRoleCount();
+        $permissionUserCount = $this->permissionUserCount();
 
         $this->artisan('access-control:sync')->assertSuccessful();
 
         $this->assertSame($roleCount, Role::query()->count());
         $this->assertSame($permissionCount, Permission::query()->count());
         $this->assertSame($permissionRoleCount, $this->permissionRoleCount());
+        $this->assertSame($permissionUserCount, $this->permissionUserCount());
     }
 
     public function test_it_can_skip_user_updates(): void
@@ -66,6 +73,25 @@ class SyncAccessControlCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertNull($user->fresh()->role_id);
+        $this->assertSame([], $user->fresh()->permissions()->pluck('permissions.id')->all());
+    }
+
+    public function test_it_syncs_permissions_for_users_with_existing_roles(): void
+    {
+        $role = Role::query()->create([
+            'name' => AccessRole::MANAGER->value,
+            'description' => AccessRole::MANAGER->label(),
+        ]);
+
+        $user = User::factory()->create(['role_id' => $role->id]);
+
+        $this->artisan('access-control:sync --without-users')
+            ->assertSuccessful();
+
+        $this->assertEqualsCanonicalizing(
+            $role->fresh()->permissions()->pluck('permissions.id')->all(),
+            $user->fresh()->permissions()->pluck('permissions.id')->all(),
+        );
     }
 
     public function test_it_fails_with_invalid_default_role(): void
@@ -97,6 +123,14 @@ class SyncAccessControlCommandTest extends TestCase
     private function permissionRoleCount(): int
     {
         return (int) Role::query()
+            ->withCount('permissions')
+            ->get()
+            ->sum('permissions_count');
+    }
+
+    private function permissionUserCount(): int
+    {
+        return (int) User::query()
             ->withCount('permissions')
             ->get()
             ->sum('permissions_count');

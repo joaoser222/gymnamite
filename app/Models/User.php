@@ -60,15 +60,28 @@ class User extends Authenticatable
      */
     public function permissionNames(): Collection
     {
-        $directPermissions = $this->permissions()->pluck('name');
-
-        $rolePermissions = $this->role === null
-            ? collect()
-            : $this->role->permissions()->pluck('name');
-
-        return $directPermissions
-            ->merge($rolePermissions)
-            ->unique()
+        return $this->permissions()
+            ->pluck('name')
             ->values();
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    public function editablePermissionIds(): Collection
+    {
+        if ($this->role === null) {
+            return collect();
+        }
+
+        return $this->role->permissions()->pluck('permissions.id')->values();
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    public function effectivePermissionIds(): Collection
+    {
+        return $this->permissions()->pluck('permissions.id')->values();
     }
 }

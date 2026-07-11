@@ -17,6 +17,7 @@ class SettingSeeder extends Seeder
             ['name' => 'purchase_default_category', 'label' => 'Categoria de Compras', 'content' => '0', 'object_type' => 'int'],
             ['name' => 'sale_default_category', 'label' => 'Categoria de Vendas', 'content' => '0', 'object_type' => 'int'],
             ['name' => 'direct_lesson_default_category', 'label' => 'Categoria de Aula Avulsa', 'content' => '0', 'object_type' => 'int'],
+            ['name' => 'default_financial_account', 'label' => 'Conta Padrão', 'content' => '0', 'object_type' => 'int'],
         ], ['name'], ['label', 'content', 'object_type']);
     }
 }

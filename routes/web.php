@@ -26,6 +26,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Controllers\TransferController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -82,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
     // Avançado
     Route::module(FinancialAccountController::class);
     Route::module(RoleController::class);
+    Route::module(UserController::class);
     Route::get('settings', [SettingController::class, 'index'])->name('settings.show');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
 });

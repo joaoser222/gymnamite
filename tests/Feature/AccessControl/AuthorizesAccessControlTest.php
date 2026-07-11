@@ -34,7 +34,7 @@ class AuthorizesAccessControlTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_user_with_role_permission_is_authorized(): void
+    public function test_user_with_only_role_permission_is_forbidden(): void
     {
         $role = Role::query()->create([
             'name' => 'manager',
@@ -51,7 +51,7 @@ class AuthorizesAccessControlTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('clients.index'));
 
-        $response->assertOk();
+        $response->assertForbidden();
     }
 
     public function test_role_permission_map_returns_string_actions(): void
