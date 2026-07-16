@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
             FinancialAccountSeeder::class,
             SupplierSeeder::class,
             TrainerSeeder::class,
-            SettingSeeder::class
+            SettingSeeder::class,
         ]);
     }
 }

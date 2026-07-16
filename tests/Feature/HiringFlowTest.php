@@ -105,7 +105,7 @@ class HiringFlowTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('contracts/Create')
+            ->component('contracts/Details')
             ->where('routes.store', route('contracts.store'))
             ->where('options.plans.0.value', $plan->id)
             ->where('options.plans.0.title', 'Plano Performance')

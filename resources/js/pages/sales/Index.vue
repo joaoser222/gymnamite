@@ -15,9 +15,10 @@ const props = defineProps<{
 
 const headers: TableHeader[] = [
     { title: 'ID', key: 'id', sortable: true, width: '80px' },
-    { title: 'Total', key: 'total', sortable: true },
+    { title: 'Cliente', key: 'client_name', sortable: true, searchable: true },
     { title: 'Status', key: 'status', sortable: true, align: 'center' },
-    { title: 'Pagamento', key: 'payment_method', sortable: true },
+    { title: 'Total', key: 'total', sortable: true },
+    { title: 'Meio de Pagamento', key: 'payment_method', sortable: true },
     { title: 'Criado em', key: 'created_at', sortable: true },
 ];
 
@@ -53,7 +54,7 @@ const { billableStatus, paymentMethods } = useSharedOptions(sharedProps.options 
             {{ formatCurrency(item.total) }}
         </template>
         <template #column-status="{ item }">
-            <v-chip :color="findOption(billableStatus, item.status)?.color" variant="tonal">
+            <v-chip :color="findOption(billableStatus, item.status)?.color">
                 {{ findLabel(billableStatus, item.status) }}
             </v-chip>
         </template>

@@ -2,12 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use App\Models\FinancialAccount;
 use App\Enums\FinancialAccountType;
 use App\Enums\Visibility;
-
+use App\Models\FinancialAccount;
+use Illuminate\Database\Seeder;
 
 class FinancialAccountSeeder extends Seeder
 {
@@ -17,11 +15,11 @@ class FinancialAccountSeeder extends Seeder
     public function run(): void
     {
         FinancialAccount::upsert([[
-            'id'=>1,
-            'name'=>'Conta Caixa Padrão',
-            'account_type'=>FinancialAccountType::CASH->value,
-            'balance'=>0,
-            'visibility'=>Visibility::VISIBLE->value
-        ]],['id'],['name','account_type','balance']);
+            'id' => 1,
+            'name' => 'Conta Caixa Padrão',
+            'account_type' => FinancialAccountType::CASH->value,
+            'balance' => 0,
+            'visibility' => Visibility::VISIBLE->value,
+        ]], ['id'], ['name', 'account_type', 'balance']);
     }
 }

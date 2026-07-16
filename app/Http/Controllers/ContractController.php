@@ -81,10 +81,15 @@ class ContractController extends Controller
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        return Inertia::render('contracts/Create', [
+        return Inertia::render($this->detailsComponent(), [
             'routes' => [
                 'index' => route('contracts.index'),
                 'store' => route('contracts.store'),
+                'update' => route('contracts.update', ['contract' => '__id__']),
+                'create' => route('contracts.create'),
+                'show' => route('contracts.show', ['contract' => '__id__']),
+                'destroy' => route('contracts.destroy'),
+                'changeVisibility' => route('contracts.change-visibility'),
                 'findClient' => route('contracts.find-client'),
                 'findCoupon' => route('contracts.find-coupon'),
             ],
@@ -336,6 +341,30 @@ class ContractController extends Controller
         ];
     }
 
+    public function show(Request $request): Response|JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::VIEW);
+
+        $model = $this->modelFromRoute($request);
+
+        if ($request->expectsJson()) {
+            return response()->json($model);
+        }
+
+        $this->shareModuleRoutes();
+
+        return Inertia::render($this->detailsComponent(), [
+            $this->itemPropName() => $model,
+            'id' => $model->getKey(),
+            'routes' => [
+                ...$this->getModuleRoutes(),
+                'findClient' => route('contracts.find-client'),
+                'findCoupon' => route('contracts.find-coupon'),
+            ],
+            ...$this->moduleDetailsProps($model),
+        ]);
+    }
+
     protected function moduleDetailsProps(?Model $model = null): array
     {
         $clientInfo = null;
@@ -358,6 +387,9 @@ class ContractController extends Controller
             'options' => [
                 'billableStatus' => $this->enumOptions(BillableStatus::class),
                 'paymentMethods' => $this->enumOptions(PaymentMethod::class),
+                'plans' => $this->planOptions(),
+                'genderTypes' => $this->enumOptions(GenderType::class),
+                'ufs' => $this->modelOptions(Uf::class),
             ],
         ];
     }

@@ -34,7 +34,7 @@ class SaleController extends Controller
     /**
      * @var array<int, string>
      */
-    protected array $fields = ['id', 'total', 'status', 'payment_method', 'created_at'];
+    protected array $fields = ['id', 'total', 'status', 'client_name', 'payment_method', 'created_at'];
 
     protected array $joins = ['client'];
 

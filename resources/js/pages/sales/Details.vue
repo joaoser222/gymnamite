@@ -198,14 +198,6 @@ function validateBillableItems(value: unknown): true | string {
 
         <template #actions="{ isCreating, canSave, submit }">
             <v-clipped-button
-                color="primary"
-                prepend-icon="ti ti-device-floppy"
-                :disabled="!canSave"
-                @click="isCreating ? submit({ generate_invoices: false }) : submit()"
-            >
-                Salvar
-            </v-clipped-button>
-            <v-clipped-button
                 v-if="isCreating"
                 color="success"
                 prepend-icon="ti ti-receipt-2"
@@ -213,6 +205,14 @@ function validateBillableItems(value: unknown): true | string {
                 @click="submit({ generate_invoices: true })"
             >
                 Finalizar
+            </v-clipped-button>
+            <v-clipped-button
+                color="primary"
+                prepend-icon="ti ti-device-floppy"
+                :disabled="!canSave"
+                @click="isCreating ? submit({ generate_invoices: false }) : submit()"
+            >
+                Salvar
             </v-clipped-button>
         </template>
     </DetailsPage>

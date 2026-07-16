@@ -230,15 +230,7 @@ void nextTick(validate);
             </v-card-text>
         </v-card>
 
-        <div class="d-flex ga-2 pa-3 justify-end">
-            <slot
-                name="actions"
-                :form="form"
-                :is-creating="isCreating"
-                :can-save="canSave"
-                :can-submit="canSubmit"
-                :submit="submit"
-            />
+        <div class="d-flex flex-row ga-2 pa-3 justify-start">
             <v-clipped-button
                 color="secondary"
                 prepend-icon="ti ti-arrow-left"
@@ -247,6 +239,15 @@ void nextTick(validate);
             >
                 {{ cancelLabel }}
             </v-clipped-button>
+            <div class="flex-grow-1"></div>
+            <slot
+                name="actions"
+                :form="form"
+                :is-creating="isCreating"
+                :can-save="canSave"
+                :can-submit="canSubmit"
+                :submit="submit"
+            />
             <v-clipped-button
                 v-if="canSubmit && !hideSaveAction"
                 color="primary"

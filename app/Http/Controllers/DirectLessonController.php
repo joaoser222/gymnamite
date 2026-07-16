@@ -4,11 +4,8 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Enums\BillableStatus;
-use App\Models\Client;
 use App\Models\DirectLesson;
-use App\Models\Trainer;
 use App\Traits\HasModule;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
 class DirectLessonController extends Controller
@@ -60,16 +57,6 @@ class DirectLessonController extends Controller
         return [
             'options' => [
                 'billableStatus' => $this->enumOptions(BillableStatus::class),
-            ],
-        ];
-    }
-
-    protected function moduleDetailsProps(?Model $model = null): array
-    {
-        return [
-            'options' => [
-                'clients' => $this->modelOptions(Client::class),
-                'trainers' => $this->modelOptions(Trainer::class),
             ],
         ];
     }

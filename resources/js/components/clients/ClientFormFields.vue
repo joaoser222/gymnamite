@@ -34,9 +34,11 @@ const props = withDefaults(
         genderTypes: Option[];
         ufs: Option[];
         requireAddressState?: boolean;
+        disabled?: boolean;
     }>(),
     {
         requireAddressState: false,
+        disabled: false,
     },
 );
 
@@ -70,6 +72,7 @@ async function fillAddress(): Promise<void> {
             <v-checkbox
                 v-model="form.legal_representative"
                 label="Possui responsável legal"
+                :disabled="disabled"
                 :error-messages="errors.legal_representative"
             />
         </v-col>
@@ -81,13 +84,14 @@ async function fillAddress(): Promise<void> {
                 </v-divider>
             </v-col>
             <v-col cols="12">
-                <v-text-field
-                    v-model="form.legal_representative_name"
-                    label="Nome do responsável"
-                    :rules="[required]"
-                    :error-messages="errors.legal_representative_name"
-                    v-text-case="'capitalize'"
-                />
+            <v-text-field
+                v-model="form.legal_representative_name"
+                label="Nome do responsável"
+                :rules="[required]"
+                :disabled="disabled"
+                :error-messages="errors.legal_representative_name"
+                v-text-case="'capitalize'"
+            />
             </v-col>
             <v-col cols="12" md="6">
                 <MaskedTextField
@@ -95,6 +99,7 @@ async function fillAddress(): Promise<void> {
                     label="CPF do responsável"
                     :mask="masks.cpf"
                     :rules="[required, cpf]"
+                    :disabled="disabled"
                     :error-messages="errors.legal_representative_document"
                 />
             </v-col>
@@ -103,6 +108,7 @@ async function fillAddress(): Promise<void> {
                     v-model="form.legal_representative_birth_date"
                     label="Nascimento do responsável"
                     :rules="[required]"
+                    :disabled="disabled"
                     :error-messages="errors.legal_representative_birth_date"
                 />
             </v-col>
@@ -118,6 +124,7 @@ async function fillAddress(): Promise<void> {
                 v-model="form.name"
                 label="Nome"
                 :rules="[required]"
+                :disabled="disabled"
                 :error-messages="errors.name"
                 v-text-case="'capitalize'"
             />
@@ -127,6 +134,7 @@ async function fillAddress(): Promise<void> {
                 v-model="form.birth_date"
                 label="Nascimento"
                 :rules="[required]"
+                :disabled="disabled"
                 :error-messages="errors.birth_date"
             />
         </v-col>
@@ -136,6 +144,7 @@ async function fillAddress(): Promise<void> {
                 label="Gênero"
                 :items="genderTypes"
                 :rules="[required]"
+                :disabled="disabled"
                 :error-messages="errors.gender"
             />
         </v-col>
@@ -145,6 +154,7 @@ async function fillAddress(): Promise<void> {
                 label="CPF"
                 :mask="masks.cpf"
                 :rules="[required, cpf]"
+                :disabled="disabled"
                 :error-messages="errors.document"
             />
         </v-col>
@@ -154,6 +164,7 @@ async function fillAddress(): Promise<void> {
                 label="E-mail"
                 type="email"
                 :rules="[required, email]"
+                :disabled="disabled"
                 :error-messages="errors.email"
                 v-text-case="'lower'"
             />
@@ -164,6 +175,7 @@ async function fillAddress(): Promise<void> {
                 label="Telefone"
                 :mask="phoneFieldMask()"
                 :rules="[required]"
+                :disabled="disabled"
                 :error-messages="errors.phone"
             />
         </v-col>
@@ -179,6 +191,7 @@ async function fillAddress(): Promise<void> {
                 label="CEP"
                 :mask="masks.cep"
                 :loading="isLoadingAddress"
+                :disabled="disabled"
                 :error-messages="errors.address_postal_code"
                 @blur="fillAddress"
             />
@@ -187,6 +200,7 @@ async function fillAddress(): Promise<void> {
             <v-text-field
                 v-model="form.address"
                 label="Endereço"
+                :disabled="disabled"
                 :error-messages="errors.address"
                 v-text-case="'capitalize'"
             />
@@ -195,6 +209,7 @@ async function fillAddress(): Promise<void> {
             <v-text-field
                 v-model="form.address_number"
                 label="Número"
+                :disabled="disabled"
                 :error-messages="errors.address_number"
                 v-text-case="'upper'"
             />
@@ -203,6 +218,7 @@ async function fillAddress(): Promise<void> {
             <v-text-field
                 v-model="form.address_complement"
                 label="Complemento"
+                :disabled="disabled"
                 :error-messages="errors.address_complement"
                 v-text-case="'capitalize'"
             />
@@ -211,6 +227,7 @@ async function fillAddress(): Promise<void> {
             <v-text-field
                 v-model="form.address_district"
                 label="Bairro"
+                :disabled="disabled"
                 :error-messages="errors.address_district"
                 v-text-case="'capitalize'"
             />
@@ -221,6 +238,7 @@ async function fillAddress(): Promise<void> {
                 label="Estado"
                 :items="ufs"
                 :rules="requireAddressState ? [required] : []"
+                :disabled="disabled"
                 :error-messages="errors.address_state"
             />
         </v-col>
@@ -228,6 +246,7 @@ async function fillAddress(): Promise<void> {
             <v-text-field
                 v-model="form.address_city"
                 label="Cidade"
+                :disabled="disabled"
                 :error-messages="errors.address_city"
                 v-text-case="'capitalize'"
             />

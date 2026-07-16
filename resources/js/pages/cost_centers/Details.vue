@@ -56,7 +56,7 @@ const defaults = {
                         :error-messages="errors.operation_type"
                     />
                 </v-col>
-                <v-col cols="12" md="4">
+                <v-col cols="12" md="6">
                     <v-text-field
                         v-model="form.color"
                         label="Cor"
