@@ -186,6 +186,12 @@ const menuGroups: MenuGroup[] = [
         icon: 'ti ti-settings',
         items: [
             {
+                title: 'Gateway de Pagamentos',
+                icon: 'ti ti-credit-card',
+                href: '/gateway-accounts',
+                permission: 'gateway_accounts.view',
+            },
+            {
                 title: 'Usuários',
                 icon: 'ti ti-user-shield',
                 href: '/users',

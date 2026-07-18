@@ -40,6 +40,7 @@ enum AccessModule: string
 
     // Avançado
     case FINANCIAL_ACCOUNT = 'financial_accounts';
+    case GATEWAY_ACCOUNT = 'gateway_accounts';
     case USER = 'users';
     case SETTING = 'settings';
 
@@ -67,6 +68,7 @@ enum AccessModule: string
             self::MOVEMENT => 'Caixa',
             self::TRANSFER => 'Transferências',
             self::FINANCIAL_ACCOUNT => 'Contas',
+            self::GATEWAY_ACCOUNT => 'Gateway de Pagamentos',
             self::USER => 'Usuários',
             self::SETTING => 'Configurações'
         };
@@ -130,6 +132,7 @@ enum AccessModule: string
                 AccessAction::CANCEL,
             ],
             self::FINANCIAL_ACCOUNT => $default_actions,
+            self::GATEWAY_ACCOUNT => $default_actions,
             self::USER => $default_actions,
             self::SETTING => [
                 AccessAction::VIEW,

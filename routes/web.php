@@ -11,6 +11,7 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\DirectLessonController;
 use App\Http\Controllers\FinancialAccountController;
 use App\Http\Controllers\FinancialCategoryController;
+use App\Http\Controllers\GatewayAccountController;
 use App\Http\Controllers\ModalityController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\PayableController;
@@ -82,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Avançado
     Route::module(FinancialAccountController::class);
+    Route::module(GatewayAccountController::class);
     Route::module(RoleController::class);
     Route::module(UserController::class);
     Route::get('settings', [SettingController::class, 'index'])->name('settings.show');
