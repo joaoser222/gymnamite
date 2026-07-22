@@ -12,12 +12,23 @@ class SettingSeeder extends Seeder
      */
     public function run(): void
     {
-        Setting::upsert([
-            ['name' => 'contract_default_category', 'label' => 'Categoria de Contratos', 'content' => '0', 'object_type' => 'int'],
-            ['name' => 'purchase_default_category', 'label' => 'Categoria de Compras', 'content' => '0', 'object_type' => 'int'],
-            ['name' => 'sale_default_category', 'label' => 'Categoria de Vendas', 'content' => '0', 'object_type' => 'int'],
-            ['name' => 'direct_lesson_default_category', 'label' => 'Categoria de Aula Avulsa', 'content' => '0', 'object_type' => 'int'],
-            ['name' => 'default_financial_account', 'label' => 'Conta Padrão', 'content' => '0', 'object_type' => 'int'],
-        ], ['name'], ['label', 'content', 'object_type']);
+        collect([
+            ['name' => 'contract_default_category', 'label' => 'Categoria de Contratos', 'content' => '', 'object_type' => 'select:financial-category'],
+            ['name' => 'purchase_default_category', 'label' => 'Categoria de Compras', 'content' => '', 'object_type' => 'select:financial-category'],
+            ['name' => 'sale_default_category', 'label' => 'Categoria de Vendas', 'content' => '', 'object_type' => 'select:financial-category'],
+            ['name' => 'direct_lesson_default_category', 'label' => 'Categoria de Aula Avulsa', 'content' => '', 'object_type' => 'select:financial-category'],
+            ['name' => 'default_financial_account', 'label' => 'Conta Padrão', 'content' => '', 'object_type' => 'select:financial-account'],
+        ])->each(function (array $attributes): void {
+            $setting = Setting::query()->firstOrNew(['name' => $attributes['name']]);
+
+            $setting->label = $attributes['label'];
+            $setting->object_type = $attributes['object_type'];
+
+            if (! $setting->exists || $setting->getRawOriginal('content') === '0') {
+                $setting->content = $attributes['content'];
+            }
+
+            $setting->save();
+        });
     }
 }

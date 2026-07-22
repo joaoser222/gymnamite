@@ -9,6 +9,8 @@ use App\Enums\PaymentMethod;
 use App\Traits\HasMorphObjects;
 use App\Traits\HasVisibility;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Date;
 
 class Invoice extends Model
 {
@@ -90,5 +92,37 @@ class Invoice extends Model
     public function billable()
     {
         return $this->morphTo();
+    }
+
+    public function gatewayPayment(): HasOne
+    {
+        return $this->hasOne(GatewayPayment::class, 'invoice_id');
+    }
+
+    public function usesGatewayPaymentMethod(): bool
+    {
+        return in_array($this->payment_method, [
+            PaymentMethod::BOLETO,
+            PaymentMethod::PIX,
+            PaymentMethod::CREDIT_CARD,
+        ], true);
+    }
+
+    public function usesCashPaymentMethod(): bool
+    {
+        return $this->payment_method === PaymentMethod::CASH;
+    }
+
+    public function shouldGenerateGatewayTransaction(): bool
+    {
+        if (! $this->usesGatewayPaymentMethod()) {
+            return false;
+        }
+
+        if ($this->payment_method === PaymentMethod::BOLETO) {
+            return true;
+        }
+
+        return $this->due_date?->isSameDay(Date::today()) === true;
     }
 }

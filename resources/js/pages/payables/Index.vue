@@ -15,10 +15,16 @@ const props = defineProps<{
 
 const headers: TableHeader[] = [
     { title: 'ID', key: 'id', sortable: true, width: '80px' },
-    { title: 'Vencimento', key: 'due_date', sortable: true },
-    { title: 'Pagamento', key: 'payment_date', sortable: true },
+    { title: 'Vencimento', key: 'due_date', sortable: true, searchable: { component: 'DateField' } },
+    { title: 'Pagamento', key: 'payment_date', sortable: true, searchable: { component: 'DateField' } },
     { title: 'Total', key: 'total', sortable: true },
-    { title: 'Status', key: 'status', sortable: true, align: 'center' },
+    {
+        title: 'Status',
+        key: 'status',
+        sortable: true,
+        align: 'center',
+        searchable: { component: 'VSelect', props: () => ({ items: invoiceStatus }) },
+    },
     { title: 'Criado em', key: 'created_at', sortable: true },
 ];
 

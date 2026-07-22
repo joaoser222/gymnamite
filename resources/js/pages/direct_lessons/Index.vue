@@ -17,6 +17,7 @@ const headers: TableHeader[] = [
     { title: 'ID', key: 'id', sortable: true, width: '80px' },
     { title: 'Data', key: 'lesson_date', sortable: true },
     { title: 'Preço', key: 'price', sortable: true },
+    { title: 'Pagamento', key: 'payment_method', sortable: true },
     { title: 'Status', key: 'status', sortable: true, align: 'center' },
     { title: 'Criado em', key: 'created_at', sortable: true },
 ];
@@ -30,7 +31,7 @@ const routes: TableRoutes = {
 };
 
 const sharedProps = usePage().props;
-const { billableStatus } = useSharedOptions(sharedProps.options ?? {});
+const { billableStatus, paymentMethods } = useSharedOptions(sharedProps.options ?? {});
 </script>
 
 <template>
@@ -44,7 +45,7 @@ const { billableStatus } = useSharedOptions(sharedProps.options ?? {});
         :routes="routes"
         module="direct_lessons"
         title="Aulas Diretas"
-        :custom-slots="['created_at', 'price', 'lesson_date', 'status']"
+        :custom-slots="['created_at', 'price', 'lesson_date', 'payment_method', 'status']"
     >
         <template #column-created_at="{ item }">
             {{ formatDate(item.created_at) }}
@@ -54,6 +55,9 @@ const { billableStatus } = useSharedOptions(sharedProps.options ?? {});
         </template>
         <template #column-lesson_date="{ item }">
             {{ formatDate(item.lesson_date) }}
+        </template>
+        <template #column-payment_method="{ item }">
+            {{ findLabel(paymentMethods, item.payment_method) }}
         </template>
         <template #column-status="{ item }">
             <v-chip :color="findOption(billableStatus, item.status)?.color" variant="tonal">

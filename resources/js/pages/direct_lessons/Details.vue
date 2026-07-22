@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import type { DetailsRoutes } from '@/shared/page';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { required } from '@/plugins/validators';
+import { useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -11,6 +12,7 @@ type DirectLesson = {
     lesson_date?: string;
     price?: number;
     status?: string;
+    payment_method?: string;
     client_id?: number;
     trainer_id?: number;
 };
@@ -20,10 +22,14 @@ defineProps<{
     routes: DetailsRoutes;
 }>();
 
+const { paymentMethods } = useSharedOptions(usePage().props.options ?? {});
+
 const defaults = {
     lesson_date: '',
     price: 0,
     status: 'open',
+    payment_method: 'cash',
+    generate_invoices: false,
     client_id: null,
     trainer_id: null,
 };
@@ -36,6 +42,7 @@ const defaults = {
         :defaults="defaults"
         :routes="routes"
         module="direct_lessons"
+        hide-save-action
     >
         <template #default="{ form, errors }">
             <v-row class="ma-0">
@@ -66,6 +73,15 @@ const defaults = {
                     />
                 </v-col>
                 <v-col cols="12" md="6">
+                    <v-select
+                        v-model="form.payment_method"
+                        label="Forma de Pagamento"
+                        :items="paymentMethods"
+                        :rules="[required]"
+                        :error-messages="errors.payment_method"
+                    />
+                </v-col>
+                <v-col cols="12" md="6">
                     <CurrencyField
                         v-model="form.price"
                         label="Preço"
@@ -74,6 +90,26 @@ const defaults = {
                     />
                 </v-col>
             </v-row>
+        </template>
+
+        <template #actions="{ isCreating, canSave, submit }">
+            <v-clipped-button
+                v-if="isCreating"
+                color="success"
+                prepend-icon="ti ti-receipt-2"
+                :disabled="!canSave"
+                @click="submit({ generate_invoices: true })"
+            >
+                Finalizar
+            </v-clipped-button>
+            <v-clipped-button
+                color="primary"
+                prepend-icon="ti ti-device-floppy"
+                :disabled="!canSave"
+                @click="isCreating ? submit({ generate_invoices: false }) : submit({ generate_invoices: true })"
+            >
+                Salvar
+            </v-clipped-button>
         </template>
     </DetailsPage>
 </template>

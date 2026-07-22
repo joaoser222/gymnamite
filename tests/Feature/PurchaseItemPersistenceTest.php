@@ -13,7 +13,9 @@ use App\Models\Purchase;
 use App\Models\PurchaseItem;
 use App\Models\Supplier;
 use App\Models\User;
+use Illuminate\Foundation\Console\QueuedCommand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 class PurchaseItemPersistenceTest extends TestCase
@@ -32,6 +34,8 @@ class PurchaseItemPersistenceTest extends TestCase
 
     public function test_authenticated_users_can_create_purchase_with_items(): void
     {
+        Bus::fake();
+
         $user = User::factory()->create();
         $this->grantPermission($user, 'purchases.create');
 
@@ -42,7 +46,7 @@ class PurchaseItemPersistenceTest extends TestCase
         $response = $this->actingAs($user)->post(route('purchases.store'), [
             'supplier_id' => $supplier->id,
             'status' => BillableStatus::OPEN->value,
-            'payment_method' => PaymentMethod::CASH->value,
+            'payment_method' => PaymentMethod::PIX->value,
             'first_due_date' => '2026-07-10',
             'installments' => 2,
             'generate_invoices' => true,
@@ -90,6 +94,7 @@ class PurchaseItemPersistenceTest extends TestCase
             'product_name' => 'Produto A',
             'quantity' => 2,
         ]);
+        Bus::assertNotDispatched(QueuedCommand::class);
     }
 
     public function test_authenticated_users_can_create_purchase_without_generating_installments(): void

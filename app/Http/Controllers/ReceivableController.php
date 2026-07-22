@@ -2,19 +2,33 @@
 
 namespace App\Http\Controllers;
 
+use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Contracts\GatewayAdapter;
 use App\Enums\InvoiceStatus;
+use App\Enums\MovementType;
 use App\Enums\OperationType;
 use App\Enums\PaymentMethod;
+use App\Http\Requests\ReceivableSettlementRequest;
+use App\Models\Movement;
 use App\Models\Receivable;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ReceivableController extends Controller
 {
-    use HasModule;
+    use HasModule {
+        getModuleRoutes as protected baseModuleRoutes;
+        validatedRequestData as protected baseValidatedRequestData;
+    }
 
     /**
      * @var array<int, string>
@@ -24,7 +38,7 @@ class ReceivableController extends Controller
     /**
      * @var array<int, string>
      */
-    protected array $searchableFields = ['id'];
+    protected array $searchableFields = ['due_date', 'payment_date', 'status'];
 
     /**
      * @var array<int, string>
@@ -63,5 +77,122 @@ class ReceivableController extends Controller
                 'paymentMethods' => $this->enumOptions(PaymentMethod::class),
             ],
         ];
+    }
+
+    /**
+     * Retorna as rotas disponíveis para o frontend.
+     */
+    protected function getModuleRoutes(): array
+    {
+        $routes = $this->baseModuleRoutes();
+        $markPaidRoute = route('receivables.mark-paid', ['receivable' => '__id__']);
+
+        return [
+            ...$routes,
+            'markPaid' => str_replace('__id__', ':id', $markPaidRoute),
+        ];
+    }
+
+    /**
+     * @param  class-string<FormRequest>|null  $formRequestClass
+     * @return array<string, mixed>
+     */
+    protected function validatedRequestData(Request $request, ?string $formRequestClass): array
+    {
+        $data = $this->baseValidatedRequestData($request, $formRequestClass);
+
+        unset($data['payment_date'], $data['total']);
+
+        if (array_key_exists('holder_id', $data)) {
+            $data['holder_type'] = 'client';
+        }
+
+        return $data;
+    }
+
+    public function markPaid(ReceivableSettlementRequest $request, Receivable $receivable): RedirectResponse|JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::MARK_PAID);
+
+        abort_unless(
+            $receivable->operation_type === OperationType::RECEIVABLE,
+            404,
+        );
+
+        abort_if(
+            $receivable->status === InvoiceStatus::PAID,
+            422,
+            'Este recebimento já foi baixado.',
+        );
+
+        $data = $request->validated();
+
+        DB::transaction(function () use ($receivable, $data): void {
+            $receivable->update([
+                'payment_date' => $data['payment_date'],
+                'paid_value' => $receivable->total,
+                'status' => InvoiceStatus::PAID,
+            ]);
+
+            Movement::query()->create([
+                'operation_type' => OperationType::RECEIVABLE,
+                'movement_type' => $receivable->payment_method === PaymentMethod::CASH
+                    ? MovementType::INTERNAL
+                    : MovementType::EXTERNAL,
+                'value' => $receivable->total,
+                'invoice_id' => $receivable->id,
+                'visibility' => 'visible',
+            ]);
+        });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Recebimento baixado com sucesso.',
+            ]);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Recebimento baixado com sucesso.',
+        ]);
+
+        return redirect()->route('receivables.index');
+    }
+
+    public function show(Request $request): Response|JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::VIEW);
+
+        /** @var Receivable $receivable */
+        $receivable = $this->modelFromRoute($request)->load('gatewayPayment');
+
+        if ($request->expectsJson()) {
+            return response()->json($receivable);
+        }
+
+        $this->shareModuleRoutes();
+
+        return Inertia::render($this->detailsComponent(), [
+            $this->itemPropName() => $receivable,
+            'id' => $receivable->getKey(),
+            'routes' => $this->getModuleRoutes(),
+            'pixQrCode' => $this->pixQrCode($receivable),
+            ...$this->moduleDetailsProps($receivable),
+        ]);
+    }
+
+    private function pixQrCode(Receivable $receivable): ?array
+    {
+        if ($receivable->payment_method !== PaymentMethod::PIX || $receivable->gatewayPayment === null) {
+            return null;
+        }
+
+        try {
+            return app(GatewayAdapter::class)->getPixQrCode($receivable->gatewayPayment);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 }

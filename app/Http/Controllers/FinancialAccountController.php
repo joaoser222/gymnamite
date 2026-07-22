@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Enums\FinancialAccountType;
+use App\Http\Requests\FinancialAccountRequest;
 use App\Models\FinancialAccount;
 use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class FinancialAccountController extends Controller
 {
@@ -35,6 +37,25 @@ class FinancialAccountController extends Controller
     protected function modelClass(): string
     {
         return FinancialAccount::class;
+    }
+
+    protected function storeRequestClass(): ?string
+    {
+        return FinancialAccountRequest::class;
+    }
+
+    protected function updateRequestClass(): ?string
+    {
+        return FinancialAccountRequest::class;
+    }
+
+    protected function moduleIndexProps(Request $request): array
+    {
+        return [
+            'options' => [
+                'accountTypes' => $this->enumOptions(FinancialAccountType::class),
+            ],
+        ];
     }
 
     protected function moduleDetailsProps(?Model $model = null): array

@@ -206,12 +206,12 @@ function validateBillableItems(value: unknown): true | string {
             >
                 Finalizar
             </v-clipped-button>
-            <v-clipped-button
-                color="primary"
-                prepend-icon="ti ti-device-floppy"
-                :disabled="!canSave"
-                @click="isCreating ? submit({ generate_invoices: false }) : submit()"
-            >
+                <v-clipped-button
+                    color="primary"
+                    prepend-icon="ti ti-device-floppy"
+                    :disabled="!canSave"
+                    @click="isCreating ? submit({ generate_invoices: false }) : submit({ generate_invoices: true })"
+                >
                 Salvar
             </v-clipped-button>
         </template>

@@ -13,6 +13,11 @@ class Movement extends Model
         'movement_type',
         'value',
         'invoice_id',
+        'visibility',
+    ];
+
+    protected $attributes = [
+        'visibility' => 'visible',
     ];
 
     protected $casts = [

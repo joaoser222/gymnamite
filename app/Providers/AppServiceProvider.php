@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\GatewayAdapter;
+use App\Services\Gateway\AsaasAdapter;
+use App\Services\Gateway\GatewayManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(GatewayAdapter::class, AsaasAdapter::class);
+        $this->app->singleton(GatewayManager::class);
+
         // Gera rotas de forma customizada para modulos
         Route::macro('module', function (string $prefixOrController, ?string $controller = null) {
             $controller ??= $prefixOrController;

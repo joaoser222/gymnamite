@@ -24,7 +24,7 @@ class PayableController extends Controller
     /**
      * @var array<int, string>
      */
-    protected array $searchableFields = ['id'];
+    protected array $searchableFields = ['due_date', 'payment_date', 'status'];
 
     /**
      * @var array<int, string>

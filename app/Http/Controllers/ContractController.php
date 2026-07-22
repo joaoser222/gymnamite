@@ -17,11 +17,13 @@ use App\Models\PlanTier;
 use App\Models\Uf;
 use App\Services\BillingInvoiceService;
 use App\Traits\HasModule;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -203,6 +205,8 @@ class ContractController extends Controller
                 $invoices = $this->billingInvoiceService->generate($contract);
                 $discountTotal = round($invoices->sum('discount_value'), 4);
 
+                $this->queueGatewayInvoiceSync($invoices);
+
                 $contract->update([
                     'discount_value' => $discountTotal,
                     'total' => round($grossValue - $discountTotal, 4),
@@ -229,6 +233,21 @@ class ContractController extends Controller
         ]);
 
         return redirect()->route('contracts.index');
+    }
+
+    private function queueGatewayInvoiceSync(Collection $invoices): void
+    {
+        $invoicesToSync = $invoices->filter(
+            fn ($invoice): bool => $invoice->shouldGenerateGatewayTransaction(),
+        );
+
+        if ($invoicesToSync->isEmpty()) {
+            return;
+        }
+
+        Artisan::queue('gateway:sync-invoices', [
+            '--invoice' => $invoicesToSync->modelKeys(),
+        ])->afterCommit();
     }
 
     public function findClient(Request $request): JsonResponse

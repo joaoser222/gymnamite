@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Contracts\BillingInvoiceSource;
 use App\Enums\InvoiceStatus;
 use App\Models\Contract;
+use App\Models\DirectLesson;
 use App\Models\Invoice;
 use App\Models\Purchase;
 use App\Models\Sale;
@@ -162,6 +163,7 @@ class BillingInvoiceService
     {
         return match ($source::class) {
             Contract::class => ['client', 'coupon'],
+            DirectLesson::class => ['client'],
             Sale::class => ['client'],
             Purchase::class => ['supplier'],
             default => [],

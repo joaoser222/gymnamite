@@ -11,6 +11,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Sale extends Model implements BillingInvoiceSource
 {
@@ -53,6 +54,11 @@ class Sale extends Model implements BillingInvoiceSource
     public function items(): HasMany
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    public function invoices(): MorphMany
+    {
+        return $this->morphMany(Invoice::class, 'billable');
     }
 
     public function billingHolder(): Model

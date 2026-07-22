@@ -11,7 +11,6 @@ type FinancialAccount = {
     id?: number;
     name?: string;
     account_type?: string;
-    balance?: number;
     holder_name?: string;
     holder_document?: string;
     holder_birth_date?: string;
@@ -32,7 +31,6 @@ const { accountTypes } = useSharedOptions(sharedProps.options ?? {});
 const defaults = {
     name: '',
     account_type: '',
-    balance: 0,
     holder_name: '',
     holder_document: '',
     holder_birth_date: '',
@@ -41,6 +39,8 @@ const defaults = {
     bank_account_type: '',
     bank_code: '',
 };
+
+const isBankAccount = (form: Record<string, unknown>): boolean => form.account_type === 'bank';
 </script>
 
 <template>
@@ -70,48 +70,64 @@ const defaults = {
                         :error-messages="errors.account_type"
                     />
                 </v-col>
-                <v-col cols="12" md="4">
-                    <CurrencyField
-                        v-model="form.balance"
-                        label="Saldo"
-                        :error-messages="errors.balance"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-text-field
-                        v-model="form.holder_name"
-                        label="Nome do Titular"
-                        :error-messages="errors.holder_name"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-text-field
-                        v-model="form.holder_document"
-                        label="CPF/CNPJ do Titular"
-                        :error-messages="errors.holder_document"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-text-field
-                        v-model="form.bank_code"
-                        label="Código do Banco"
-                        :error-messages="errors.bank_code"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-text-field
-                        v-model="form.bank_agency"
-                        label="Agência"
-                        :error-messages="errors.bank_agency"
-                    />
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-text-field
-                        v-model="form.bank_account_number"
-                        label="Número da Conta"
-                        :error-messages="errors.bank_account_number"
-                    />
-                </v-col>
+                <template v-if="isBankAccount(form)">
+                    <v-col cols="12" md="4">
+                        <v-text-field
+                            v-model="form.holder_name"
+                            label="Nome do Titular"
+                            :rules="[required]"
+                            :error-messages="errors.holder_name"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field
+                            v-model="form.holder_document"
+                            label="CPF/CNPJ do Titular"
+                            :rules="[required]"
+                            :error-messages="errors.holder_document"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <DateField
+                            v-model="form.holder_birth_date"
+                            label="Data de Nascimento do Titular"
+                            :rules="[required]"
+                            :error-messages="errors.holder_birth_date"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field
+                            v-model="form.bank_code"
+                            label="Código do Banco"
+                            :rules="[required]"
+                            :error-messages="errors.bank_code"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field
+                            v-model="form.bank_agency"
+                            label="Agência"
+                            :rules="[required]"
+                            :error-messages="errors.bank_agency"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field
+                            v-model="form.bank_account_number"
+                            label="Número da Conta"
+                            :rules="[required]"
+                            :error-messages="errors.bank_account_number"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field
+                            v-model="form.bank_account_type"
+                            label="Tipo de Conta Bancária"
+                            :rules="[required]"
+                            :error-messages="errors.bank_account_type"
+                        />
+                    </v-col>
+                </template>
             </v-row>
         </template>
     </DetailsPage>

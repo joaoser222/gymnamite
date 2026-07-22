@@ -7,6 +7,7 @@ use App\Enums\MovementType;
 use App\Enums\OperationType;
 use App\Models\Movement;
 use App\Traits\HasModule;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
 class MovementController extends Controller
@@ -39,6 +40,16 @@ class MovementController extends Controller
     }
 
     protected function moduleIndexProps(Request $request): array
+    {
+        return [
+            'options' => [
+                'operationTypes' => $this->enumOptions(OperationType::class),
+                'movementTypes' => $this->enumOptions(MovementType::class),
+            ],
+        ];
+    }
+
+    protected function moduleDetailsProps(?Model $model = null): array
     {
         return [
             'options' => [

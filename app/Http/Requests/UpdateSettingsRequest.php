@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Setting;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateSettingsRequest extends FormRequest
 {
@@ -27,10 +28,24 @@ class UpdateSettingsRequest extends FormRequest
             ->orderBy('id')
             ->get()
             ->each(function (Setting $setting) use (&$rules): void {
-                $rules['settings.'.$setting->name] = $this->rulesForType($setting->object_type);
+                $rules['settings.'.$setting->name] = $this->rulesForSetting($setting);
             });
 
         return $rules;
+    }
+
+    /**
+     * @return array<int, ValidationRule|string>
+     */
+    private function rulesForSetting(Setting $setting): array
+    {
+        $selectTable = $setting->selectTable();
+
+        if ($selectTable !== null) {
+            return ['nullable', 'integer', Rule::exists($selectTable, 'id')];
+        }
+
+        return $this->rulesForType($setting->object_type);
     }
 
     /**

@@ -67,7 +67,7 @@ class SettingController extends Controller
     }
 
     /**
-     * @return array<int, array{id: int, name: string, label: string, content: mixed, object_type: string}>
+     * @return array<int, array{id: int, name: string, label: string, content: mixed, object_type: string, input_type: string, select_object_name: string|null}>
      */
     private function settingsPayload(): array
     {
@@ -81,6 +81,8 @@ class SettingController extends Controller
                 'label' => $setting->label,
                 'content' => $setting->content,
                 'object_type' => $setting->object_type,
+                'input_type' => $setting->isSelection() ? 'select' : $setting->object_type,
+                'select_object_name' => $setting->selectObjectName(),
             ])
             ->all();
     }

@@ -12,11 +12,13 @@ use App\Services\BillableItemService;
 use App\Services\BillingInvoiceService;
 use App\Services\StockRecalculationService;
 use App\Traits\HasModule;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -140,7 +142,9 @@ class SaleController extends Controller
             $sale = $sale->refresh();
 
             if ($generateInvoices) {
-                $this->billingInvoiceService->generate($sale);
+                $invoices = $this->billingInvoiceService->generate($sale);
+
+                $this->queueGatewayInvoiceSync($invoices);
             }
 
             return $sale->load('items');
@@ -166,20 +170,30 @@ class SaleController extends Controller
     {
         $this->authorizeAccess(AccessAction::UPDATE);
 
-        $sale = DB::transaction(function () use ($request): Sale {
-            /** @var Sale $sale */
-            $sale = $this->modelFromRoute($request);
+        /** @var Sale $sale */
+        $sale = $this->modelFromRoute($request);
 
-            abort_if(
-                $sale->status !== BillableStatus::OPEN->value,
-                403,
+        if ($sale->status !== BillableStatus::OPEN->value) {
+            return $this->blockedSaleUpdateResponse(
+                $request,
                 'Somente vendas pendentes podem ser atualizadas.',
             );
+        }
 
+        if ($sale->invoices()->whereHas('gatewayPayment')->exists()) {
+            return $this->blockedSaleUpdateResponse(
+                $request,
+                'Vendas com faturas vinculadas a transações no gateway não podem ser atualizadas.',
+            );
+        }
+
+        $sale = DB::transaction(function () use ($request, $sale): Sale {
             $productIdsBeforeUpdate = $sale->items()->pluck('product_id')->filter()->all();
             $data = $this->validatedRequestData($request, $this->updateRequestClass());
             $items = Arr::pull($data, 'items', []);
-            Arr::pull($data, 'generate_invoices');
+            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
+
+            $sale->invoices()->delete();
 
             $sale->update($data);
 
@@ -190,6 +204,13 @@ class SaleController extends Controller
             );
 
             $sale = $sale->refresh()->load('items');
+
+            if ($generateInvoices) {
+                $invoices = $this->billingInvoiceService->generate($sale);
+
+                $this->queueGatewayInvoiceSync($invoices);
+            }
+
             $sale->setAttribute(
                 'recalculation_product_ids',
                 array_values(array_unique([
@@ -215,5 +236,37 @@ class SaleController extends Controller
         ]);
 
         return redirect()->route($this->routePrefix().'.index');
+    }
+
+    private function queueGatewayInvoiceSync(Collection $invoices): void
+    {
+        $invoicesToSync = $invoices->filter(
+            fn ($invoice): bool => $invoice->shouldGenerateGatewayTransaction(),
+        );
+
+        if ($invoicesToSync->isEmpty()) {
+            return;
+        }
+
+        Artisan::queue('gateway:sync-invoices', [
+            '--invoice' => $invoicesToSync->modelKeys(),
+        ])->afterCommit();
+    }
+
+    private function blockedSaleUpdateResponse(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+            ], 422);
+        }
+
+        Inertia::flash('dialog', [
+            'type' => 'error',
+            'title' => 'Não foi possível atualizar a venda',
+            'message' => $message,
+        ]);
+
+        return back();
     }
 }

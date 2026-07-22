@@ -9,6 +9,7 @@ enum InvoiceStatus: string
     use HasMetadata;
 
     case PENDING = 'pending';
+    case WAITING = 'waiting';
     case OVERDUED = 'overdued';
     case PAID = 'paid';
     case CANCELED = 'canceled';
@@ -22,6 +23,7 @@ enum InvoiceStatus: string
     {
         return match ($this) {
             self::PENDING => 'Pendente',
+            self::WAITING => 'Aguardando Pagamento',
             self::OVERDUED => 'Vencido',
             self::PAID => 'Pago',
             self::CANCELED => 'Cancelado'
@@ -32,6 +34,7 @@ enum InvoiceStatus: string
     {
         return match ($this) {
             self::PENDING => 'warning',
+            self::WAITING => 'warning',
             self::OVERDUED => 'error',
             self::PAID => 'success',
             self::CANCELED => 'error',

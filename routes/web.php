@@ -78,6 +78,7 @@ Route::middleware(['auth'])->group(function () {
     Route::module(FinancialCategoryController::class);
     Route::module(PayableController::class);
     Route::module(ReceivableController::class);
+    Route::patch('receivables/{receivable}/mark-paid', [ReceivableController::class, 'markPaid'])->name('receivables.mark-paid');
     Route::module(MovementController::class);
     Route::module(TransferController::class);
 

@@ -12,6 +12,8 @@ type SettingField = {
     label: string;
     content: string | number | boolean | null;
     object_type: string;
+    input_type: string;
+    select_object_name?: string | null;
 };
 
 const props = defineProps<{
@@ -38,6 +40,10 @@ const canSave = computed(() => {
 });
 
 function normalizeValue(setting: SettingField): string | number | boolean | null {
+    if (isSelectField(setting)) {
+        return setting.content === '' ? null : setting.content;
+    }
+
     if (setting.object_type === 'boolean' || setting.object_type === 'bool') {
         return setting.content === true || setting.content === '1' || setting.content === 1;
     }
@@ -56,11 +62,15 @@ function normalizeValue(setting: SettingField): string | number | boolean | null
 }
 
 function isBooleanField(setting: SettingField): boolean {
-    return setting.object_type === 'boolean' || setting.object_type === 'bool';
+    return setting.input_type === 'boolean' || setting.input_type === 'bool';
 }
 
 function isNumericField(setting: SettingField): boolean {
-    return ['integer', 'int', 'number', 'numeric', 'float', 'decimal'].includes(setting.object_type);
+    return ['integer', 'int', 'number', 'numeric', 'float', 'decimal'].includes(setting.input_type);
+}
+
+function isSelectField(setting: SettingField): boolean {
+    return setting.input_type === 'select' && Boolean(setting.select_object_name);
 }
 
 function submit(): void {
@@ -114,6 +124,17 @@ onMounted(() => {
                                 :label="setting.label"
                                 color="primary"
                                 hide-details="auto"
+                                :error-messages="form.errors[`settings.${setting.name}`]"
+                                :disabled="!hasPermission('update') || form.processing"
+                            />
+
+                            <ServerAutocomplete
+                                v-else-if="isSelectField(setting)"
+                                v-model="form.settings[setting.name]"
+                                :object-name="setting.select_object_name!"
+                                :label="setting.label"
+                                clearable
+                                persistent-hint
                                 :error-messages="form.errors[`settings.${setting.name}`]"
                                 :disabled="!hasPermission('update') || form.processing"
                             />

@@ -15,6 +15,7 @@ declare module 'vue' {
     DateField: typeof import('./components/inputs/DateField.vue')['default']
     DetailsPage: typeof import('./components/DetailsPage.vue')['default']
     EditableRowsTable: typeof import('./components/EditableRowsTable.vue')['default']
+    GlobalDialog: typeof import('./components/GlobalDialog.vue')['default']
     GlobalToast: typeof import('./components/GlobalToast.vue')['default']
     MaskedTextField: typeof import('./components/inputs/MaskedTextField.vue')['default']
     PasswordField: typeof import('./components/inputs/PasswordField.vue')['default']

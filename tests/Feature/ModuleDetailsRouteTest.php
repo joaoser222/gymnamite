@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\BillableStatus;
 use App\Enums\FinancialAccountType;
 use App\Enums\GenderType;
+use App\Enums\MovementType;
 use App\Enums\OperationType;
 use App\Models\Client;
 use App\Models\Contract;
@@ -56,6 +57,24 @@ class ModuleDetailsRouteTest extends TestCase
             ->component('cost_centers/Details')
             ->where('cost-center.id', $costCenter->id)
             ->where('cost-center.name', 'Centro Principal')
+        );
+    }
+
+    public function test_authenticated_users_can_visit_movement_create_with_type_options(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'movements.create');
+
+        $response = $this->actingAs($user)->get(route('movements.create'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('movements/Details')
+            ->where('movement', null)
+            ->has('options.operationTypes', 2)
+            ->where('options.operationTypes.0.value', OperationType::PAYABLE->value)
+            ->has('options.movementTypes', 2)
+            ->where('options.movementTypes.0.value', MovementType::INTERNAL->value)
         );
     }
 
@@ -259,6 +278,8 @@ class ModuleDetailsRouteTest extends TestCase
             ->where('settings.0.name', 'contract_default_category')
             ->where('settings.0.label', 'Categoria de Contratos')
             ->where('settings.0.content', 'Mensalidades')
+            ->where('settings.0.input_type', 'string')
+            ->where('settings.0.select_object_name', null)
             ->where('settings.1.name', 'sale_default_category')
             ->where('settings.1.label', 'Categoria de Vendas')
             ->where('settings.1.content', 'Produtos')
@@ -302,5 +323,59 @@ class ModuleDetailsRouteTest extends TestCase
             'id' => $saleSetting->id,
             'content' => 'Produtos',
         ]);
+    }
+
+    public function test_authenticated_users_can_update_select_settings_with_existing_records(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'settings.update');
+
+        $category = FinancialCategory::query()->create([
+            'name' => 'Mensalidades',
+            'color' => '#000000',
+            'operation_type' => OperationType::RECEIVABLE,
+        ]);
+
+        $setting = Setting::query()->create([
+            'name' => 'contract_default_category',
+            'label' => 'Categoria de Contratos',
+            'content' => '',
+            'object_type' => 'select:financial-category',
+        ]);
+
+        $response = $this->actingAs($user)->put(route('settings.update'), [
+            'settings' => [
+                'contract_default_category' => $category->id,
+            ],
+        ]);
+
+        $response->assertRedirect(route('settings.show'));
+
+        $this->assertDatabaseHas('settings', [
+            'id' => $setting->id,
+            'content' => (string) $category->id,
+        ]);
+    }
+
+    public function test_select_settings_reject_missing_records(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'settings.update');
+
+        Setting::query()->create([
+            'name' => 'contract_default_category',
+            'label' => 'Categoria de Contratos',
+            'content' => '',
+            'object_type' => 'select:financial-category',
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('settings.update'), [
+            'settings' => [
+                'contract_default_category' => 999,
+            ],
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['settings.contract_default_category']);
     }
 }
