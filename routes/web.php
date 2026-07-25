@@ -25,6 +25,7 @@ use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReceivableController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SelectBoxController;
@@ -98,6 +99,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('gateway-customers/{gateway_customer}', [GatewayCustomerController::class, 'show'])->name('gateway-customers.show');
     Route::get('gateway-credit-cards', [GatewayCreditCardController::class, 'index'])->name('gateway-credit-cards.index');
     Route::get('gateway-credit-cards/{gateway_credit_card}', [GatewayCreditCardController::class, 'show'])->name('gateway-credit-cards.show');
+
+    // Relatórios
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/{report}', [ReportController::class, 'show'])->name('reports.show');
 
     // Avançado
     Route::module(FinancialAccountController::class);
