@@ -1,27 +1,17 @@
 <?php
 
-namespace App\Traits;
+namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
-use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Query\Expression;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
-trait HasReadOnlyModule
+abstract class ReadOnlyModuleController extends AbstractModuleController
 {
-    use AuthorizesAccessControl;
-
-    /**
-     * @return class-string<Model>
-     */
-    abstract protected function modelClass(): string;
-
     public function index(Request $request): Response|JsonResponse
     {
         $this->authorizeAccess(AccessAction::VIEW);
@@ -93,12 +83,8 @@ trait HasReadOnlyModule
         return Inertia::render($this->detailsComponent(), [
             $this->itemPropName() => $model,
             'routes' => $this->getModuleRoutes(),
+            ...$this->moduleIndexProps($request),
         ]);
-    }
-
-    protected function routePrefix(): string
-    {
-        return str_replace('_', '-', $this->accessModule()->value);
     }
 
     protected function indexComponent(): string
@@ -125,11 +111,6 @@ trait HasReadOnlyModule
         return Str::camel(Str::singular($this->accessModule()->value));
     }
 
-    protected function routeParameterName(): string
-    {
-        return Str::of($this->routePrefix())->replace('-', '_')->singular()->toString();
-    }
-
     /**
      * @return array<string, string>
      */
@@ -141,112 +122,5 @@ trait HasReadOnlyModule
             'index' => route($this->routePrefix().'.index'),
             'show' => str_replace('__id__', ':id', $showRoute),
         ];
-    }
-
-    protected function defaultSearchField(): ?string
-    {
-        return $this->searchableFields()[0] ?? null;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    protected function fields(): array
-    {
-        return property_exists($this, 'fields')
-            ? $this->fields
-            : [];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    protected function fieldsMapping(): array
-    {
-        return property_exists($this, 'fieldsMapping')
-            ? $this->fieldsMapping
-            : [];
-    }
-
-    /**
-     * @return array<int, string|Expression>
-     */
-    protected function resolveSelectColumns(): array
-    {
-        $mapping = $this->fieldsMapping();
-
-        return array_map(
-            fn (string $field) => isset($mapping[$field])
-                ? \DB::raw("{$mapping[$field]} AS `{$field}`")
-                : $field,
-            $this->fields(),
-        );
-    }
-
-    protected function resolveSearchColumn(string $field): string
-    {
-        $mapping = $this->fieldsMapping();
-
-        return $mapping[$field] ?? $field;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    protected function searchableFields(): array
-    {
-        return property_exists($this, 'searchableFields')
-            ? $this->searchableFields
-            : [];
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    protected function sortableFields(): array
-    {
-        return property_exists($this, 'sortableFields')
-            ? $this->sortableFields
-            : ['id', 'created_at', 'updated_at'];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function moduleIndexProps(Request $request): array
-    {
-        return [];
-    }
-
-    protected function newModelQuery(): Builder
-    {
-        return $this->modelClass()::query();
-    }
-
-    protected function modelFromRoute(Request $request): Model
-    {
-        $routeValue = $request->route($this->routeParameterName());
-
-        if ($routeValue instanceof Model) {
-            return $routeValue;
-        }
-
-        return $this->newModelQuery()->findOrFail($routeValue);
-    }
-
-    /**
-     * @param  class-string<BackedEnum>  $enumClass
-     * @return array<int, array{value: string, label: string, color: string}>
-     */
-    protected function enumOptions(string $enumClass): array
-    {
-        return array_map(
-            fn (BackedEnum $case): array => [
-                'value' => (string) $case->value,
-                'label' => method_exists($case, 'label') ? $case->label() : (string) $case->value,
-                'color' => method_exists($case, 'color') ? $case->color() : 'secondary',
-            ],
-            $enumClass::cases(),
-        );
     }
 }

@@ -6,15 +6,12 @@ use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
 use App\Http\Requests\UpdateSettingsRequest;
 use App\Models\Setting;
-use App\Traits\HasModule;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class SettingController extends Controller
+class SettingController extends AbstractModuleController
 {
-    use HasModule;
-
     protected function accessModule(): AccessModule
     {
         return AccessModule::SETTING;
@@ -23,6 +20,17 @@ class SettingController extends Controller
     protected function modelClass(): string
     {
         return Setting::class;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function getModuleRoutes(): array
+    {
+        return [
+            'index' => route('settings.show'),
+            'update' => route('settings.update'),
+        ];
     }
 
     public function index(): Response

@@ -8,17 +8,14 @@ use App\Http\Requests\GatewayAccountRequest;
 use App\Models\GatewayAccount;
 use App\Services\Gateway\Definitions\GatewaySettingDefinition;
 use App\Services\Gateway\GatewayManager;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class GatewayAccountController extends Controller
+class GatewayAccountController extends CrudModuleController
 {
-    use HasModule;
-
     public function __construct(
         private readonly GatewayManager $gatewayManager,
     ) {}

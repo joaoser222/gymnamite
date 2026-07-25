@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Models\Coupon;
-use App\Traits\HasModule;
 
-class CouponController extends Controller
+class CouponController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

@@ -1,31 +1,19 @@
 <?php
 
-namespace App\Traits;
+namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
-use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Query\Expression;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
-trait HasModule
+abstract class CrudModuleController extends AbstractModuleController
 {
-    use AuthorizesAccessControl;
-
     /**
-     * @return class-string<Model>
-     */
-    abstract protected function modelClass(): string;
-
-    /**
-     * Retorna as rotas disponíveis para o frontend
+     * @return array<string, string>
      */
     protected function getModuleRoutes(): array
     {
@@ -44,16 +32,6 @@ trait HasModule
             'destroy' => route("{$prefix}.destroy"),
             'changeVisibility' => route("{$prefix}.change-visibility"),
         ];
-    }
-
-    /**
-     * Compartilha as rotas com o Inertia
-     */
-    protected function shareModuleRoutes(): void
-    {
-        Inertia::share('moduleRoutes', function () {
-            return $this->getModuleRoutes();
-        });
     }
 
     public function index(Request $request): Response|JsonResponse
@@ -198,7 +176,6 @@ trait HasModule
     {
         $this->authorizeAccess(AccessAction::DELETE);
 
-        // Tenta obter os IDs de diferentes fontes
         $ids = $this->extractIdsFromRequest($request);
 
         if (empty($ids)) {
@@ -211,7 +188,6 @@ trait HasModule
             return back()->with('error', 'Nenhum item selecionado para deletar.');
         }
 
-        // Valida se os IDs existem
         $validIds = $this->newModelQuery()
             ->whereIn('id', $ids)
             ->pluck('id')
@@ -227,12 +203,10 @@ trait HasModule
             return back()->with('error', 'Nenhum item válido encontrado para deletar.');
         }
 
-        // Executa a deleção
         $deletedCount = $this->newModelQuery()
             ->whereIn('id', $validIds)
             ->delete();
 
-        // Prepara a mensagem
         $moduleLabel = $this->accessModule()->label();
         $message = $deletedCount > 1
             ? "{$deletedCount} {$moduleLabel} removidos com sucesso."
@@ -255,8 +229,6 @@ trait HasModule
     }
 
     /**
-     * Extrai IDs da requisição de diferentes fontes
-     *
      * @return array<int, int>
      */
     protected function extractIdsFromRequest(Request $request): array
@@ -270,13 +242,9 @@ trait HasModule
             }
         }
 
-        // Garante que é um array de inteiros
         return array_filter(array_map('intval', (array) $ids));
     }
 
-    /**
-     * Altera a visibilidade de múltiplos registros
-     */
     public function changeVisibility(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorizeAccess(AccessAction::VISIBILITY);
@@ -308,273 +276,5 @@ trait HasModule
         ]);
 
         return redirect()->route($this->routePrefix().'.index');
-    }
-
-    protected function routePrefix(): string
-    {
-        return str_replace('_', '-', $this->accessModule()->value);
-    }
-
-    protected function routeParameterName(): string
-    {
-        return Str::of($this->routePrefix())->replace('-', '_')->singular()->toString();
-    }
-
-    protected function indexComponent(): string
-    {
-        return Str::of($this->routePrefix())
-            ->replace('-', '_')
-            ->append('/Index')
-            ->toString();
-    }
-
-    protected function detailsComponent(): string
-    {
-        return Str::of($this->routePrefix())
-            ->replace('-', '_')
-            ->append('/Details')
-            ->toString();
-    }
-
-    protected function collectionPropName(): string
-    {
-        return $this->routePrefix();
-    }
-
-    protected function itemPropName(): string
-    {
-        return Str::singular($this->routePrefix());
-    }
-
-    /**
-     * @return class-string<FormRequest>|null
-     */
-    protected function storeRequestClass(): ?string
-    {
-        return null;
-    }
-
-    /**
-     * @return class-string<FormRequest>|null
-     */
-    protected function updateRequestClass(): ?string
-    {
-        return null;
-    }
-
-    protected function defaultSearchField(): ?string
-    {
-        return $this->searchableFields()[0] ?? null;
-    }
-
-    /**
-     * Campos que serão retornados para o frontend.
-     * Se vazio, retorna todos os campos.
-     *
-     * @return array<int, string>
-     */
-    protected function fields(): array
-    {
-        return property_exists($this, 'fields')
-            ? $this->fields
-            : [];
-    }
-
-    /**
-     * Mapeamento de alias para expressões SQL.
-     * Por padrão, cada field vira `field AS field`.
-     * Sobrescreva no controller para renomear colunas de join.
-     *
-     * @return array<string, string>
-     */
-    protected function fieldsMapping(): array
-    {
-        return property_exists($this, 'fieldsMapping')
-            ? $this->fieldsMapping
-            : [];
-    }
-
-    /**
-     * Resolve as colunas do select aplicando o mapping.
-     *
-     * @return array<int, string|Expression>
-     */
-    protected function resolveSelectColumns(): array
-    {
-        $mapping = $this->fieldsMapping();
-
-        return array_map(
-            fn (string $field) => isset($mapping[$field])
-                ? \DB::raw("{$mapping[$field]} AS `{$field}`")
-                : $field,
-            $this->fields(),
-        );
-    }
-
-    /**
-     * Resolve o nome da coluna para cláusulas WHERE/ORDER BY,
-     * convertendo aliases do SELECT para expressões SQL reais.
-     */
-    protected function resolveSearchColumn(string $field): string
-    {
-        $mapping = $this->fieldsMapping();
-
-        return $mapping[$field] ?? $field;
-    }
-
-    /**
-     * Relações Eloquent que devem ser joined na listagem.
-     * Permite usar campos relacionados em searchableFields e sortableFields.
-     *
-     * @return array<int, string>
-     */
-    protected function joins(): array
-    {
-        return property_exists($this, 'joins')
-            ? $this->joins
-            : [];
-    }
-
-    /**
-     * Aplica os joins definidos na query.
-     */
-    protected function applyJoins(Builder $query): void
-    {
-        $model = new ($this->modelClass());
-
-        foreach ($this->joins() as $relation) {
-            $relationObject = $model->$relation();
-
-            $query->join(
-                $relationObject->getRelated()->getTable(),
-                $relationObject->getQualifiedForeignKeyName(),
-                '=',
-                $relationObject->getQualifiedOwnerKeyName(),
-            );
-        }
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    protected function searchableFields(): array
-    {
-        return property_exists($this, 'searchableFields')
-            ? $this->searchableFields
-            : [];
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    protected function sortableFields(): array
-    {
-        return property_exists($this, 'sortableFields')
-            ? $this->sortableFields
-            : ['id', 'created_at', 'updated_at'];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function moduleIndexProps(Request $request): array
-    {
-        return [];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function moduleDetailsProps(?Model $model = null): array
-    {
-        return [];
-    }
-
-    /**
-     * @param  class-string<BackedEnum>  $enumClass
-     * @return array<int, array{value: string, label: string, color: string}>
-     */
-    protected function enumOptions(string $enumClass): array
-    {
-        return array_map(
-            fn (BackedEnum $case): array => [
-                'value' => (string) $case->value,
-                'label' => method_exists($case, 'label') ? $case->label() : (string) $case->value,
-                'color' => method_exists($case, 'color') ? $case->color() : 'secondary',
-            ],
-            $enumClass::cases(),
-        );
-    }
-
-    /**
-     * @param  class-string<Model>  $modelClass
-     * @return array<int, array{value: string, label: string}>
-     */
-    protected function modelOptions(string $modelClass): array
-    {
-        return $modelClass::query()
-            ->select(['code', 'name'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Model $model): array => [
-                'value' => (string) $model->getAttribute('code'),
-                'label' => (string) $model->getAttribute('name'),
-            ])
-            ->all();
-    }
-
-    protected function modelFromRoute(Request $request): Model
-    {
-        $routeValue = $request->route($this->routeParameterName());
-
-        if ($routeValue instanceof Model) {
-            return $routeValue;
-        }
-
-        $model = $this->newModelQuery()->findOrFail($routeValue);
-
-        $request->route()?->setParameter($this->routeParameterName(), $model);
-
-        return $model;
-    }
-
-    protected function pageItemId(Request $request): string|int|null
-    {
-        if ($request->routeIs($this->routePrefix().'.create')) {
-            return 'new';
-        }
-
-        $routeValue = $request->route($this->routeParameterName());
-
-        if ($routeValue instanceof Model) {
-            return $routeValue->getKey();
-        }
-
-        return $routeValue;
-    }
-
-    protected function newModelQuery(): Builder
-    {
-        return $this->modelClass()::query();
-    }
-
-    /**
-     * @param  class-string<FormRequest>|null  $formRequestClass
-     * @return array<string, mixed>
-     */
-    protected function validatedRequestData(Request $request, ?string $formRequestClass): array
-    {
-        if ($formRequestClass === null) {
-            return $request->all();
-        }
-
-        $formRequest = $formRequestClass::createFrom($request);
-        $formRequest->setContainer(app());
-        $formRequest->setRedirector(app('redirect'));
-        $formRequest->setUserResolver($request->getUserResolver());
-        $formRequest->setRouteResolver($request->getRouteResolver());
-        $formRequest->validateResolved();
-
-        return $formRequest->validated();
     }
 }

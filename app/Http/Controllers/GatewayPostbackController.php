@@ -5,13 +5,10 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Enums\Gateway\PostbackStatus;
 use App\Models\GatewayPostback;
-use App\Traits\HasReadOnlyModule;
 use Illuminate\Http\Request;
 
-class GatewayPostbackController extends Controller
+class GatewayPostbackController extends ReadOnlyModuleController
 {
-    use HasReadOnlyModule;
-
     /**
      * @var array<int, string>
      */

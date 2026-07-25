@@ -12,7 +12,6 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\ReceivableSettlementRequest;
 use App\Models\Movement;
 use App\Models\Receivable;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,13 +22,8 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ReceivableController extends Controller
+class ReceivableController extends CrudModuleController
 {
-    use HasModule {
-        getModuleRoutes as protected baseModuleRoutes;
-        validatedRequestData as protected baseValidatedRequestData;
-    }
-
     /**
      * @var array<int, string>
      */
@@ -84,7 +78,7 @@ class ReceivableController extends Controller
      */
     protected function getModuleRoutes(): array
     {
-        $routes = $this->baseModuleRoutes();
+        $routes = parent::getModuleRoutes();
         $markPaidRoute = route('receivables.mark-paid', ['receivable' => '__id__']);
 
         return [
@@ -99,7 +93,7 @@ class ReceivableController extends Controller
      */
     protected function validatedRequestData(Request $request, ?string $formRequestClass): array
     {
-        $data = $this->baseValidatedRequestData($request, $formRequestClass);
+        $data = parent::validatedRequestData($request, $formRequestClass);
 
         unset($data['payment_date'], $data['total']);
 

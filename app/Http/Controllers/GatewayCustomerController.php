@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Models\GatewayCustomer;
-use App\Traits\HasReadOnlyModule;
 
-class GatewayCustomerController extends Controller
+class GatewayCustomerController extends ReadOnlyModuleController
 {
-    use HasReadOnlyModule;
-
     /**
      * @var array<int, string>
      */

@@ -5,14 +5,11 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Enums\OperationType;
 use App\Models\CostCenter;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class CostCenterController extends Controller
+class CostCenterController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

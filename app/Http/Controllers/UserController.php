@@ -8,7 +8,6 @@ use App\Http\Requests\UserRequest;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -18,10 +17,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-class UserController extends Controller
+class UserController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

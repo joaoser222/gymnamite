@@ -6,13 +6,10 @@ use App\AccessControl\AccessModule;
 use App\Enums\Gateway\TransactionStatus;
 use App\Enums\PaymentMethod;
 use App\Models\GatewayPayment;
-use App\Traits\HasReadOnlyModule;
 use Illuminate\Http\Request;
 
-class GatewayPaymentController extends Controller
+class GatewayPaymentController extends ReadOnlyModuleController
 {
-    use HasReadOnlyModule;
-
     /**
      * @var array<int, string>
      */

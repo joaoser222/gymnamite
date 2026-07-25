@@ -6,14 +6,11 @@ use App\AccessControl\AccessModule;
 use App\Enums\MovementType;
 use App\Enums\OperationType;
 use App\Models\Movement;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class MovementController extends Controller
+class MovementController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

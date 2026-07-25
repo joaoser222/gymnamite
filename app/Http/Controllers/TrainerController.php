@@ -6,13 +6,10 @@ use App\AccessControl\AccessModule;
 use App\Enums\GenderType;
 use App\Models\Trainer;
 use App\Models\Uf;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 
-class TrainerController extends Controller
+class TrainerController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

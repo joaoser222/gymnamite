@@ -6,14 +6,11 @@ use App\AccessControl\AccessModule;
 use App\Enums\FinancialAccountType;
 use App\Http\Requests\FinancialAccountRequest;
 use App\Models\FinancialAccount;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class FinancialAccountController extends Controller
+class FinancialAccountController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

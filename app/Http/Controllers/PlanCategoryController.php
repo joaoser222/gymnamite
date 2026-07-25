@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Models\PlanCategory;
-use App\Traits\HasModule;
 
-class PlanCategoryController extends Controller
+class PlanCategoryController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

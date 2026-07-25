@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Models\Modality;
-use App\Traits\HasModule;
 
-class ModalityController extends Controller
+class ModalityController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

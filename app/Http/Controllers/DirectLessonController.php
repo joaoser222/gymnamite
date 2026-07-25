@@ -9,7 +9,6 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\DirectLessonRequest;
 use App\Models\DirectLesson;
 use App\Services\BillingInvoiceService;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -20,10 +19,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-class DirectLessonController extends Controller
+class DirectLessonController extends CrudModuleController
 {
-    use HasModule;
-
     public function __construct(
         private readonly BillingInvoiceService $billingInvoiceService,
     ) {}

@@ -11,7 +11,6 @@ use App\Models\Sale;
 use App\Services\BillableItemService;
 use App\Services\BillingInvoiceService;
 use App\Services\StockRecalculationService;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -23,10 +22,8 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class SaleController extends Controller
+class SaleController extends CrudModuleController
 {
-    use HasModule;
-
     public function __construct(
         private readonly BillableItemService $billableItemService,
         private readonly BillingInvoiceService $billingInvoiceService,

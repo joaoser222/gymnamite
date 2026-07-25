@@ -16,7 +16,6 @@ use App\Models\Plan;
 use App\Models\PlanTier;
 use App\Models\Uf;
 use App\Services\BillingInvoiceService;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -30,10 +29,8 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ContractController extends Controller
+class ContractController extends CrudModuleController
 {
-    use HasModule;
-
     public function __construct(
         private readonly BillingInvoiceService $billingInvoiceService,
     ) {}
@@ -103,11 +100,11 @@ class ContractController extends Controller
         ]);
     }
 
-    public function store(ContractWizardRequest $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $validated = $request->validated();
+        $validated = $this->validatedRequestData($request, ContractWizardRequest::class);
         $generateInvoices = ! array_key_exists('generate_invoices', $validated)
             || (bool) $validated['generate_invoices'];
 
@@ -411,22 +408,6 @@ class ContractController extends Controller
                 'ufs' => $this->modelOptions(Uf::class),
             ],
         ];
-    }
-
-    /**
-     * @return array<int, array{value: string, label: string}>
-     */
-    private function modelOptions(string $modelClass): array
-    {
-        return $modelClass::query()
-            ->select(['code', 'name'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Model $model): array => [
-                'value' => (string) $model->getAttribute('code'),
-                'label' => (string) $model->getAttribute('name'),
-            ])
-            ->all();
     }
 
     /**

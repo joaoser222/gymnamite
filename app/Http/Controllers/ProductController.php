@@ -5,14 +5,11 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Enums\ProductType;
 use App\Models\Product;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class ProductController extends Controller
+class ProductController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

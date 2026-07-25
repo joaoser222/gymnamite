@@ -5,13 +5,10 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Models\Supplier;
 use App\Models\Uf;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 
-class SupplierController extends Controller
+class SupplierController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

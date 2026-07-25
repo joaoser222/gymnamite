@@ -8,14 +8,11 @@ use App\Enums\GenderType;
 use App\Http\Requests\ClientRequest;
 use App\Models\Client;
 use App\Models\Uf;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class ClientController extends Controller
+class ClientController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

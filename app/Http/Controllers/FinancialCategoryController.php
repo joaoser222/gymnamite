@@ -5,13 +5,10 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Enums\OperationType;
 use App\Models\FinancialCategory;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 
-class FinancialCategoryController extends Controller
+class FinancialCategoryController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

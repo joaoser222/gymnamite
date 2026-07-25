@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Models\Report;
-use App\Traits\HasReadOnlyModule;
 
-class ReportController extends Controller
+class ReportController extends ReadOnlyModuleController
 {
-    use HasReadOnlyModule;
-
     /**
      * @var array<int, string>
      */

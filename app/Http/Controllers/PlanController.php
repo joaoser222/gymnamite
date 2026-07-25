@@ -7,7 +7,6 @@ use App\AccessControl\AccessModule;
 use App\Http\Requests\PlanRequest;
 use App\Models\Modality;
 use App\Models\Plan;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -17,10 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class PlanController extends Controller
+class PlanController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

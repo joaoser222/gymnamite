@@ -5,13 +5,10 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Models\FinancialAccount;
 use App\Models\Transfer;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Model;
 
-class TransferController extends Controller
+class TransferController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

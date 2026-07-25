@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
 use App\Models\Role;
-use App\Traits\HasModule;
 
-class RoleController extends Controller
+class RoleController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

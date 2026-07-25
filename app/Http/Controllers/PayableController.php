@@ -7,15 +7,12 @@ use App\Enums\InvoiceStatus;
 use App\Enums\OperationType;
 use App\Enums\PaymentMethod;
 use App\Models\Payable;
-use App\Traits\HasModule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class PayableController extends Controller
+class PayableController extends CrudModuleController
 {
-    use HasModule;
-
     /**
      * @var array<int, string>
      */

@@ -5,13 +5,10 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessModule;
 use App\Enums\Gateway\TransactionStatus;
 use App\Models\GatewayTransfer;
-use App\Traits\HasReadOnlyModule;
 use Illuminate\Http\Request;
 
-class GatewayTransferController extends Controller
+class GatewayTransferController extends ReadOnlyModuleController
 {
-    use HasReadOnlyModule;
-
     /**
      * @var array<int, string>
      */
