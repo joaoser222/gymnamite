@@ -92,6 +92,7 @@ interface Props {
     headers: TableHeader[];
     routes?: TableRoutes;
     hideSelection?: boolean;
+    hideVisibilityFilter?: boolean;
     loading?: boolean;
     searchKey?: string;
     title?: string;
@@ -104,6 +105,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     hideSelection: false,
+    hideVisibilityFilter: false,
     loading: false,
     searchKey: 'search',
     title: 'Items',
@@ -277,8 +279,11 @@ const loadItems = (options?: {
         per_page: pagination.value.perPage,
         [props.searchKey]: search.value ?? '',
         searchField: internalSearchField.value,
-        visibility: internalVisibilityFilter.value,
     };
+
+    if (!props.hideVisibilityFilter) {
+        params.visibility = internalVisibilityFilter.value;
+    }
 
     if (options?.sortBy?.length) {
         params.sort_by = options.sortBy[0].key;
@@ -312,7 +317,10 @@ const handleEdit = (item: unknown) => {
     if (!permissions.value.view) return;
     emit('edit', item);
 
-    const route = props.routes?.show?.replace(':id', String((item as { id: number }).id));
+    const route = props.routes?.show?.replace(
+        ':id',
+        String((item as { id: number }).id),
+    );
 
     if (route) {
         router.get(route);
@@ -509,7 +517,11 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 Alterar Visibilidade
             </v-clipped-button>
             <v-clipped-button
-                v-if="permissions.delete && selectedItems.length > 0 && internalVisibilityFilter=='archived'"
+                v-if="
+                    permissions.delete &&
+                    selectedItems.length > 0 &&
+                    internalVisibilityFilter == 'archived'
+                "
                 color="error"
                 prepend-icon="ti ti-trash"
                 class="ml-2"
@@ -520,7 +532,7 @@ defineExpose({ loadItems, selectedItems, internalLoading });
         </div>
 
         <!-- Filtro de visibilidade -->
-        <div class="mb-4">
+        <div v-if="!hideVisibilityFilter" class="mb-4">
             <v-btn-group class="bg-secondary" elevation="2" border="0">
                 <v-btn
                     v-for="item in visibilityOptions"
