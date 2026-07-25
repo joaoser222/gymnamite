@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Contracts\BillingInvoiceSource;
-use App\Contracts\GatewayAdapter;
 use App\Enums\InvoiceStatus;
 use App\Enums\OperationType;
 use App\Models\GatewayPayment;
 use App\Models\Invoice;
+use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,7 +15,7 @@ class GatewayBillingService
 {
     public function __construct(
         private readonly BillingInvoiceService $billingInvoiceService,
-        private readonly GatewayAdapter $gateway,
+        private readonly PaymentGatewayAdapter $gateway,
     ) {}
 
     public function generate(BillingInvoiceSource&Model $source): Collection

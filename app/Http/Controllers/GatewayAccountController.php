@@ -6,8 +6,8 @@ use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
 use App\Http\Requests\GatewayAccountRequest;
 use App\Models\GatewayAccount;
-use App\Services\Gateway\Definitions\GatewaySettingDefinition;
-use App\Services\Gateway\GatewayManager;
+use App\PaymentGateways\Definitions\PaymentGatewaySettingDefinition;
+use App\PaymentGateways\PaymentGatewayManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +17,7 @@ use Inertia\Response;
 class GatewayAccountController extends CrudModuleController
 {
     public function __construct(
-        private readonly GatewayManager $gatewayManager,
+        private readonly PaymentGatewayManager $gatewayManager,
     ) {}
 
     /**
@@ -109,7 +109,7 @@ class GatewayAccountController extends CrudModuleController
         $settings = $gatewayAccount->settings ?? [];
 
         foreach ($definition->settings() as $setting) {
-            if ($setting instanceof GatewaySettingDefinition && $setting->type === 'password') {
+            if ($setting instanceof PaymentGatewaySettingDefinition && $setting->type === 'password') {
                 unset($settings[$setting->key]);
             }
         }

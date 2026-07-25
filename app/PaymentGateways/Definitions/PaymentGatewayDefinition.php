@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Gateway\Definitions;
+namespace App\PaymentGateways\Definitions;
 
-abstract class GatewayDefinition
+abstract class PaymentGatewayDefinition
 {
     abstract public function name(): string;
 
@@ -16,7 +16,7 @@ abstract class GatewayDefinition
             'name' => $this->name(),
             'description' => $this->description(),
             'settings' => array_map(
-                fn (GatewaySettingDefinition $setting) => [
+                fn (PaymentGatewaySettingDefinition $setting) => [
                     'key' => $setting->key,
                     'label' => $setting->label,
                     'type' => $setting->type,

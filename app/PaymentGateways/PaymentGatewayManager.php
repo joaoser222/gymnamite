@@ -1,31 +1,31 @@
 <?php
 
-namespace App\Services\Gateway;
+namespace App\PaymentGateways;
 
-use App\Services\Gateway\Definitions\AsaasGatewayDefinition;
-use App\Services\Gateway\Definitions\GatewayDefinition;
+use App\PaymentGateways\Definitions\AsaasPaymentGatewayDefinition;
+use App\PaymentGateways\Definitions\PaymentGatewayDefinition;
 use InvalidArgumentException;
 
-class GatewayManager
+class PaymentGatewayManager
 {
     private array $definitions = [];
 
     public function __construct()
     {
-        $this->register(new AsaasGatewayDefinition);
+        $this->register(new AsaasPaymentGatewayDefinition);
     }
 
-    public function register(GatewayDefinition $definition): void
+    public function register(PaymentGatewayDefinition $definition): void
     {
         $this->definitions[$definition->name()] = $definition;
     }
 
-    public function find(string $name): ?GatewayDefinition
+    public function find(string $name): ?PaymentGatewayDefinition
     {
         return $this->definitions[$name] ?? null;
     }
 
-    public function findOrFail(string $name): GatewayDefinition
+    public function findOrFail(string $name): PaymentGatewayDefinition
     {
         $definition = $this->find($name);
 
@@ -39,7 +39,7 @@ class GatewayManager
     public function all(): array
     {
         return array_map(
-            fn (GatewayDefinition $definition) => $definition->toArray(),
+            fn (PaymentGatewayDefinition $definition) => $definition->toArray(),
             array_values($this->definitions),
         );
     }
@@ -47,7 +47,7 @@ class GatewayManager
     public function providers(): array
     {
         return array_map(
-            fn (GatewayDefinition $definition) => [
+            fn (PaymentGatewayDefinition $definition) => [
                 'value' => $definition->name(),
                 'label' => $definition->name(),
                 'description' => $definition->description(),

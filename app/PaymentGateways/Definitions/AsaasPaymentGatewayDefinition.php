@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Gateway\Definitions;
+namespace App\PaymentGateways\Definitions;
 
-class AsaasGatewayDefinition extends GatewayDefinition
+class AsaasPaymentGatewayDefinition extends PaymentGatewayDefinition
 {
     public function name(): string
     {
@@ -17,7 +17,7 @@ class AsaasGatewayDefinition extends GatewayDefinition
     public function settings(): array
     {
         return [
-            new GatewaySettingDefinition(
+            new PaymentGatewaySettingDefinition(
                 key: 'api_key',
                 label: 'API Key',
                 type: 'password',
@@ -25,7 +25,7 @@ class AsaasGatewayDefinition extends GatewayDefinition
                 placeholder: 'Token de integração',
                 helpText: 'Chave de API fornecida pelo Asaas em Integração > Chave de API.',
             ),
-            new GatewaySettingDefinition(
+            new PaymentGatewaySettingDefinition(
                 key: 'base_url',
                 label: 'Ambiente',
                 type: 'select',
@@ -37,7 +37,7 @@ class AsaasGatewayDefinition extends GatewayDefinition
                 ],
                 helpText: 'URL base da API do Asaas.',
             ),
-            new GatewaySettingDefinition(
+            new PaymentGatewaySettingDefinition(
                 key: 'wallet_id',
                 label: 'ID da Carteira',
                 type: 'string',

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Contracts;
+namespace App\PaymentGateways\Contracts;
 
 use App\Models\GatewayCustomer;
 use App\Models\GatewayPayment;
@@ -9,7 +9,7 @@ use App\Models\GatewayTransfer;
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Model;
 
-interface GatewayAdapter
+interface PaymentGatewayAdapter
 {
     public function createCustomer(Model $holder): GatewayCustomer;
 

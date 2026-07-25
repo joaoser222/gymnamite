@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use App\Contracts\GatewayAdapter;
-use App\Services\Gateway\AsaasAdapter;
-use App\Services\Gateway\GatewayManager;
+use App\PaymentGateways\Adapters\AsaasPaymentGatewayAdapter;
+use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
+use App\PaymentGateways\PaymentGatewayManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(GatewayAdapter::class, AsaasAdapter::class);
-        $this->app->singleton(GatewayManager::class);
+        $this->app->bind(PaymentGatewayAdapter::class, AsaasPaymentGatewayAdapter::class);
+        $this->app->singleton(PaymentGatewayManager::class);
 
         // Gera rotas de forma customizada para modulos
         Route::macro('module', function (string $prefixOrController, ?string $controller = null) {

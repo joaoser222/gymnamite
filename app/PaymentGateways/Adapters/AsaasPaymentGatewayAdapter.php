@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Services\Gateway;
+namespace App\PaymentGateways\Adapters;
 
-use App\Contracts\GatewayAdapter;
 use App\Enums\Gateway\PostbackStatus;
 use App\Enums\Gateway\TransactionStatus;
 use App\Enums\InvoiceStatus;
@@ -16,6 +15,7 @@ use App\Models\GatewayTransfer;
 use App\Models\Invoice;
 use App\Models\Supplier;
 use App\Models\Trainer;
+use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\ConnectionException;
@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use RuntimeException;
 
-class AsaasAdapter implements GatewayAdapter
+class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter
 {
     private const ASAAS_STATUS_MAP = [
         'PENDING' => TransactionStatus::PENDING,

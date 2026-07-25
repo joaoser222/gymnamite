@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
-use App\Contracts\GatewayAdapter;
 use App\Enums\InvoiceStatus;
 use App\Enums\MovementType;
 use App\Enums\OperationType;
@@ -12,6 +11,7 @@ use App\Enums\PaymentMethod;
 use App\Http\Requests\ReceivableSettlementRequest;
 use App\Models\Movement;
 use App\Models\Receivable;
+use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
@@ -182,7 +182,7 @@ class ReceivableController extends CrudModuleController
         }
 
         try {
-            return app(GatewayAdapter::class)->getPixQrCode($receivable->gatewayPayment);
+            return app(PaymentGatewayAdapter::class)->getPixQrCode($receivable->gatewayPayment);
         } catch (\Throwable $e) {
             report($e);
 

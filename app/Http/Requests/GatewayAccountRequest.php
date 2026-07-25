@@ -3,8 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Models\GatewayAccount;
-use App\Services\Gateway\Definitions\GatewaySettingDefinition;
-use App\Services\Gateway\GatewayManager;
+use App\PaymentGateways\Definitions\PaymentGatewaySettingDefinition;
+use App\PaymentGateways\PaymentGatewayManager;
 use Illuminate\Foundation\Http\FormRequest;
 
 class GatewayAccountRequest extends FormRequest
@@ -37,7 +37,7 @@ class GatewayAccountRequest extends FormRequest
             return;
         }
 
-        $definition = app(GatewayManager::class)->find((string) $this->input('name', $gatewayAccount->name));
+        $definition = app(PaymentGatewayManager::class)->find((string) $this->input('name', $gatewayAccount->name));
 
         if ($definition === null) {
             return;
@@ -46,7 +46,7 @@ class GatewayAccountRequest extends FormRequest
         $existingSettings = $gatewayAccount->settings ?? [];
 
         foreach ($definition->settings() as $setting) {
-            if (! $setting instanceof GatewaySettingDefinition || $setting->type !== 'password') {
+            if (! $setting instanceof PaymentGatewaySettingDefinition || $setting->type !== 'password') {
                 continue;
             }
 

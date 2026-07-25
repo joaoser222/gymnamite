@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\Gateway\Definitions;
+namespace App\PaymentGateways\Definitions;
 
-class GatewaySettingDefinition
+class PaymentGatewaySettingDefinition
 {
     public function __construct(
         public readonly string $key,
