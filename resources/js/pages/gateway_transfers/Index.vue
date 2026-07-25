@@ -75,7 +75,6 @@ const { transactionStatus } = useSharedOptions(sharedProps.options ?? {});
         <template #column-status="{ item }">
             <v-chip
                 :color="findOption(transactionStatus, item.status)?.color"
-                variant="tonal"
             >
                 {{ findLabel(transactionStatus, item.status) ?? item.status }}
             </v-chip>

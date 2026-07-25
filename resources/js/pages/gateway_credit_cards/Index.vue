@@ -52,7 +52,7 @@ const routes: TableRoutes = {
         :custom-slots="['status', 'created_at']"
     >
         <template #column-status="{ item }">
-            <v-chip variant="tonal">
+            <v-chip>
                 {{ item.status ?? '-' }}
             </v-chip>
         </template>

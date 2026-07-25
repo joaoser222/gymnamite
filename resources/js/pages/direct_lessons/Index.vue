@@ -60,7 +60,7 @@ const { billableStatus, paymentMethods } = useSharedOptions(sharedProps.options 
             {{ findLabel(paymentMethods, item.payment_method) }}
         </template>
         <template #column-status="{ item }">
-            <v-chip :color="findOption(billableStatus, item.status)?.color" variant="tonal">
+            <v-chip :color="findOption(billableStatus, item.status)?.color">
                 {{ findLabel(billableStatus, item.status) }}
             </v-chip>
         </template>

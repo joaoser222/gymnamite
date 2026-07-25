@@ -64,7 +64,6 @@ const { postbackStatus } = useSharedOptions(sharedProps.options ?? {});
         <template #column-status="{ item }">
             <v-chip
                 :color="findOption(postbackStatus, item.status)?.color"
-                variant="tonal"
             >
                 {{ findLabel(postbackStatus, item.status) ?? item.status }}
             </v-chip>

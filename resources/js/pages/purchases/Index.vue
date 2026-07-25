@@ -53,7 +53,7 @@ const { billableStatus, paymentMethods } = useSharedOptions(sharedProps.options 
             {{ formatCurrency(item.total) }}
         </template>
         <template #column-status="{ item }">
-            <v-chip :color="findOption(billableStatus, item.status)?.color" variant="tonal">
+            <v-chip :color="findOption(billableStatus, item.status)?.color">
                 {{ findLabel(billableStatus, item.status) }}
             </v-chip>
         </template>
