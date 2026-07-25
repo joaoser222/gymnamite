@@ -21,6 +21,7 @@ type Purchase = {
     disable_stock?: boolean;
     supplier_id?: number;
     items?: Array<Record<string, unknown>>;
+    invoices?: Array<Record<string, unknown>>;
 };
 
 const props = defineProps<{
@@ -50,17 +51,30 @@ const canUpdatePurchase = computed(() => {
     return props.purchase?.id === undefined || props.purchase.status === 'open';
 });
 
+const canFinalizePurchase = computed(() => {
+    return (
+        props.purchase?.id === undefined ||
+        (props.purchase.invoices?.length ?? 0) === 0
+    );
+});
+
 function normalizeCurrencyValue(value: unknown): number {
     const numberValue = Number(value ?? 0);
 
     return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
-function recalculateTotals(form: Record<string, unknown>, grossValue?: number): void {
-    const resolvedGrossValue = normalizeCurrencyValue(grossValue ?? form.gross_value);
+function recalculateTotals(
+    form: Record<string, unknown>,
+    grossValue?: number,
+): void {
+    const resolvedGrossValue = normalizeCurrencyValue(
+        grossValue ?? form.gross_value,
+    );
 
     form.gross_value = resolvedGrossValue;
-    form.total = resolvedGrossValue - normalizeCurrencyValue(form.discount_value);
+    form.total =
+        resolvedGrossValue - normalizeCurrencyValue(form.discount_value);
 }
 
 function validateBillableItems(value: unknown): true | string {
@@ -68,7 +82,11 @@ function validateBillableItems(value: unknown): true | string {
         return 'Adicione pelo menos um item.';
     }
 
-    if (value.some((item) => !item || !('product_id' in item) || !item.product_id)) {
+    if (
+        value.some(
+            (item) => !item || !('product_id' in item) || !item.product_id,
+        )
+    ) {
         return 'Preencha o produto de todos os itens.';
     }
 
@@ -88,7 +106,10 @@ function validateBillableItems(value: unknown): true | string {
     >
         <template #default="{ form, errors }">
             <v-row class="ma-0">
-                <v-col v-if="purchase?.id && purchase.status !== 'open'" cols="12">
+                <v-col
+                    v-if="purchase?.id && purchase.status !== 'open'"
+                    cols="12"
+                >
                     <v-alert type="warning" variant="tonal" border="start">
                         Compras finalizadas nao podem ser atualizadas.
                     </v-alert>
@@ -103,7 +124,8 @@ function validateBillableItems(value: unknown): true | string {
                         hide-details
                     />
                     <div class="text-caption text-medium-emphasis">
-                        Quando desativado, esta compra não altera o estoque dos produtos.
+                        Quando desativado, esta compra não altera o estoque dos
+                        produtos.
                     </div>
                 </v-col>
                 <v-col cols="12" md="6">
@@ -198,21 +220,23 @@ function validateBillableItems(value: unknown): true | string {
 
         <template #actions="{ isCreating, canSave, submit }">
             <v-clipped-button
-                color="primary"
-                prepend-icon="ti ti-device-floppy"
-                :disabled="!canSave"
-                @click="isCreating ? submit({ generate_invoices: false }) : submit()"
-            >
-                Salvar
-            </v-clipped-button>
-            <v-clipped-button
-                v-if="isCreating"
+                v-if="canFinalizePurchase"
                 color="success"
                 prepend-icon="ti ti-receipt-2"
                 :disabled="!canSave"
                 @click="submit({ generate_invoices: true })"
             >
                 Finalizar
+            </v-clipped-button>
+            <v-clipped-button
+                color="primary"
+                prepend-icon="ti ti-device-floppy"
+                :disabled="!canSave"
+                @click="
+                    isCreating ? submit({ generate_invoices: false }) : submit()
+                "
+            >
+                Salvar
             </v-clipped-button>
         </template>
     </DetailsPage>

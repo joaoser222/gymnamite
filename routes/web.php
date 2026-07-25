@@ -12,6 +12,11 @@ use App\Http\Controllers\DirectLessonController;
 use App\Http\Controllers\FinancialAccountController;
 use App\Http\Controllers\FinancialCategoryController;
 use App\Http\Controllers\GatewayAccountController;
+use App\Http\Controllers\GatewayCreditCardController;
+use App\Http\Controllers\GatewayCustomerController;
+use App\Http\Controllers\GatewayPaymentController;
+use App\Http\Controllers\GatewayPostbackController;
+use App\Http\Controllers\GatewayTransferController;
 use App\Http\Controllers\ModalityController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\PayableController;
@@ -81,6 +86,18 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('receivables/{receivable}/mark-paid', [ReceivableController::class, 'markPaid'])->name('receivables.mark-paid');
     Route::module(MovementController::class);
     Route::module(TransferController::class);
+
+    // Gateway de Pagamentos
+    Route::get('gateway-payments', [GatewayPaymentController::class, 'index'])->name('gateway-payments.index');
+    Route::get('gateway-payments/{gateway_payment}', [GatewayPaymentController::class, 'show'])->name('gateway-payments.show');
+    Route::get('gateway-transfers', [GatewayTransferController::class, 'index'])->name('gateway-transfers.index');
+    Route::get('gateway-transfers/{gateway_transfer}', [GatewayTransferController::class, 'show'])->name('gateway-transfers.show');
+    Route::get('gateway-postbacks', [GatewayPostbackController::class, 'index'])->name('gateway-postbacks.index');
+    Route::get('gateway-postbacks/{gateway_postback}', [GatewayPostbackController::class, 'show'])->name('gateway-postbacks.show');
+    Route::get('gateway-customers', [GatewayCustomerController::class, 'index'])->name('gateway-customers.index');
+    Route::get('gateway-customers/{gateway_customer}', [GatewayCustomerController::class, 'show'])->name('gateway-customers.show');
+    Route::get('gateway-credit-cards', [GatewayCreditCardController::class, 'index'])->name('gateway-credit-cards.index');
+    Route::get('gateway-credit-cards/{gateway_credit_card}', [GatewayCreditCardController::class, 'show'])->name('gateway-credit-cards.show');
 
     // Avançado
     Route::module(FinancialAccountController::class);

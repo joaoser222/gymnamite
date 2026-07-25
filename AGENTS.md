@@ -57,6 +57,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Use Tabler icon names through Vuetify icon props/classes, matching existing usage such as `ti ti-plus`, `ti ti-pencil`, and `ti ti-search`.
 - Prefer Vuetify spacing, layout, density, variant, color, and validation APIs over custom CSS. Add scoped CSS only when Vuetify props/classes cannot express the needed behavior cleanly.
 - Check sibling Vue components in `resources/js/components` and `resources/js/pages` before creating new shared UI patterns.
+- In form action bars, the save button must always be the last action on the far right. Place any other actions before the save button.
 
 ## Documentation Files
 

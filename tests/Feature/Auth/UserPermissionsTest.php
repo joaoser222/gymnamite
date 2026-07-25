@@ -47,9 +47,25 @@ class UserPermissionsTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('version', $user->updated_at?->toISOString());
+            ->assertJsonPath('version', $user->permissionsVersion());
 
         $this->assertSame(['clients.view'], $response->json('permissions'));
+    }
+
+    public function test_permissions_version_changes_when_direct_permissions_change(): void
+    {
+        $user = User::factory()->create();
+
+        $firstVersion = $user->permissionsVersion();
+
+        $permission = Permission::query()->create([
+            'name' => 'clients.view',
+            'description' => 'clients.view',
+        ]);
+
+        $user->permissions()->attach($permission);
+
+        $this->assertNotSame($firstVersion, $user->fresh()->permissionsVersion());
     }
 
     public function test_role_permissions_are_not_returned_in_cached_payload(): void

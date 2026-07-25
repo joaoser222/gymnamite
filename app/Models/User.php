@@ -52,7 +52,24 @@ class User extends Authenticatable
             'permission_user',
             'user_id',
             'permission_id'
-        );
+        )->withTimestamps();
+    }
+
+    public function permissionsVersion(): string
+    {
+        $permissionsFingerprint = $this->permissions()
+            ->select(['permissions.id'])
+            ->selectRaw('permission_user.updated_at as permission_updated_at')
+            ->orderBy('permissions.id')
+            ->get()
+            ->map(fn (Permission $permission): string => $permission->id.':'.($permission->getAttribute('permission_updated_at') ?? ''))
+            ->implode('|');
+
+        return hash('sha256', implode('|', [
+            $this->id,
+            $this->updated_at?->toISOString() ?? '',
+            $permissionsFingerprint,
+        ]));
     }
 
     /**

@@ -31,7 +31,7 @@ class DashboardTest extends TestCase
                 ->where('auth.user.id', $user->id)
                 ->where('auth.user.name', $user->name)
                 ->where('auth.user.email', $user->email)
-                ->where('auth.user.permissions_version', $user->updated_at?->toISOString())
+                ->where('auth.user.permissions_version', $user->permissionsVersion())
                 ->where('sidebarOpen', true)
             );
     }

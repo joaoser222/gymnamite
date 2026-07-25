@@ -15,7 +15,7 @@ class UserPermissionsController extends Controller
         abort_unless($user !== null, 401);
 
         return response()->json([
-            'version' => $user->updated_at?->toISOString(),
+            'version' => $user->permissionsVersion(),
             'permissions' => $user->permissionNames()->all(),
         ]);
     }

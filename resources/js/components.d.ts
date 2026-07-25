@@ -19,6 +19,7 @@ declare module 'vue' {
     GlobalToast: typeof import('./components/GlobalToast.vue')['default']
     MaskedTextField: typeof import('./components/inputs/MaskedTextField.vue')['default']
     PasswordField: typeof import('./components/inputs/PasswordField.vue')['default']
+    ReadOnlyDetailsPage: typeof import('./components/ReadOnlyDetailsPage.vue')['default']
     ServerAutocomplete: typeof import('./components/inputs/ServerAutocomplete.vue')['default']
     TablePage: typeof import('./components/TablePage.vue')['default']
     TimeField: typeof import('./components/inputs/TimeField.vue')['default']

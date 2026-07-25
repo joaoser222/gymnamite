@@ -181,16 +181,53 @@ const menuGroups: MenuGroup[] = [
         ],
     },
     {
+        name: 'payment-gateway',
+        title: 'Gateway de Pagamentos',
+        icon: 'ti ti-credit-card',
+        items: [
+            {
+                title: 'Configurações',
+                icon: 'ti ti-settings-dollar',
+                href: '/gateway-accounts',
+                permission: 'gateway_accounts.view',
+            },
+            {
+                title: 'Pagamentos',
+                icon: 'ti ti-credit-card-pay',
+                href: '/gateway-payments',
+                permission: 'gateway_payments.view',
+            },
+            {
+                title: 'Transferências',
+                icon: 'ti ti-cash-banknote-move',
+                href: '/gateway-transfers',
+                permission: 'gateway_transfers.view',
+            },
+            {
+                title: 'Postbacks',
+                icon: 'ti ti-webhook',
+                href: '/gateway-postbacks',
+                permission: 'gateway_postbacks.view',
+            },
+            {
+                title: 'Clientes',
+                icon: 'ti ti-users',
+                href: '/gateway-customers',
+                permission: 'gateway_customers.view',
+            },
+            {
+                title: 'Cartões',
+                icon: 'ti ti-credit-card',
+                href: '/gateway-credit-cards',
+                permission: 'gateway_credit_cards.view',
+            },
+        ],
+    },
+    {
         name: 'advanced',
         title: 'Avançado',
         icon: 'ti ti-settings',
         items: [
-            {
-                title: 'Gateway de Pagamentos',
-                icon: 'ti ti-credit-card',
-                href: '/gateway-accounts',
-                permission: 'gateway_accounts.view',
-            },
             {
                 title: 'Usuários',
                 icon: 'ti ti-user-shield',

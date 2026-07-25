@@ -103,7 +103,7 @@ class PurchaseController extends Controller
     {
         $this->authorizeAccess(AccessAction::VIEW);
 
-        $purchase = $this->modelFromRoute($request)->load('items');
+        $purchase = $this->modelFromRoute($request)->load('items', 'invoices');
 
         if ($request->expectsJson()) {
             return response()->json($purchase);
@@ -127,6 +127,10 @@ class PurchaseController extends Controller
             $data = $this->validatedRequestData($request, $this->storeRequestClass());
             $items = Arr::pull($data, 'items', []);
             $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
+
+            if ($generateInvoices) {
+                $data['status'] = BillableStatus::COMPLETED->value;
+            }
 
             /** @var Purchase $purchase */
             $purchase = $this->newModelQuery()->create($data);
@@ -179,7 +183,11 @@ class PurchaseController extends Controller
             $productIdsBeforeUpdate = $purchase->items()->pluck('product_id')->filter()->all();
             $data = $this->validatedRequestData($request, $this->updateRequestClass());
             $items = Arr::pull($data, 'items', []);
-            Arr::pull($data, 'generate_invoices');
+            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', false);
+
+            if ($generateInvoices) {
+                $data['status'] = BillableStatus::COMPLETED->value;
+            }
 
             $purchase->update($data);
 
@@ -190,6 +198,11 @@ class PurchaseController extends Controller
             );
 
             $purchase = $purchase->refresh()->load('items');
+
+            if ($generateInvoices && ! $purchase->invoices()->exists()) {
+                $this->billingInvoiceService->generate($purchase);
+            }
+
             $purchase->setAttribute(
                 'recalculation_product_ids',
                 array_values(array_unique([

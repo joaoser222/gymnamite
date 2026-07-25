@@ -4,6 +4,21 @@ namespace App\AccessControl;
 
 final class RolePermissionMap
 {
+    /**
+     * @return array<int, AccessModule>
+     */
+    private static function gatewayModules(): array
+    {
+        return [
+            AccessModule::GATEWAY_ACCOUNT,
+            AccessModule::GATEWAY_PAYMENT,
+            AccessModule::GATEWAY_TRANSFER,
+            AccessModule::GATEWAY_POSTBACK,
+            AccessModule::GATEWAY_CUSTOMER,
+            AccessModule::GATEWAY_CREDIT_CARD,
+        ];
+    }
+
     private static function actionsToString(array $actions): array
     {
         return array_map(fn (AccessAction $action) => $action->value, $actions);
@@ -41,7 +56,10 @@ final class RolePermissionMap
     public function managerPermissions(): array
     {
         return self::generate(
-            [AccessModule::SETTING],
+            [
+                AccessModule::SETTING,
+                ...self::gatewayModules(),
+            ],
             [AccessAction::DELETE]
         );
     }
@@ -66,6 +84,7 @@ final class RolePermissionMap
                 AccessModule::MOVEMENT,
                 AccessModule::FINANCIAL_ACCOUNT,
                 AccessModule::FINANCIAL_CATEGORY,
+                ...self::gatewayModules(),
             ],
             $exceptActions
         );

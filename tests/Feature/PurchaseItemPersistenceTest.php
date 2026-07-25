@@ -76,6 +76,7 @@ class PurchaseItemPersistenceTest extends TestCase
         $this->assertSame(51.0, $purchase->gross_value);
         $this->assertSame(10.0, $purchase->discount_value);
         $this->assertSame(41.0, $purchase->total);
+        $this->assertSame(BillableStatus::COMPLETED->value, $purchase->status);
         $this->assertSame('2026-07-10', $purchase->first_due_date?->format('Y-m-d'));
         $this->assertSame(2, $purchase->installments);
         $this->assertCount(2, $purchase->items);
@@ -126,6 +127,7 @@ class PurchaseItemPersistenceTest extends TestCase
 
         $this->assertNull($purchase->first_due_date);
         $this->assertSame(1, $purchase->installments);
+        $this->assertSame(BillableStatus::OPEN->value, $purchase->status);
         $this->assertDatabaseCount('invoices', 0);
     }
 
@@ -203,6 +205,68 @@ class PurchaseItemPersistenceTest extends TestCase
             'product_id' => $secondProduct->id,
             'product_name' => 'Produto B',
             'quantity' => 3,
+        ]);
+    }
+
+    public function test_authenticated_users_can_finalize_saved_purchase_by_generating_invoices(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'purchases.update');
+
+        $supplier = $this->createSupplier();
+        $product = $this->createProduct('Produto Rascunho');
+
+        $purchase = Purchase::query()->create([
+            'supplier_id' => $supplier->id,
+            'status' => BillableStatus::OPEN->value,
+            'payment_method' => PaymentMethod::CASH->value,
+            'first_due_date' => '2026-07-10',
+            'installments' => 2,
+            'gross_value' => 40,
+            'discount_value' => 0,
+            'total' => 40,
+            'annotations' => null,
+            'disable_stock' => true,
+            'visibility' => 'visible',
+        ]);
+
+        PurchaseItem::query()->create([
+            'purchase_id' => $purchase->id,
+            'product_id' => $product->id,
+            'product_name' => 'Produto Rascunho',
+            'quantity' => 2,
+            'price' => 20,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('purchases.update', $purchase), [
+            'supplier_id' => $supplier->id,
+            'status' => BillableStatus::OPEN->value,
+            'payment_method' => PaymentMethod::CASH->value,
+            'first_due_date' => '2026-07-10',
+            'installments' => 2,
+            'generate_invoices' => true,
+            'discount_value' => 0,
+            'annotations' => null,
+            'disable_stock' => true,
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => 2,
+                'price' => 20,
+            ]],
+        ]);
+
+        $response->assertRedirect(route('purchases.index'));
+
+        $purchase->refresh();
+
+        $this->assertSame(BillableStatus::COMPLETED->value, $purchase->status);
+
+        $this->assertDatabaseCount('invoices', 2);
+        $this->assertDatabaseHas('invoices', [
+            'billable_type' => 'purchase',
+            'billable_id' => $purchase->id,
+            'operation_type' => 'payable',
+            'installment_number' => 1,
         ]);
     }
 

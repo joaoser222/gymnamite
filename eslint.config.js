@@ -2,8 +2,6 @@ import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
 import prettier from 'eslint-config-prettier/flat';
 import importPlugin from 'eslint-plugin-import';
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -41,15 +39,6 @@ export default tseslint.config(
     },
     js.configs.recommended,
     ...tseslint.configs.recommended,
-    react.configs.flat.recommended,
-    react.configs.flat['jsx-runtime'],
-    {
-        settings: {
-            react: {
-                version: 'detect',
-            },
-        },
-    },
     {
         files: ['resources/js/**/*.{ts,tsx}'],
         languageOptions: {
@@ -59,7 +48,6 @@ export default tseslint.config(
         },
         plugins: {
             import: importPlugin,
-            'react-hooks': reactHooks,
         },
         settings: {
             'import/resolver': {
@@ -72,9 +60,6 @@ export default tseslint.config(
         },
         rules: {
             '@typescript-eslint/no-explicit-any': 'off',
-            'react/prop-types': 'off',
-            'react-hooks/exhaustive-deps': 'warn',
-            'react-hooks/rules-of-hooks': 'error',
             '@typescript-eslint/no-unused-vars': [
                 'error',
                 {
