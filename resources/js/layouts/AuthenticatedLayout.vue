@@ -36,6 +36,12 @@ const menuGroups: MenuGroup[] = [
                 icon: 'ti ti-home',
                 href: '/dashboard',
             },
+            {
+                title: 'Relatórios',
+                icon: 'ti ti-report-analytics',
+                href: '/reports',
+                permission: 'reports.view',
+            },
         ],
     },
     {
