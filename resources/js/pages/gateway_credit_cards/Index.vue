@@ -47,6 +47,7 @@ const routes: TableRoutes = {
         module="gateway_credit_cards"
         title="Cartões do Gateway"
         hide-selection
+        hide-visibility-filter
         :permission-map="{ create: false, delete: false, visibility: false }"
         :custom-slots="['status', 'created_at']"
     >

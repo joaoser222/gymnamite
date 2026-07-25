@@ -20,4 +20,18 @@ enum PostbackStatus: string
             self::SUCCESS => 'Finalizado'
         };
     }
+
+    protected static function fields(): array
+    {
+        return ['label', 'value', 'color'];
+    }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::PENDING => 'warning',
+            self::SUCCESS => 'success',
+            self::FAILED => 'error'
+        };
+    }
 }

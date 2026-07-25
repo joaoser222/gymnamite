@@ -25,8 +25,6 @@ class GatewayPaymentController extends Controller
         'gross_value',
         'fee_value',
         'total',
-        'gateway_account_id',
-        'gateway_customer_id',
         'invoice_id',
         'created_at',
     ];

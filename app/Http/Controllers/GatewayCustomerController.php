@@ -18,8 +18,6 @@ class GatewayCustomerController extends Controller
         'gateway_reference_key',
         'holder_type',
         'holder_id',
-        'gateway_account_id',
-        'gateway_postback_id',
         'created_at',
     ];
 

@@ -39,6 +39,7 @@ const routes: TableRoutes = {
         module="gateway_customers"
         title="Clientes do Gateway"
         hide-selection
+        hide-visibility-filter
         :permission-map="{ create: false, delete: false, visibility: false }"
         :custom-slots="['created_at']"
     >

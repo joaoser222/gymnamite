@@ -26,4 +26,21 @@ enum TransactionStatus: string
             self::OVERDUE => 'Vencido'
         };
     }
+
+    protected static function fields(): array
+    {
+        return ['label', 'value', 'color'];
+    }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::PENDING => 'warning',
+            self::PAID => 'success',
+            self::FAILED => 'error',
+            self::REFUNDED => 'error',
+            self::CANCELED => 'error',
+            self::OVERDUE => 'error'
+        };
+    }
 }

@@ -19,9 +19,6 @@ class GatewayCreditCardController extends Controller
         'status',
         'card_brand',
         'last_digits',
-        'gateway_account_id',
-        'gateway_customer_id',
-        'gateway_postback_id',
         'created_at',
     ];
 

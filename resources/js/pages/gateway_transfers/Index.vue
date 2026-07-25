@@ -29,8 +29,6 @@ const headers: TableHeader[] = [
             props: () => ({ items: transactionStatus }),
         },
     },
-    { title: 'Conta', key: 'gateway_account_id' },
-    { title: 'Postback', key: 'gateway_postback_id' },
     { title: 'Criado em', key: 'created_at', sortable: true },
 ];
 
@@ -55,6 +53,7 @@ const { transactionStatus } = useSharedOptions(sharedProps.options ?? {});
         module="gateway_transfers"
         title="Transferências do Gateway"
         hide-selection
+        hide-visibility-filter
         :permission-map="{ create: false, delete: false, visibility: false }"
         :custom-slots="[
             'gross_value',

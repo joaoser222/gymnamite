@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import ReadOnlyDetailsPage, {
     type ReadOnlyField,
 } from '@/components/ReadOnlyDetailsPage.vue';
 import { formatCurrency, formatDateTime } from '@/plugins/formatters';
+import { findLabel, findOption, useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -24,6 +26,9 @@ const fields: ReadOnlyField[] = [
     { title: 'Criado em', key: 'created_at' },
     { title: 'Atualizado em', key: 'updated_at' },
 ];
+
+const sharedProps = usePage().props;
+const { transactionStatus } = useSharedOptions(sharedProps.options ?? {});
 </script>
 
 <template>
@@ -36,6 +41,7 @@ const fields: ReadOnlyField[] = [
             'gross_value',
             'fee_value',
             'total',
+            'status',
             'created_at',
             'updated_at',
         ]"
@@ -48,6 +54,20 @@ const fields: ReadOnlyField[] = [
         </template>
         <template #field-total="{ value }">
             {{ formatCurrency(value as string | number | null) }}
+        </template>
+        <template #field-status="{ value }">
+            <v-chip
+                :color="
+                    findOption(transactionStatus, value as string | null)?.color
+                "
+                variant="tonal"
+            >
+                {{
+                    findLabel(transactionStatus, value as string | null) ??
+                    value ??
+                    '-'
+                }}
+            </v-chip>
         </template>
         <template #field-created_at="{ value }">
             {{ formatDateTime(value as string | null) }}

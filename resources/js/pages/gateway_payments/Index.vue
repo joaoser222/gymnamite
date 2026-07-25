@@ -47,8 +47,6 @@ const headers: TableHeader[] = [
     { title: 'Bruto', key: 'gross_value', sortable: true },
     { title: 'Taxa', key: 'fee_value', sortable: true },
     { title: 'Total', key: 'total', sortable: true },
-    { title: 'Conta', key: 'gateway_account_id', sortable: true },
-    { title: 'Cliente', key: 'gateway_customer_id' },
     { title: 'Fatura', key: 'invoice_id' },
     { title: 'Criado em', key: 'created_at', sortable: true },
 ];
@@ -76,6 +74,7 @@ const { paymentMethods, transactionStatus } = useSharedOptions(
         module="gateway_payments"
         title="Pagamentos do Gateway"
         hide-selection
+        hide-visibility-filter
         :permission-map="{ create: false, delete: false, visibility: false }"
         :custom-slots="[
             'payment_method',

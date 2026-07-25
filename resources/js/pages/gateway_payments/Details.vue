@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import ReadOnlyDetailsPage, {
     type ReadOnlyField,
@@ -8,6 +9,7 @@ import {
     formatDate,
     formatDateTime,
 } from '@/plugins/formatters';
+import { findLabel, findOption, useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -32,6 +34,11 @@ const fields: ReadOnlyField[] = [
     { title: 'Criado em', key: 'created_at' },
     { title: 'Atualizado em', key: 'updated_at' },
 ];
+
+const sharedProps = usePage().props;
+const { paymentMethods, transactionStatus } = useSharedOptions(
+    sharedProps.options ?? {},
+);
 </script>
 
 <template>
@@ -42,6 +49,8 @@ const fields: ReadOnlyField[] = [
         :index-route="routes.index"
         :custom-slots="[
             'payment_date',
+            'payment_method',
+            'status',
             'gross_value',
             'fee_value',
             'total',
@@ -51,6 +60,27 @@ const fields: ReadOnlyField[] = [
     >
         <template #field-payment_date="{ value }">
             {{ formatDate(value as string | null) }}
+        </template>
+        <template #field-payment_method="{ value }">
+            {{
+                findLabel(paymentMethods, value as string | null) ??
+                value ??
+                '-'
+            }}
+        </template>
+        <template #field-status="{ value }">
+            <v-chip
+                :color="
+                    findOption(transactionStatus, value as string | null)?.color
+                "
+                variant="tonal"
+            >
+                {{
+                    findLabel(transactionStatus, value as string | null) ??
+                    value ??
+                    '-'
+                }}
+            </v-chip>
         </template>
         <template #field-gross_value="{ value }">
             {{ formatCurrency(value as string | number | null) }}

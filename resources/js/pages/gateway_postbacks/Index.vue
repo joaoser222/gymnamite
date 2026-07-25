@@ -57,6 +57,7 @@ const { postbackStatus } = useSharedOptions(sharedProps.options ?? {});
         module="gateway_postbacks"
         title="Postbacks do Gateway"
         hide-selection
+        hide-visibility-filter
         :permission-map="{ create: false, delete: false, visibility: false }"
         :custom-slots="['status', 'created_at']"
     >

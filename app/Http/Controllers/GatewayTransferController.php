@@ -22,8 +22,6 @@ class GatewayTransferController extends Controller
         'fee_value',
         'total',
         'status',
-        'gateway_account_id',
-        'gateway_postback_id',
         'created_at',
     ];
 
