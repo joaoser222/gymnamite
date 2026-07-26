@@ -40,6 +40,9 @@ Route::get('/', function () {
     return redirect()->route(auth()->check() ? 'dashboard' : 'login');
 })->name('home');
 
+Route::post('gateway-postbacks/{gateway_account}/receive', [GatewayPostbackController::class, 'receive'])
+    ->name('gateway-postbacks.receive');
+
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');

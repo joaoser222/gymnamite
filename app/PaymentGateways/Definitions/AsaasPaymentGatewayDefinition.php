@@ -45,6 +45,14 @@ class AsaasPaymentGatewayDefinition extends PaymentGatewayDefinition
                 placeholder: 'wallet_...',
                 helpText: 'Obrigatório apenas para transferências. Encontrado em Configurações > Carteiras.',
             ),
+            new PaymentGatewaySettingDefinition(
+                key: 'webhook_token',
+                label: 'Token de Webhook',
+                type: 'password',
+                required: true,
+                placeholder: 'Token enviado no header asaas-access-token',
+                helpText: 'Usado para autenticar postbacks recebidos do Asaas.',
+            ),
         ];
     }
 }

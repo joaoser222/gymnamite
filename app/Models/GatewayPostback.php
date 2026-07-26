@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Gateway\PostbackStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class GatewayPostback extends Model
@@ -13,6 +14,14 @@ class GatewayPostback extends Model
         'status',
         'gateway_account_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'payload' => 'array',
+            'status' => PostbackStatus::class,
+        ];
+    }
 
     //
 }
