@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
 use App\Http\Requests\GatewayAccountRequest;
+use App\Http\Requests\GatewayMunicipalConfigurationRequest;
 use App\Models\GatewayAccount;
 use App\PaymentGateways\Definitions\PaymentGatewaySettingDefinition;
 use App\PaymentGateways\PaymentGatewayManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,6 +56,31 @@ class GatewayAccountController extends CrudModuleController
     protected function updateRequestClass(): ?string
     {
         return GatewayAccountRequest::class;
+    }
+
+    protected function getModuleRoutes(): array
+    {
+        $routes = parent::getModuleRoutes();
+        $parameter = ['gateway_account' => '__id__'];
+
+        return [
+            ...$routes,
+            'municipalOptions' => str_replace(
+                '__id__',
+                ':id',
+                route('gateway-accounts.invoicing.municipal-options', $parameter),
+            ),
+            'municipalServices' => str_replace(
+                '__id__',
+                ':id',
+                route('gateway-accounts.invoicing.municipal-services', $parameter),
+            ),
+            'municipalConfiguration' => str_replace(
+                '__id__',
+                ':id',
+                route('gateway-accounts.invoicing.municipal-configuration', $parameter),
+            ),
+        ];
     }
 
     protected function moduleIndexProps(Request $request): array
@@ -116,6 +144,54 @@ class GatewayAccountController extends CrudModuleController
                 $request->only(['city', 'state', 'service_code', 'description']),
             ),
         );
+    }
+
+    public function configureFiscalData(GatewayMunicipalConfigurationRequest $request, GatewayAccount $gatewayAccount): JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::UPDATE);
+
+        $definition = $this->gatewayManager->find((string) $gatewayAccount->name);
+
+        if ($definition?->supportsInvoicing() !== true) {
+            throw new ValidationException(
+                Validator::make([], [
+                    'gateway_account' => ['O provedor desta conta não suporta emissão fiscal.'],
+                ]),
+            );
+        }
+
+        $payload = array_filter([
+            'municipalServiceCode' => $request->validated('municipal_service_code'),
+            'municipalServiceName' => $request->validated('municipal_service_name'),
+            'serviceDescription' => $request->validated('service_description'),
+            'observations' => $request->validated('observations'),
+            'incentivizedTax' => $request->validated('incentivized_tax'),
+        ], static fn (mixed $value): bool => $value !== null);
+
+        $response = $this->gatewayManager
+            ->invoicingAdapter($gatewayAccount)
+            ->configureFiscalData($payload);
+
+        $settings = $gatewayAccount->settings ?? [];
+        $settings['invoicing']['service_description'] = $request->validated('service_description');
+        $settings['invoicing']['municipal_service_code'] = $request->validated('municipal_service_code');
+        $settings['invoicing']['fiscal_configuration_at'] = now()->toISOString();
+        $gatewayAccount->update(['settings' => $settings]);
+
+        $safeResponse = array_intersect_key($response, array_flip([
+            'municipalServiceCode',
+            'municipalServiceName',
+            'serviceDescription',
+            'observations',
+            'incentivizedTax',
+            'status',
+        ]));
+
+        return response()->json([
+            'configuration' => $safeResponse,
+            'invoicing_configured' => $gatewayAccount->fresh()->invoicing_configured,
+            'invoicing_supported' => $gatewayAccount->invoicing_supported,
+        ]);
     }
 
     private function withoutSensitiveSettings(GatewayAccount $gatewayAccount): GatewayAccount

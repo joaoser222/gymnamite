@@ -19,4 +19,7 @@ export type DetailsRoutes = {
     store?: string;
     update?: string;
     requestGatewayInvoice?: string;
+    municipalOptions?: string;
+    municipalServices?: string;
+    municipalConfiguration?: string;
 };

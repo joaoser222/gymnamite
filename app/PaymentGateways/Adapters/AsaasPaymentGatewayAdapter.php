@@ -437,6 +437,28 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
         }
     }
 
+    public function syncInvoice(GatewayInvoice $invoice, bool $force = false): ?GatewayInvoice
+    {
+        $body = $this->findInvoice($invoice);
+
+        if ($body === null) {
+            return null;
+        }
+
+        $currentStatus = $invoice->status instanceof \App\Enums\Gateway\InvoiceStatus
+            ? $invoice->status
+            : \App\Enums\Gateway\InvoiceStatus::UNKNOWN;
+        $newStatus = $this->mapInvoiceStatus($body['status'] ?? 'PENDING');
+
+        // Idempotência: sem --force, não regrava o registro quando o status
+        // informado pelo provedor não mudou em relação ao que já temos.
+        if (! $force && $currentStatus === $newStatus) {
+            return $invoice->fresh();
+        }
+
+        return $this->updateGatewayInvoice($invoice, $body);
+    }
+
     public function authorizeInvoice(GatewayInvoice $invoice): GatewayInvoice
     {
         $body = $this->client()->post("/invoices/{$invoice->gateway_reference_key}/authorize")->throw()->json();

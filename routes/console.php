@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('invoices:mark-overdue-cash')->dailyAt('00:10');
+Schedule::command('gateway:sync-fiscal-invoices')->everyThirtyMinutes();
