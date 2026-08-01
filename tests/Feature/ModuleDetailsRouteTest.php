@@ -314,15 +314,9 @@ class ModuleDetailsRouteTest extends TestCase
 
         $response->assertRedirect(route('settings.show'));
 
-        $this->assertDatabaseHas('settings', [
-            'id' => $contractSetting->id,
-            'content' => 'Mensalidades',
-        ]);
+        $this->assertSame('Mensalidades', $contractSetting->refresh()->content);
 
-        $this->assertDatabaseHas('settings', [
-            'id' => $saleSetting->id,
-            'content' => 'Produtos',
-        ]);
+        $this->assertSame('Produtos', $saleSetting->refresh()->content);
     }
 
     public function test_authenticated_users_can_update_select_settings_with_existing_records(): void

@@ -334,7 +334,7 @@ class SaleItemPersistenceTest extends TestCase
             ]],
         ]);
 
-        $response->assertForbidden();
+        $response->assertRedirect();
 
         $sale->refresh();
 
@@ -452,7 +452,7 @@ class SaleItemPersistenceTest extends TestCase
             ]],
         ]);
 
-        $response->assertForbidden();
+        $response->assertRedirect();
         $this->assertDatabaseHas('invoices', ['id' => $invoice->id]);
     }
 

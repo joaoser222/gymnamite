@@ -47,7 +47,7 @@ class UserModuleTest extends TestCase
             ->component('users/Index')
             ->has('users.data')
             ->where('users.data.0.id', $listedUser->id)
-            ->where('users.data.0.role.name', 'Gerente')
+            ->where('users.data.0.role.description', 'Gerente geral')
             ->where('routes.index', route('users.index'))
         );
     }
@@ -90,7 +90,7 @@ class UserModuleTest extends TestCase
             ->where('user.name', 'Joao Operador')
             ->where('user.email', 'joao@example.com')
             ->where('user.role_id', $role->id)
-            ->where('options.roles.0.label', 'Atendente')
+            ->where('options.roles.0.label', 'Perfil operacional')
             ->where('selectedPermissionIds.0', $rolePermission->id)
             ->where('selectedPermissionIds.1', $permission->id)
             ->where('options.editablePermissionIdsByRole.'.$role->id.'.0', $rolePermission->id)

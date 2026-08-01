@@ -48,7 +48,7 @@ class ClientIndexTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('client/Details')
+            ->component('clients/Details')
             ->where('client', null)
             ->where('id', 'new')
             ->has('routes')
@@ -66,7 +66,7 @@ class ClientIndexTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('client/Index')
+            ->component('clients/Index')
             ->has('clients.data')
             ->has('filters')
             ->has('options.clientStatus')
@@ -122,7 +122,7 @@ class ClientIndexTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('client/Index')
+            ->component('clients/Index')
             ->where('clients.total', 1)
             ->where('clients.data.0.name', 'João Silva')
         );

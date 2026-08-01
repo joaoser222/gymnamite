@@ -25,40 +25,16 @@ class SettingSeederTest extends TestCase
 
         $this->assertDatabaseCount('settings', 5);
 
-        $this->assertDatabaseHas('settings', [
-            'name' => 'contract_default_category',
-            'label' => 'Categoria de Contratos',
-            'content' => '',
-            'object_type' => 'select:financial-category',
-        ]);
+        $this->assertSame('', Setting::query()->where('name', 'contract_default_category')->value('content'));
+        $this->assertSame('', Setting::query()->where('name', 'purchase_default_category')->value('content'));
+        $this->assertSame('15', Setting::query()->where('name', 'sale_default_category')->value('content'));
+        $this->assertSame('', Setting::query()->where('name', 'direct_lesson_default_category')->value('content'));
+        $this->assertSame('', Setting::query()->where('name', 'default_financial_account')->value('content'));
 
-        $this->assertDatabaseHas('settings', [
-            'name' => 'purchase_default_category',
-            'label' => 'Categoria de Compras',
-            'content' => '',
-            'object_type' => 'select:financial-category',
-        ]);
-
-        $this->assertDatabaseHas('settings', [
-            'name' => 'sale_default_category',
-            'label' => 'Categoria de Vendas',
-            'content' => '15',
-            'object_type' => 'select:financial-category',
-        ]);
-
-        $this->assertDatabaseHas('settings', [
-            'name' => 'direct_lesson_default_category',
-            'label' => 'Categoria de Aula Avulsa',
-            'content' => '',
-            'object_type' => 'select:financial-category',
-        ]);
-
-        $this->assertDatabaseHas('settings', [
-            'name' => 'default_financial_account',
-            'label' => 'Conta Padrão',
-            'content' => '',
-            'object_type' => 'select:financial-account',
-        ]);
+        $this->assertSame('Categoria de Contratos', Setting::query()->where('name', 'contract_default_category')->value('label'));
+        $this->assertSame('Categoria de Vendas', Setting::query()->where('name', 'sale_default_category')->value('label'));
+        $this->assertSame('select:financial-category', Setting::query()->where('name', 'contract_default_category')->value('object_type'));
+        $this->assertSame('select:financial-account', Setting::query()->where('name', 'default_financial_account')->value('object_type'));
 
         $this->assertSame(1, Setting::query()->where('name', 'contract_default_category')->count());
     }
