@@ -82,7 +82,7 @@ class ReportModuleTest extends TestCase
         $this->assertFalse(Route::has('reports.update'));
     }
 
-    private function grantPermission(User $user, string $permissionName): void
+    protected function grantPermission(User $user, string $permissionName): void
     {
         $permission = Permission::query()->create([
             'name' => $permissionName,

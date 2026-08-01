@@ -13,7 +13,7 @@ class InvoiceModuleFilterTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function grantPermission(User $user, string $permission): void
+    protected function grantPermission(User $user, string $permission): void
     {
         $permission = Permission::query()->create([
             'name' => $permission,

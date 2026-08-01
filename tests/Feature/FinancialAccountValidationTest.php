@@ -109,7 +109,7 @@ class FinancialAccountValidationTest extends TestCase
         $this->assertSame('0.0000', $account->getRawOriginal('balance'));
     }
 
-    private function grantPermission(User $user, string $permission): void
+    protected function grantPermission(User $user, string $permission): void
     {
         $permission = Permission::query()->create([
             'name' => $permission,

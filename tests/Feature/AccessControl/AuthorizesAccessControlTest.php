@@ -3,7 +3,6 @@
 namespace Tests\Feature\AccessControl;
 
 use App\AccessControl\RolePermissionMap;
-use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,13 +64,5 @@ class AuthorizesAccessControlTest extends TestCase
                 }
             }
         }
-    }
-
-    private function createPermission(string $name): Permission
-    {
-        return Permission::query()->create([
-            'name' => $name,
-            'description' => $name,
-        ]);
     }
 }
