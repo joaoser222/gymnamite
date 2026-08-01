@@ -100,17 +100,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function findCustomer(GatewayCustomer $customer): ?array
     {
-        try {
-            $response = $this->client()->get("/customers/{$customer->gateway_reference_key}");
-
-            return $response->throw()->json();
-        } catch (RequestException $e) {
-            if ($e->response->status() === 404) {
-                return null;
-            }
-
-            throw $e;
-        }
+        return $this->getOrNull("/customers/{$customer->gateway_reference_key}");
     }
 
     public function syncCustomer(GatewayCustomer $customer): bool
@@ -139,7 +129,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
     {
         $billingType = $this->resolveBillingType($invoice->payment_method?->value);
 
-        $payload = array_filter([
+        $payload = $this->sanitizePayload([
             'customer' => $customer->gateway_reference_key,
             'billingType' => $billingType,
             'value' => $invoice->total,
@@ -152,7 +142,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
             'fine' => $options['fine'] ?? null,
             'interest' => $options['interest'] ?? null,
             'postalService' => $options['postal_service'] ?? false,
-        ], fn ($value) => $value !== null);
+        ]);
 
         $response = $this->client()->post('/payments', $payload)->throw();
 
@@ -163,19 +153,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function findPayment(GatewayPayment $payment): ?array
     {
-        try {
-            $response = $this->client()->get(
-                "/payments/{$payment->gateway_reference_key}",
-            );
-
-            return $response->throw()->json();
-        } catch (RequestException $e) {
-            if ($e->response->status() === 404) {
-                return null;
-            }
-
-            throw $e;
-        }
+        return $this->getOrNull("/payments/{$payment->gateway_reference_key}");
     }
 
     public function payWithCreditCard(GatewayPayment $payment, array $creditCardData): GatewayPayment
@@ -248,7 +226,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function createTransfer(array $data): GatewayTransfer
     {
-        $payload = array_filter([
+        $payload = $this->sanitizePayload([
             'value' => $data['value'],
             'walletId' => $data['wallet_id'] ?? $this->gatewayAccount->settings['wallet_id'] ?? null,
             'pixAddressKey' => $data['pix_address_key'] ?? null,
@@ -256,7 +234,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
             'bankAccount' => $data['bank_account'] ?? null,
             'operationType' => $data['operation_type'] ?? 'PIX',
             'description' => $data['description'] ?? null,
-        ], fn ($value) => $value !== null);
+        ]);
 
         $response = $this->client()->post('/transfers', $payload)->throw();
 
@@ -276,19 +254,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function findTransfer(GatewayTransfer $transfer): ?array
     {
-        try {
-            $response = $this->client()->get(
-                "/transfers/{$transfer->gateway_reference_key}",
-            );
-
-            return $response->throw()->json();
-        } catch (RequestException $e) {
-            if ($e->response->status() === 404) {
-                return null;
-            }
-
-            throw $e;
-        }
+        return $this->getOrNull("/transfers/{$transfer->gateway_reference_key}");
     }
 
     public function processPostback(array $payload): GatewayPostback
@@ -354,7 +320,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function requestInvoice(GatewayPayment $payment, array $configuration, ?GatewayInvoice $invoice = null): GatewayInvoice
     {
-        $payload = array_filter([
+        $payload = $this->sanitizePayload([
             'customer' => $payment->gatewayCustomer?->gateway_reference_key,
             'payment' => $payment->gateway_reference_key,
             'value' => $payment->gross_value,
@@ -364,7 +330,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
             'deductions' => $configuration['deductions'] ?? null,
             'observations' => $configuration['observations'] ?? null,
             'externalReference' => (string) $payment->invoice_id,
-        ], static fn (mixed $value): bool => $value !== null);
+        ]);
 
         $body = $this->client()->post('/invoices', $payload)->throw()->json();
 
@@ -426,15 +392,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function findInvoice(GatewayInvoice $invoice): ?array
     {
-        try {
-            return $this->client()->get("/invoices/{$invoice->gateway_reference_key}")->throw()->json();
-        } catch (RequestException $exception) {
-            if ($exception->response->status() === 404) {
-                return null;
-            }
-
-            throw $exception;
-        }
+        return $this->getOrNull("/invoices/{$invoice->gateway_reference_key}");
     }
 
     public function syncInvoice(GatewayInvoice $invoice, bool $force = false): ?GatewayInvoice
@@ -468,7 +426,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function cancelInvoice(GatewayInvoice $invoice, ?string $reason = null): GatewayInvoice
     {
-        $body = $this->client()->delete("/invoices/{$invoice->gateway_reference_key}", array_filter([
+        $body = $this->client()->delete("/invoices/{$invoice->gateway_reference_key}", $this->sanitizePayload([
             'reason' => $reason,
         ]))->throw()->json();
 
@@ -511,7 +469,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
 
     public function createSubscription(array $data): array
     {
-        $payload = array_filter([
+        $payload = $this->sanitizePayload([
             'customer' => $data['customer'],
             'billingType' => $data['billing_type'],
             'value' => $data['value'],
@@ -524,7 +482,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
             'discount' => $data['discount'] ?? null,
             'fine' => $data['fine'] ?? null,
             'interest' => $data['interest'] ?? null,
-        ], fn ($value) => $value !== null);
+        ]);
 
         $response = $this->client()->post('/subscriptions', $payload)->throw();
 
@@ -741,13 +699,39 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
     private function mapTransferStatus(string $asaasStatus): string
     {
         return match ($asaasStatus) {
-            'PENDING' => TransactionStatus::PENDING->value,
             'BANK_PROCESSING' => TransactionStatus::PENDING->value,
             'DONE' => TransactionStatus::PAID->value,
             'CANCELED' => TransactionStatus::CANCELED->value,
             'FAILED' => TransactionStatus::FAILED->value,
-            default => TransactionStatus::PENDING->value,
+            default => (self::ASAAS_STATUS_MAP[$asaasStatus] ?? TransactionStatus::PENDING)->value,
         };
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     *
+     * @throws RequestException
+     */
+    private function getOrNull(string $path): ?array
+    {
+        try {
+            return $this->client()->get($path)->throw()->json();
+        } catch (RequestException $exception) {
+            if ($exception->response?->status() === 404) {
+                return null;
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function sanitizePayload(array $payload): array
+    {
+        return array_filter($payload, static fn (mixed $value): bool => $value !== null);
     }
 
     private function mapBillingType(string $billingType): string

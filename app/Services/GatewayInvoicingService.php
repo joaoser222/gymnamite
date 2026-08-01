@@ -133,8 +133,7 @@ class GatewayInvoicingService
 
     private function isEligible(GatewayAccount $account, ?PaymentGatewayDefinition $definition): bool
     {
-        return $account->invoicing_enabled === true
-            && $definition?->supportsInvoicing() === true
-            && $account->invoicing_configured === true;
+        return $account->isInvoicingEligible()
+            && $definition?->supportsInvoicing() === true;
     }
 }

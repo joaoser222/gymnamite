@@ -49,9 +49,7 @@ class GatewayFiscalSyncService
     private function accounts(array $accountIds): Collection
     {
         return GatewayAccount::query()
-            ->where('invoicing_supported', true)
-            ->where('invoicing_configured', true)
-            ->where('invoicing_enabled', true)
+            ->invoicingEligible()
             ->when($accountIds !== [], fn ($query) => $query->whereKey($accountIds))
             ->orderBy('id')
             ->get();

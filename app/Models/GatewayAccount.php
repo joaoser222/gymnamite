@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\PaymentGateways\PaymentGatewayManager;
 use App\Traits\HasVisibility;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class GatewayAccount extends Model
@@ -47,5 +48,20 @@ class GatewayAccount extends Model
     public function customers()
     {
         return $this->hasMany(GatewayCustomer::class);
+    }
+
+    public function scopeInvoicingEligible(Builder $query): void
+    {
+        $query
+            ->where('invoicing_supported', true)
+            ->where('invoicing_configured', true)
+            ->where('invoicing_enabled', true);
+    }
+
+    public function isInvoicingEligible(): bool
+    {
+        return $this->invoicing_supported
+            && $this->invoicing_configured
+            && $this->invoicing_enabled;
     }
 }
