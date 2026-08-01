@@ -10,11 +10,22 @@ abstract class PaymentGatewayDefinition
 
     abstract public function settings(): array;
 
+    public function supportsInvoicing(): bool
+    {
+        return false;
+    }
+
+    public function invoicingAdapterClass(): ?string
+    {
+        return null;
+    }
+
     public function toArray(): array
     {
         return [
             'name' => $this->name(),
             'description' => $this->description(),
+            'supportsInvoicing' => $this->supportsInvoicing(),
             'settings' => array_map(
                 fn (PaymentGatewaySettingDefinition $setting) => [
                     'key' => $setting->key,

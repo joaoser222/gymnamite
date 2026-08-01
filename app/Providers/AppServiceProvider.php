@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\PaymentGateways\Adapters\AsaasPaymentGatewayAdapter;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
+use App\PaymentGateways\Contracts\PaymentGatewayInvoicingAdapter;
 use App\PaymentGateways\PaymentGatewayManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -21,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(PaymentGatewayAdapter::class, AsaasPaymentGatewayAdapter::class);
+        $this->app->bind(
+            PaymentGatewayInvoicingAdapter::class,
+            fn ($app): PaymentGatewayInvoicingAdapter => $app->make(AsaasPaymentGatewayAdapter::class),
+        );
         $this->app->singleton(PaymentGatewayManager::class);
 
         // Gera rotas de forma customizada para modulos
