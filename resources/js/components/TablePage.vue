@@ -12,6 +12,7 @@ import {
 } from '@/composables/useModulePermissions';
 import { visibilityOptions, type VisibilityValue } from '@/shared/visibility';
 import type { PaginatedResponse } from '@/shared/page';
+import { formatDateTime } from '@/plugins/formatters';
 
 /**
  * Tabela genérica para páginas indexadas do sistema.
@@ -580,6 +581,18 @@ defineExpose({ loadItems, selectedItems, internalLoading });
             >
                 <!-- `column-{slot}` permite sobrescrever apenas a célula necessária. -->
                 <slot :name="`column-${slot}`" :item="item" />
+            </template>
+
+            <template #item.created_at="{ item }">
+                <slot name="column-created_at" :item="item">
+                    {{ formatDateTime(item.created_at) }}
+                </slot>
+            </template>
+
+            <template #item.updated_at="{ item }">
+                <slot name="column-updated_at" :item="item">
+                    {{ formatDateTime(item.updated_at) }}
+                </slot>
             </template>
 
             <!-- Ações -->

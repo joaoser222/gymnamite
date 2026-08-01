@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import { formatDateTime } from '@/plugins/formatters';
 
 export type ReadOnlyField = {
     title: string;
@@ -23,6 +24,10 @@ const props = withDefaults(
 
 function valueFor(key: string): string {
     const value = props.item[key];
+
+    if (key === 'created_at' || key === 'updated_at') {
+        return formatDateTime(value as string | number | Date | null | undefined);
+    }
 
     if (value === null || value === undefined || value === '') {
         return '-';
