@@ -42,6 +42,19 @@ directly). Acknowledge receipt and confirm you understand the scope before start
     php artisan test --compact --filter=<test>
     ```
 
+**F. Apply the DRY principle** — Always reuse existing code instead of duplicating it.
+    Before writing any logic, check whether the project already provides it:
+    - If a base or abstract class already implements a function, extend or reuse that
+      class instead of reimplementing the behavior (e.g., prefer
+      CrudModuleController/ReadOnlyModuleController/AbstractModuleController over
+      writing module logic from scratch, and reuse existing services and helpers).
+    - If you observe the same function being repeated across classes, extract it into
+      a trait (or a shared service/helper) and have those classes use it — avoid
+      copy-pasting logic between files.
+    - Prefer composition and project conventions over introducing new abstractions
+      that duplicate what already exists. In every review of a change, look for
+      duplicated logic and consolidate it before finalizing.
+
 ### 3. Per-Domain Implementation Notes
 
 **Backend (Laravel):**
