@@ -14,6 +14,11 @@ class GatewayAccountRequest extends FormRequest
         return true;
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->excludeUnvalidatedArrayKeys = false;
+    }
+
     public function rules(): array
     {
         return [
