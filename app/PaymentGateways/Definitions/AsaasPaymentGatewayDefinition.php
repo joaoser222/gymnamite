@@ -2,6 +2,8 @@
 
 namespace App\PaymentGateways\Definitions;
 
+use App\PaymentGateways\Adapters\AsaasPaymentGatewayAdapter;
+
 class AsaasPaymentGatewayDefinition extends PaymentGatewayDefinition
 {
     public function name(): string
@@ -54,5 +56,15 @@ class AsaasPaymentGatewayDefinition extends PaymentGatewayDefinition
                 helpText: 'Usado para autenticar postbacks recebidos do Asaas.',
             ),
         ];
+    }
+
+    public function supportsInvoicing(): bool
+    {
+        return true;
+    }
+
+    public function invoicingAdapterClass(): ?string
+    {
+        return AsaasPaymentGatewayAdapter::class;
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\GatewayAccount;
 use App\Models\GatewayCreditCard;
 use App\Models\GatewayCustomer;
+use App\Models\GatewayInvoice;
 use App\Models\GatewayPayment;
 use App\Models\GatewayPostback;
 use App\Models\GatewayTransfer;
@@ -16,8 +17,10 @@ use App\Models\Invoice;
 use App\Models\Supplier;
 use App\Models\Trainer;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
+use App\PaymentGateways\Contracts\PaymentGatewayInvoicingAdapter;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
@@ -25,7 +28,7 @@ use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use RuntimeException;
 
-class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter
+class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewayInvoicingAdapter
 {
     private const ASAAS_STATUS_MAP = [
         'PENDING' => TransactionStatus::PENDING,
@@ -291,15 +294,39 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter
     public function processPostback(array $payload): GatewayPostback
     {
         $event = $payload['event'] ?? 'UNKNOWN';
+        $externalEventKey = $payload['id'] ?? null;
 
-        /** @var GatewayPostback $postback */
-        $postback = GatewayPostback::create([
-            'postback_event' => $event,
-            'postback_type' => $this->resolvePostbackType($event),
-            'payload' => $payload,
-            'status' => PostbackStatus::PENDING,
-            'gateway_account_id' => $this->gatewayAccount->id,
-        ]);
+        if (is_string($externalEventKey) && filled($externalEventKey)) {
+            $existingPostback = GatewayPostback::query()
+                ->where('gateway_account_id', $this->gatewayAccount->id)
+                ->where('external_event_key', $externalEventKey)
+                ->first();
+
+            if ($existingPostback !== null) {
+                return $existingPostback;
+            }
+        }
+
+        try {
+            /** @var GatewayPostback $postback */
+            $postback = GatewayPostback::create([
+                'postback_event' => $event,
+                'postback_type' => $this->resolvePostbackType($event),
+                'external_event_key' => $externalEventKey,
+                'payload' => $payload,
+                'status' => PostbackStatus::PENDING,
+                'gateway_account_id' => $this->gatewayAccount->id,
+            ]);
+        } catch (QueryException $exception) {
+            if (! is_string($externalEventKey) || ! str_contains($exception->getMessage(), 'unique')) {
+                throw $exception;
+            }
+
+            return GatewayPostback::query()
+                ->where('gateway_account_id', $this->gatewayAccount->id)
+                ->where('external_event_key', $externalEventKey)
+                ->firstOrFail();
+        }
 
         try {
             $this->handlePostbackEvent($event, $payload, $postback);
@@ -323,6 +350,107 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter
         } catch (RequestException) {
             return null;
         }
+    }
+
+    public function requestInvoice(GatewayPayment $payment, array $configuration, ?GatewayInvoice $invoice = null): GatewayInvoice
+    {
+        $payload = array_filter([
+            'customer' => $payment->gatewayCustomer?->gateway_reference_key,
+            'payment' => $payment->gateway_reference_key,
+            'value' => $payment->gross_value,
+            'serviceDescription' => $configuration['service_description'] ?? null,
+            'municipalServiceId' => $configuration['municipal_service_id'] ?? null,
+            'municipalServiceCode' => $configuration['municipal_service_code'] ?? null,
+            'deductions' => $configuration['deductions'] ?? null,
+            'observations' => $configuration['observations'] ?? null,
+            'externalReference' => (string) $payment->invoice_id,
+        ], static fn (mixed $value): bool => $value !== null);
+
+        $body = $this->client()->post('/invoices', $payload)->throw()->json();
+
+        $invoice ??= new GatewayInvoice([
+            'gateway_account_id' => $this->gatewayAccount->id,
+            'gateway_payment_id' => $payment->id,
+            'invoice_id' => $payment->invoice_id,
+        ]);
+
+        $this->updateGatewayInvoice($invoice, $body);
+
+        return $invoice->fresh();
+    }
+
+    private function invoiceAttributes(array $body): array
+    {
+        return [
+            'gateway_reference_key' => $body['id'] ?? null,
+            'status' => $this->mapInvoiceStatus($body['status'] ?? 'PENDING'),
+            'status_description' => $body['statusDescription'] ?? $body['status_description'] ?? null,
+            'invoice_number' => $body['number'] ?? $body['invoiceNumber'] ?? null,
+            'validation_code' => $body['validationCode'] ?? null,
+            'service_description' => $body['serviceDescription'] ?? null,
+            'observations' => $body['observations'] ?? null,
+            'value' => $body['value'] ?? null,
+            'deductions' => $body['deductions'] ?? null,
+            'effective_date' => $body['effectiveDate'] ?? null,
+            'pdf_url' => $body['pdfUrl'] ?? $body['pdf_url'] ?? null,
+            'xml_url' => $body['xmlUrl'] ?? $body['xml_url'] ?? null,
+            'municipal_service_id' => $body['municipalServiceId'] ?? null,
+            'municipal_service_code' => $body['municipalServiceCode'] ?? null,
+            'municipal_service_description' => $body['municipalServiceDescription'] ?? null,
+            'external_reference' => $body['externalReference'] ?? null,
+            'payload' => $body,
+        ];
+    }
+
+    public function getMunicipalOptions(): array
+    {
+        return $this->client()->get('/invoices/municipalOptions')->throw()->json();
+    }
+
+    public function configureFiscalData(array $data): array
+    {
+        return $this->client()->put('/invoices/municipalConfiguration', $data)->throw()->json();
+    }
+
+    public function getMunicipalServices(array $filters = []): array
+    {
+        return $this->client()->get('/invoices/municipalServices', $filters)->throw()->json();
+    }
+
+    public function scheduleInvoice(GatewayInvoice $invoice): GatewayInvoice
+    {
+        $body = $this->client()->post("/invoices/{$invoice->gateway_reference_key}/schedule")->throw()->json();
+
+        return $this->updateGatewayInvoice($invoice, $body);
+    }
+
+    public function findInvoice(GatewayInvoice $invoice): ?array
+    {
+        try {
+            return $this->client()->get("/invoices/{$invoice->gateway_reference_key}")->throw()->json();
+        } catch (RequestException $exception) {
+            if ($exception->response->status() === 404) {
+                return null;
+            }
+
+            throw $exception;
+        }
+    }
+
+    public function authorizeInvoice(GatewayInvoice $invoice): GatewayInvoice
+    {
+        $body = $this->client()->post("/invoices/{$invoice->gateway_reference_key}/authorize")->throw()->json();
+
+        return $this->updateGatewayInvoice($invoice, $body);
+    }
+
+    public function cancelInvoice(GatewayInvoice $invoice, ?string $reason = null): GatewayInvoice
+    {
+        $body = $this->client()->delete("/invoices/{$invoice->gateway_reference_key}", array_filter([
+            'reason' => $reason,
+        ]))->throw()->json();
+
+        return $this->updateGatewayInvoice($invoice, $body);
     }
 
     public function registerWebhook(string $url, string $type = 'NONE', array $events = []): array
@@ -625,6 +753,10 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter
 
     private function resolvePostbackType(string $event): string
     {
+        if (str_starts_with($event, 'INVOICE')) {
+            return 'invoice';
+        }
+
         if (str_starts_with($event, 'PAYMENT')) {
             return 'payment';
         }
@@ -644,6 +776,30 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter
         return 'unknown';
     }
 
+    private function mapInvoiceStatus(string $status): \App\Enums\Gateway\InvoiceStatus
+    {
+        return match (strtoupper($status)) {
+            'AUTHORIZED', 'ISSUED' => \App\Enums\Gateway\InvoiceStatus::AUTHORIZED,
+            'SYNCHRONIZED' => \App\Enums\Gateway\InvoiceStatus::SYNCHRONIZED,
+            'CANCELED', 'CANCELLED' => \App\Enums\Gateway\InvoiceStatus::CANCELED,
+            'CANCELLATION_PROCESSING', 'PROCESSING_CANCELLATION' => \App\Enums\Gateway\InvoiceStatus::PROCESSING_CANCELLATION,
+            'CANCELLATION_DENIED' => \App\Enums\Gateway\InvoiceStatus::CANCELLATION_DENIED,
+            'PROCESSING' => \App\Enums\Gateway\InvoiceStatus::PROCESSING,
+            'SCHEDULED' => \App\Enums\Gateway\InvoiceStatus::SCHEDULED,
+            'ERROR', 'FAILED' => \App\Enums\Gateway\InvoiceStatus::ERROR,
+            'PENDING' => \App\Enums\Gateway\InvoiceStatus::PENDING,
+            default => \App\Enums\Gateway\InvoiceStatus::UNKNOWN,
+        };
+    }
+
+    private function updateGatewayInvoice(GatewayInvoice $invoice, array $body): GatewayInvoice
+    {
+        $invoice->fill($this->invoiceAttributes($body));
+        $invoice->save();
+
+        return $invoice->fresh();
+    }
+
     private function handlePostbackEvent(string $event, array $payload, GatewayPostback $postback): void
     {
         if (str_starts_with($event, 'PAYMENT')) {
@@ -652,11 +808,68 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter
             return;
         }
 
+        if (str_starts_with($event, 'INVOICE')) {
+            $this->handleInvoicePostback($payload);
+        }
+
         if (str_starts_with($event, 'TRANSFER')) {
             $this->handleTransferPostback($payload, $postback);
 
             return;
         }
+    }
+
+    private function handleInvoicePostback(array $payload): void
+    {
+        $invoiceData = $payload['invoice'] ?? $payload;
+        $reference = $invoiceData['id'] ?? null;
+
+        if (! is_string($reference)) {
+            return;
+        }
+
+        $paymentReference = $invoiceData['payment'] ?? $invoiceData['paymentId'] ?? null;
+        $payment = is_string($paymentReference)
+            ? GatewayPayment::query()
+                ->where('gateway_account_id', $this->gatewayAccount->id)
+                ->where('gateway_reference_key', $paymentReference)
+                ->first()
+            : null;
+
+        if ($payment === null && isset($invoiceData['externalReference'])) {
+            $payment = GatewayPayment::query()
+                ->where('gateway_account_id', $this->gatewayAccount->id)
+                ->where('invoice_id', (int) $invoiceData['externalReference'])
+                ->latest('id')
+                ->first();
+        }
+
+        $invoice = GatewayInvoice::query()
+            ->where('gateway_account_id', $this->gatewayAccount->id)
+            ->where('gateway_reference_key', $reference)
+            ->first();
+
+        if ($invoice === null && $payment !== null) {
+            $invoice = GatewayInvoice::query()
+                ->where('gateway_account_id', $this->gatewayAccount->id)
+                ->where('gateway_payment_id', $payment->id)
+                ->first();
+
+            if ($invoice === null) {
+                $invoice = new GatewayInvoice([
+                    'gateway_account_id' => $this->gatewayAccount->id,
+                    'gateway_payment_id' => $payment->id,
+                    'invoice_id' => $payment->invoice_id,
+                ]);
+            }
+        }
+
+        if ($invoice === null) {
+            return;
+        }
+
+        $invoice->fill($this->invoiceAttributes($invoiceData));
+        $invoice->save();
     }
 
     private function handlePaymentPostback(array $payload, GatewayPostback $postback): void
