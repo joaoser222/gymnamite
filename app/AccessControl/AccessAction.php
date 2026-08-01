@@ -16,6 +16,7 @@ enum AccessAction: string
     case MARK_PAID = 'mark_paid';
     case MARK_UNPAID = 'mark_unpaid';
     case CANCEL = 'cancel';
+    case REQUEST_INVOICE = 'request_invoice';
 
     public function label(): string
     {
@@ -27,7 +28,8 @@ enum AccessAction: string
             self::VISIBILITY => 'Visibilidade',
             self::MARK_PAID => 'Realizar Baixa',
             self::MARK_UNPAID => 'Estornar Baixa',
-            self::CANCEL => 'Cancelar'
+            self::CANCEL => 'Cancelar',
+            self::REQUEST_INVOICE => 'Solicitar nota fiscal',
         };
     }
 }

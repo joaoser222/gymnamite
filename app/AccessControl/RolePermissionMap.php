@@ -16,6 +16,7 @@ final class RolePermissionMap
             AccessModule::GATEWAY_POSTBACK,
             AccessModule::GATEWAY_CUSTOMER,
             AccessModule::GATEWAY_CREDIT_CARD,
+            AccessModule::GATEWAY_INVOICE,
         ];
     }
 
