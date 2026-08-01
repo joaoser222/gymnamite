@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import type { DetailsRoutes } from '@/shared/page';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
@@ -21,6 +21,8 @@ type Receivable = {
     annotations?: string;
     financial_account_id?: number;
     financial_category_id?: number;
+    can_request_gateway_invoice?: boolean;
+    gateway_invoice_request_reason?: string | null;
 };
 
 type PixQrCode = {
@@ -212,6 +214,17 @@ const calculatedTotal = (form: Record<string, unknown>): number => {
                     </v-row>
                 </v-card-text>
             </v-card>
+        </template>
+        <template #actions>
+            <v-btn
+                v-if="props.receivable?.can_request_gateway_invoice && props.routes.requestGatewayInvoice"
+                color="secondary"
+                variant="tonal"
+                prepend-icon="ti ti-file-invoice"
+                @click="router.post(props.routes.requestGatewayInvoice.replace(':id', String(props.receivable?.id)))"
+            >
+                Solicitar nota fiscal
+            </v-btn>
         </template>
     </DetailsPage>
 </template>

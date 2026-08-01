@@ -29,6 +29,7 @@ type GatewayAccount = {
     name?: string;
     description?: string;
     settings?: Record<string, unknown>;
+    invoicing_enabled?: boolean;
 };
 
 const props = defineProps<{
@@ -44,6 +45,7 @@ const defaults = {
     name: '',
     description: '',
     settings: {} as Record<string, unknown>,
+    invoicing_enabled: false,
 };
 
 const isEditing = computed(() => props.gatewayAccount?.id != null);
@@ -53,6 +55,7 @@ const selectedProvider = ref(props.gatewayAccount?.name ?? '');
 const currentDefinition = computed<GatewayDefinition | undefined>(() =>
     definitions.find((d) => d.name === selectedProvider.value),
 );
+
 </script>
 
 <template>
@@ -108,6 +111,47 @@ const currentDefinition = computed<GatewayDefinition | undefined>(() =>
             </v-row>
 
             <v-divider class="my-4" />
+
+            <v-switch
+                v-model="form.invoicing_enabled"
+                label="Habilitar emissão de notas fiscais"
+                color="primary"
+                hint="Permite solicitar notas fiscais para cobranças deste gateway."
+                persistent-hint
+                @update:model-value="
+                    (enabled) => {
+                        if (enabled && !form.settings.invoicing) {
+                            form.settings.invoicing = {};
+                        }
+                    }
+                "
+            />
+
+            <v-row v-if="form.invoicing_enabled && form.settings.invoicing" class="ma-0 mt-2">
+                <v-col cols="12">
+                    <v-textarea
+                        v-model="form.settings.invoicing.service_description"
+                        label="Descrição do serviço fiscal"
+                        hint="Configuração enviada ao provedor no momento da solicitação."
+                        persistent-hint
+                        :error-messages="errors['settings.invoicing.service_description']"
+                    />
+                </v-col>
+                <v-col cols="12" md="6">
+                    <v-text-field
+                        v-model="form.settings.invoicing.municipal_service_id"
+                        label="ID do serviço municipal"
+                        :error-messages="errors['settings.invoicing.municipal_service_id']"
+                    />
+                </v-col>
+                <v-col cols="12" md="6">
+                    <v-text-field
+                        v-model="form.settings.invoicing.municipal_service_code"
+                        label="Código do serviço municipal"
+                        :error-messages="errors['settings.invoicing.municipal_service_code']"
+                    />
+                </v-col>
+            </v-row>
 
             <h3 class="text-subtitle-1 font-weight-medium mb-3">
                 Configurações
