@@ -14,6 +14,7 @@ use App\Http\Controllers\FinancialCategoryController;
 use App\Http\Controllers\GatewayAccountController;
 use App\Http\Controllers\GatewayCreditCardController;
 use App\Http\Controllers\GatewayCustomerController;
+use App\Http\Controllers\GatewayInvoiceController;
 use App\Http\Controllers\GatewayPaymentController;
 use App\Http\Controllers\GatewayPostbackController;
 use App\Http\Controllers\GatewayTransferController;
@@ -88,6 +89,7 @@ Route::middleware(['auth'])->group(function () {
     Route::module(PayableController::class);
     Route::module(ReceivableController::class);
     Route::patch('receivables/{receivable}/mark-paid', [ReceivableController::class, 'markPaid'])->name('receivables.mark-paid');
+    Route::post('receivables/{receivable}/request-gateway-invoice', [ReceivableController::class, 'requestGatewayInvoice'])->name('receivables.request-gateway-invoice');
     Route::module(MovementController::class);
     Route::module(TransferController::class);
 
@@ -102,6 +104,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('gateway-customers/{gateway_customer}', [GatewayCustomerController::class, 'show'])->name('gateway-customers.show');
     Route::get('gateway-credit-cards', [GatewayCreditCardController::class, 'index'])->name('gateway-credit-cards.index');
     Route::get('gateway-credit-cards/{gateway_credit_card}', [GatewayCreditCardController::class, 'show'])->name('gateway-credit-cards.show');
+    Route::get('gateway-invoices', [GatewayInvoiceController::class, 'index'])->name('gateway-invoices.index');
+    Route::get('gateway-invoices/{gateway_invoice}', [GatewayInvoiceController::class, 'show'])->name('gateway-invoices.show');
 
     // Relatórios
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
@@ -110,6 +114,8 @@ Route::middleware(['auth'])->group(function () {
     // Avançado
     Route::module(FinancialAccountController::class);
     Route::module(GatewayAccountController::class);
+    Route::get('gateway-accounts/{gateway_account}/invoicing/municipal-options', [GatewayAccountController::class, 'municipalOptions'])->name('gateway-accounts.invoicing.municipal-options');
+    Route::get('gateway-accounts/{gateway_account}/invoicing/municipal-services', [GatewayAccountController::class, 'municipalServices'])->name('gateway-accounts.invoicing.municipal-services');
     Route::module(RoleController::class);
     Route::module(UserController::class);
     Route::get('settings', [SettingController::class, 'index'])->name('settings.show');
