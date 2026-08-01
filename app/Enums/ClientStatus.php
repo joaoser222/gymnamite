@@ -13,11 +13,6 @@ enum ClientStatus: string
     case OVERDUED = 'overdued';
     case LOCKED = 'locked';
 
-    protected static function fields(): array
-    {
-        return ['label', 'value', 'color'];
-    }
-
     public function label(): string
     {
         return match ($this) {

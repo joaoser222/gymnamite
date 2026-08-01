@@ -46,9 +46,4 @@ enum InvoiceStatus: string
             self::PENDING, self::UNKNOWN => 'warning',
         };
     }
-
-    protected static function fields(): array
-    {
-        return ['label', 'value', 'color'];
-    }
 }

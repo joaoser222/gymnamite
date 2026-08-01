@@ -21,11 +21,6 @@ enum PostbackStatus: string
         };
     }
 
-    protected static function fields(): array
-    {
-        return ['label', 'value', 'color'];
-    }
-
     public function color(): string
     {
         return match ($this) {

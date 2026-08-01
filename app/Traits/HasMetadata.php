@@ -6,13 +6,18 @@ trait HasMetadata
 {
     abstract public function label(): string;
 
+    public function color(): string
+    {
+        return 'secondary';
+    }
+
     /**
      * Lista de campos que serão retornados em options().
      * Pode ser sobrescrita no enum que usa o trait.
      */
     protected static function fields(): array
     {
-        return ['label', 'value'];
+        return ['label', 'value', 'color'];
     }
 
     /**

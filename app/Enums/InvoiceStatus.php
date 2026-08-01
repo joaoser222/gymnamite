@@ -14,11 +14,6 @@ enum InvoiceStatus: string
     case PAID = 'paid';
     case CANCELED = 'canceled';
 
-    protected static function fields(): array
-    {
-        return ['label', 'value', 'color'];
-    }
-
     public function label(): string
     {
         return match ($this) {
