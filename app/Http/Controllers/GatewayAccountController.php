@@ -23,7 +23,7 @@ class GatewayAccountController extends CrudModuleController
     /**
      * @var array<int, string>
      */
-    protected array $fields = ['id', 'name', 'description', 'created_at', 'updated_at'];
+    protected array $fields = ['id', 'name', 'description', 'invoicing_enabled', 'invoicing_configured', 'created_at', 'updated_at'];
 
     /**
      * @var array<int, string>
@@ -98,6 +98,26 @@ class GatewayAccountController extends CrudModuleController
         ]);
     }
 
+    public function municipalOptions(GatewayAccount $gatewayAccount): JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::VIEW);
+
+        return response()->json(
+            $this->gatewayManager->invoicingAdapter($gatewayAccount)->getMunicipalOptions(),
+        );
+    }
+
+    public function municipalServices(Request $request, GatewayAccount $gatewayAccount): JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::VIEW);
+
+        return response()->json(
+            $this->gatewayManager->invoicingAdapter($gatewayAccount)->getMunicipalServices(
+                $request->only(['city', 'state', 'service_code', 'description']),
+            ),
+        );
+    }
+
     private function withoutSensitiveSettings(GatewayAccount $gatewayAccount): GatewayAccount
     {
         $definition = $this->gatewayManager->find($gatewayAccount->name);
@@ -111,6 +131,12 @@ class GatewayAccountController extends CrudModuleController
         foreach ($definition->settings() as $setting) {
             if ($setting instanceof PaymentGatewaySettingDefinition && $setting->type === 'password') {
                 unset($settings[$setting->key]);
+            }
+        }
+
+        if (isset($settings['invoicing']) && is_array($settings['invoicing'])) {
+            foreach (['api_key', 'access_token', 'certificate', 'certificate_password', 'password', 'token'] as $key) {
+                unset($settings['invoicing'][$key]);
             }
         }
 

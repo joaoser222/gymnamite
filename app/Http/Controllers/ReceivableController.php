@@ -12,6 +12,7 @@ use App\Http\Requests\ReceivableSettlementRequest;
 use App\Models\Movement;
 use App\Models\Receivable;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
+use App\Services\GatewayInvoicingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,9 +22,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class ReceivableController extends CrudModuleController
 {
+    public function __construct(
+        private readonly GatewayInvoicingService $invoicingService,
+    ) {}
+
     /**
      * @var array<int, string>
      */
@@ -84,6 +90,11 @@ class ReceivableController extends CrudModuleController
         return [
             ...$routes,
             'markPaid' => str_replace('__id__', ':id', $markPaidRoute),
+            'requestGatewayInvoice' => str_replace(
+                '__id__',
+                ':id',
+                route('receivables.request-gateway-invoice', ['receivable' => '__id__']),
+            ),
         ];
     }
 
@@ -158,7 +169,10 @@ class ReceivableController extends CrudModuleController
         $this->authorizeAccess(AccessAction::VIEW);
 
         /** @var Receivable $receivable */
-        $receivable = $this->modelFromRoute($request)->load('gatewayPayment');
+        $receivable = $this->invoicingService->eligibilityQuery($this->newModelQuery())
+            ->whereKey($this->modelFromRoute($request)->getKey())
+            ->with('gatewayPayment')
+            ->firstOrFail();
 
         if ($request->expectsJson()) {
             return response()->json($receivable);
@@ -173,6 +187,33 @@ class ReceivableController extends CrudModuleController
             'pixQrCode' => $this->pixQrCode($receivable),
             ...$this->moduleDetailsProps($receivable),
         ]);
+    }
+
+    public function requestGatewayInvoice(Request $request, Receivable $receivable): JsonResponse|RedirectResponse
+    {
+        $this->authorizeAccess(AccessAction::REQUEST_INVOICE);
+        abort_unless($receivable->operation_type === OperationType::RECEIVABLE, 404);
+
+        try {
+            $gatewayInvoice = $this->invoicingService->request($receivable);
+        } catch (RuntimeException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $exception->getMessage()], 422);
+            }
+
+            return back()->withErrors(['gateway_invoice' => $exception->getMessage()]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json($gatewayInvoice, 201);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Nota fiscal solicitada com sucesso.',
+        ]);
+
+        return back();
     }
 
     private function pixQrCode(Receivable $receivable): ?array
