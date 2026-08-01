@@ -94,22 +94,15 @@ Route::middleware(['auth'])->group(function () {
     Route::module(TransferController::class);
 
     // Gateway de Pagamentos
-    Route::get('gateway-payments', [GatewayPaymentController::class, 'index'])->name('gateway-payments.index');
-    Route::get('gateway-payments/{gateway_payment}', [GatewayPaymentController::class, 'show'])->name('gateway-payments.show');
-    Route::get('gateway-transfers', [GatewayTransferController::class, 'index'])->name('gateway-transfers.index');
-    Route::get('gateway-transfers/{gateway_transfer}', [GatewayTransferController::class, 'show'])->name('gateway-transfers.show');
-    Route::get('gateway-postbacks', [GatewayPostbackController::class, 'index'])->name('gateway-postbacks.index');
-    Route::get('gateway-postbacks/{gateway_postback}', [GatewayPostbackController::class, 'show'])->name('gateway-postbacks.show');
-    Route::get('gateway-customers', [GatewayCustomerController::class, 'index'])->name('gateway-customers.index');
-    Route::get('gateway-customers/{gateway_customer}', [GatewayCustomerController::class, 'show'])->name('gateway-customers.show');
-    Route::get('gateway-credit-cards', [GatewayCreditCardController::class, 'index'])->name('gateway-credit-cards.index');
-    Route::get('gateway-credit-cards/{gateway_credit_card}', [GatewayCreditCardController::class, 'show'])->name('gateway-credit-cards.show');
-    Route::get('gateway-invoices', [GatewayInvoiceController::class, 'index'])->name('gateway-invoices.index');
-    Route::get('gateway-invoices/{gateway_invoice}', [GatewayInvoiceController::class, 'show'])->name('gateway-invoices.show');
+    Route::moduleReadOnly(GatewayPaymentController::class);
+    Route::moduleReadOnly(GatewayTransferController::class);
+    Route::moduleReadOnly(GatewayPostbackController::class);
+    Route::moduleReadOnly(GatewayCustomerController::class);
+    Route::moduleReadOnly(GatewayCreditCardController::class);
+    Route::moduleReadOnly(GatewayInvoiceController::class);
 
     // Relatórios
-    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+    Route::moduleReadOnly(ReportController::class);
 
     // Avançado
     Route::module(FinancialAccountController::class);

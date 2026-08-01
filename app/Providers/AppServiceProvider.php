@@ -46,6 +46,19 @@ class AppServiceProvider extends ServiceProvider
                 Route::patch('/change-visibility', [$controller, 'changeVisibility'])->name('change-visibility');
             });
         });
+
+        Route::macro('moduleReadOnly', function (string $prefixOrController, ?string $controller = null) {
+            $controller ??= $prefixOrController;
+            $prefix = $controller === $prefixOrController
+                ? Str::of(class_basename($controller))->beforeLast('Controller')->plural()->kebab()->toString()
+                : $prefixOrController;
+            $param = Str::of($prefix)->replace('-', '_')->singular()->toString();
+
+            Route::prefix($prefix)->name("{$prefix}.")->group(function () use ($controller, $param) {
+                Route::get('/', [$controller, 'index'])->name('index');
+                Route::get("/{{$param}}", [$controller, 'show'])->name('show');
+            });
+        });
     }
 
     /**
