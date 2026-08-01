@@ -10,6 +10,7 @@ class GatewayPostback extends Model
     protected $fillable = [
         'postback_event',
         'postback_type',
+        'external_event_key',
         'payload',
         'status',
         'gateway_account_id',

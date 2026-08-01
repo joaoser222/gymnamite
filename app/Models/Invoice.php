@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Traits\HasMorphObjects;
 use App\Traits\HasVisibility;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Date;
 
@@ -96,7 +97,15 @@ class Invoice extends Model
 
     public function gatewayPayment(): HasOne
     {
-        return $this->hasOne(GatewayPayment::class, 'invoice_id');
+        return $this->hasOne(GatewayPayment::class, 'invoice_id')->ofMany([
+            'created_at' => 'max',
+            'id' => 'max',
+        ]);
+    }
+
+    public function gatewayPayments(): HasMany
+    {
+        return $this->hasMany(GatewayPayment::class, 'invoice_id');
     }
 
     public function usesGatewayPaymentMethod(): bool
