@@ -39,4 +39,13 @@ class ClientFactory extends Factory
             'visibility' => Visibility::VISIBLE->value,
         ];
     }
+
+    public function testClient(): static
+    {
+        return $this->state([
+            'name' => 'Cliente Teste',
+            'email' => 'cliente@example.com',
+            'document' => '12345678901',
+        ]);
+    }
 }
