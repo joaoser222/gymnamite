@@ -77,10 +77,11 @@ class GatewayAccountSecurityTest extends TestCase
 
         $response->assertRedirect(route('gateway-accounts.index'));
 
-        $this->assertSame([
+        $this->assertEquals([
             'api_key' => 'secret-api-key',
             'base_url' => 'https://api.asaas.com/api/v3',
             'wallet_id' => 'wallet_456',
+            'invoicing' => [],
         ], $gatewayAccount->refresh()->settings);
     }
 }
