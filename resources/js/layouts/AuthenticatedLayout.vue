@@ -227,6 +227,12 @@ const menuGroups: MenuGroup[] = [
                 href: '/gateway-credit-cards',
                 permission: 'gateway_credit_cards.view',
             },
+            {
+                title: 'Notas Fiscais',
+                icon: 'ti ti-file-invoice',
+                href: '/gateway-invoices',
+                permission: 'gateway_invoices.view',
+            },
         ],
     },
     {

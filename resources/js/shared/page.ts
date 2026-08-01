@@ -15,7 +15,8 @@ export type IndexRoutes = {
 };
 
 export type DetailsRoutes = {
-    index: string;
-    store: string;
-    update: string;
+    index?: string;
+    store?: string;
+    update?: string;
+    requestGatewayInvoice?: string;
 };
