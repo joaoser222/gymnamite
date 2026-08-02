@@ -38,7 +38,9 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect()->route(auth()->check() ? 'dashboard' : 'login');
+    return auth()->check()
+        ? inertia('Home')
+        : redirect()->route('login');
 })->name('home');
 
 Route::post('gateway-postbacks/{gateway_account}/receive', [GatewayPostbackController::class, 'receive'])
@@ -59,7 +61,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('auth/permissions', UserPermissionsController::class)->name('auth.permissions');
 
-    Route::inertia('dashboard', 'Home')->name('dashboard');
+    Route::get('dashboard', fn () => inertia('Dashboard'))->name('dashboard');
     Route::get('select-box/{objectName}', SelectBoxController::class)->name('select-box');
     Route::get('contracts/find-client', [ContractController::class, 'findClient'])->name('contracts.find-client');
     Route::get('contracts/find-coupon', [ContractController::class, 'findCoupon'])->name('contracts.find-coupon');

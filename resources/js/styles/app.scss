@@ -7,14 +7,17 @@
 html,
 body,
 #app {
-    min-height: 100%;
+    min-height: 100vh;
+}
+
+html {
+    background-color: rgb(var(--v-theme-background));
 }
 
 body {
-    background-image: url('../assets/bg.webp');
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
+    background-color: rgb(var(--v-theme-background));
+    background-image: url('../assets/grid.svg');
+    background-repeat: repeat;
     background-attachment: fixed;
 }
 
@@ -37,6 +40,7 @@ body {
 }
 
 .page-content-host {
+    min-height: calc(100vh - 80px);
     position: relative;
     isolation: isolate;
     overflow: clip;

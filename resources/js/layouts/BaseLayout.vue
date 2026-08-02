@@ -1,59 +1,58 @@
 <template>
     <div>
-        <v-navigation-drawer
-            v-model="drawer"
-            :temporary="display.mdAndDown.value"
-            width="288"
-            color="surface"
-            elevation="0"
+        <v-app-bar
+            v-if="!isApplicationsHome"
+            flat
+            density="compact"
+            border="b"
+            class="border-surface-variant"
         >
-            <div class="py-4 d-flex align-center ga-3">
-                <v-img :src="logo" height="48" />
-            </div>
+            <v-menu>
+                <template #activator="{ props: menuProps }">
+                    <v-btn
+                        icon="ti ti-apps"
+                        variant="text"
+                        size="small"
+                        v-bind="menuProps"
+                    />
+                </template>
 
-            <v-list v-model:opened="openedGroups" nav class="py-2">
-                <v-list-group
-                    :value="group.name"
-                    v-for="group in menu"
-                    :key="group.name"
-                    class="mb-2"
-                >
-                    <template #activator="{ props }">
-                        <v-list-item v-bind="props">
-                            <div class="d-flex flex-row">
-                                <v-icon :icon="group.icon" />
-                                <div
-                                    class="pl-3 text-subtitle-2 font-weight-normal"
-                                >
-                                    {{ group.title }}
-                                </div>
-                            </div>
-                        </v-list-item>
-                    </template>
-
+                <v-list density="compact" min-width="280" max-height="480">
                     <v-list-item
-                        v-for="(item, index) in group.items"
-                        :key="index"
-                        class="my-2 text-subtitle-2"
-                        @click="navigateTo(item.href)"
-                        :active="isItemActive(item.href)"
-                        :active-class="'text-subtitle-2 font-weight-bold'"
-                        active-color="primary"
-                    >
-                        <template #default>
-                            <div class="d-flex flex-row">
-                                <v-icon :icon="item.icon" class="pl-4" />
-                                <div class="pl-4">{{ item.title }}</div>
-                            </div>
-                        </template>
-                    </v-list-item>
-                </v-list-group>
-            </v-list>
+                        prepend-icon="ti ti-home"
+                        title="Aplicativos"
+                        @click="navigateTo('/')"
+                    />
+                    <v-divider />
+                    <template v-for="group in menu" :key="group.name">
+                        <v-list-subheader>{{ group.title }}</v-list-subheader>
+                        <v-list-item
+                            v-for="item in group.items"
+                            :key="item.href"
+                            :active="isItemActive(item.href)"
+                            :prepend-icon="item.icon"
+                            :title="item.title"
+                            @click="navigateTo(item.href)"
+                        />
+                    </template>
+                </v-list>
+            </v-menu>
 
-            <template #append>
-                <v-divider />
+            <v-app-bar-title>
+                <h3>{{ currentPageTitle }}</h3>
+            </v-app-bar-title>
 
-                <v-list nav density="comfortable">
+            <v-menu>
+                <template #activator="{ props: menuProps }">
+                    <v-btn
+                        icon="ti ti-user-circle"
+                        variant="text"
+                        size="small"
+                        v-bind="menuProps"
+                    />
+                </template>
+
+                <v-list density="comfortable" min-width="240">
                     <v-list-item>
                         <template #prepend>
                             <v-avatar color="primary" variant="tonal">
@@ -67,42 +66,22 @@
                         <v-list-item-subtitle>{{
                             user.email
                         }}</v-list-item-subtitle>
-
-                        <template #append>
-                            <v-menu>
-                                <template #activator="{ props }">
-                                    <v-btn
-                                        icon="ti ti-dots-vertical"
-                                        variant="text"
-                                        size="small"
-                                        v-bind="props"
-                                    />
-                                </template>
-
-                                <v-list density="compact">
-                                    <v-list-item
-                                        prepend-icon="ti ti-logout"
-                                        title="Sair"
-                                        @click="logout"
-                                    />
-                                </v-list>
-                            </v-menu>
-                        </template>
                     </v-list-item>
+                    <v-divider />
+                    <v-list-item
+                        prepend-icon="ti ti-logout"
+                        title="Sair"
+                        @click="logout"
+                    />
                 </v-list>
-            </template>
-        </v-navigation-drawer>
-
-        <v-app-bar flat density="compact" border="b" class="border-surface-variant">
-            <v-btn-icon icon="ti ti-menu-2" @click="toggleSidebar" size="small"/>
-
-            <v-app-bar-title>
-                <h3>{{ currentPageTitle }}</h3>
-            </v-app-bar-title>
+            </v-menu>
         </v-app-bar>
 
         <v-main class="layout-transparent-main">
-            <v-container fluid class="pa-4 pa-md-6 layout-transparent-container">
+            <v-container
+                fluid
+                class="pa-4 pa-md-6 layout-transparent-container"
+            >
                 <div class="page-content-host">
                     <slot />
                 </div>
@@ -113,22 +92,14 @@
 
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
-import { useDisplay } from 'vuetify';
+import { computed } from 'vue';
 import { usePermissions } from '@/composables/usePermissions';
-import logo from '@/assets/logo.webp';
+import type { MenuGroup } from '@/navigation';
 
 type MenuItem = {
     title: string;
     icon: string;
     href: string;
-};
-
-type MenuGroup = {
-    name: string;
-    title: string;
-    icon: string;
-    items: MenuItem[];
 };
 
 type AuthUser = {
@@ -140,7 +111,6 @@ type AuthUser = {
 
 type SharedProps = {
     name?: string;
-    sidebarOpen?: boolean;
     auth?: {
         user?: AuthUser;
     };
@@ -151,13 +121,9 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const display = useDisplay();
 const { clearPermissionsCache } = usePermissions();
 
 const sharedProps = computed(() => page.props as SharedProps);
-
-const drawer = ref(sharedProps.value.sidebarOpen ?? true);
-const openedGroups = ref<string[]>([]);
 
 const appName = computed(() => sharedProps.value.name ?? 'Gymnamite');
 
@@ -188,6 +154,8 @@ const currentPath = computed(() => {
     return new URL(url, window.location.origin).pathname;
 });
 
+const isApplicationsHome = computed(() => currentPath.value === '/');
+
 const currentMenuItem = computed(() => {
     return props.menu
         .flatMap((group) => group.items)
@@ -215,50 +183,12 @@ function isItemActive(href: string): boolean {
     );
 }
 
-function openActiveGroup(): void {
-    const activeGroup = props.menu.find((group) =>
-        group.items.some((item) => isItemActive(item.href)),
-    );
-
-    openedGroups.value = activeGroup
-        ? [activeGroup.name]
-        : props.menu[0]
-          ? [props.menu[0].name]
-          : [];
-}
-
-function persistSidebarState(): void {
-    document.cookie = `sidebar_state=${String(drawer.value)}; path=/; max-age=31536000; samesite=lax`;
-}
-
-function toggleSidebar(): void {
-    drawer.value = !drawer.value;
-}
-
 function navigateTo(href: string): void {
     router.visit(href);
-
-    if (display.mdAndDown.value) {
-        drawer.value = false;
-    }
 }
 
 function logout(): void {
     clearPermissionsCache();
     router.post('/logout');
 }
-
-watch(currentPath, openActiveGroup, { immediate: true });
-
-watch(
-    () => display.mdAndDown.value,
-    (isMobile) => {
-        if (isMobile) {
-            drawer.value = false;
-        }
-    },
-    { immediate: true },
-);
-
-watch(drawer, persistSidebarState);
 </script>

@@ -1,11 +1,11 @@
 <template>
-    <BaseLayout :menu="visibleMenuGroups">
+    <BaseLayout :menu="authorizedMenuGroups">
         <slot />
     </BaseLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, provide } from 'vue';
 import { usePermissions } from '@/composables/usePermissions';
 import BaseLayout from '@/layouts/BaseLayout.vue';
 
@@ -256,7 +256,7 @@ const menuGroups: MenuGroup[] = [
     },
 ];
 
-const visibleMenuGroups = computed(() => {
+const authorizedMenuGroups = computed(() => {
     return menuGroups
         .map((group) => ({
             ...group,
@@ -266,6 +266,8 @@ const visibleMenuGroups = computed(() => {
         }))
         .filter((group) => group.items.length > 0);
 });
+
+provide('menuGroups', authorizedMenuGroups);
 
 onMounted(() => {
     void loadPermissions();
