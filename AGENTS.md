@@ -20,9 +20,8 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/pint (PINT) - v1
 - laravel/sail (SAIL) - v1
 - phpunit/phpunit (PHPUNIT) - v12
-- @inertiajs/vue3 (INERTIA_VUE) - v3
-- vue (VUE) - v3
-- vuetify (VUETIFY) - v3
+- @inertiajs/react (INERTIA_REACT) - v3
+- react (REACT) - v19
 - eslint (ESLINT) - v9
 - prettier (PRETTIER) - v3
 
@@ -48,16 +47,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 ## Frontend Bundling
 
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
-
-## Frontend UI
-
-- This project uses only Vue on the frontend. Ignore any detected React packages or React-oriented guidance for work in this repository.
-- This project uses Vuetify 3 as its UI component system. Do not use Tailwind CSS utilities or Tailwind-specific patterns unless the user explicitly asks to introduce Tailwind.
-- Build Vue UI with Vuetify components (`v-card`, `v-form`, `v-text-field`, `v-btn`, `v-data-table`, `v-container`, etc.) and follow the conventions already present in `resources/js`.
-- Use Tabler icon names through Vuetify icon props/classes, matching existing usage such as `ti ti-plus`, `ti ti-pencil`, and `ti ti-search`.
-- Prefer Vuetify spacing, layout, density, variant, color, and validation APIs over custom CSS. Add scoped CSS only when Vuetify props/classes cannot express the needed behavior cleanly.
-- Check sibling Vue components in `resources/js/components` and `resources/js/pages` before creating new shared UI patterns.
-- In form action bars, the save button must always be the last action on the far right. Place any other actions before the save button.
 
 ## Documentation Files
 
@@ -135,9 +124,8 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
 - Components live in `resources/js/pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
-- This repository uses Inertia with Vue only. Do not generate or suggest React components, hooks, or examples for this project.
 - ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
-- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
+- IMPORTANT: Activate `inertia-react-development` when working with Inertia client-side patterns.
 
 # Inertia v3
 
@@ -208,11 +196,10 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
 
-=== inertia-vue/core rules ===
+=== inertia-react/core rules ===
 
-# Inertia + Vue
+# Inertia + React
 
-Vue components must have a single root element.
-- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
+- IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>

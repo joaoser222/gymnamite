@@ -8,7 +8,6 @@
     "nightwatch": false,
     "sail": false,
     "skills": [
-        "laravel-best-practices",
-        "inertia-vue-development"
+        "laravel-best-practices"
     ]
 }
