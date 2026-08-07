@@ -6,6 +6,52 @@ use App\PaymentGateways\Adapters\AsaasPaymentGatewayAdapter;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
 use App\PaymentGateways\Contracts\PaymentGatewayInvoicingAdapter;
 use App\PaymentGateways\PaymentGatewayManager;
+use App\Repositories\Contracts\ClientRepositoryInterface;
+use App\Repositories\Contracts\ContractRepositoryInterface;
+use App\Repositories\Contracts\CouponRepositoryInterface;
+use App\Repositories\Contracts\DirectLessonRepositoryInterface;
+use App\Repositories\Contracts\GatewayAccountRepositoryInterface;
+use App\Repositories\Contracts\GatewayInvoiceRepositoryInterface;
+use App\Repositories\Contracts\GatewayPaymentRepositoryInterface;
+use App\Repositories\Contracts\InvoiceRepositoryInterface;
+use App\Repositories\Contracts\ModalityRepositoryInterface;
+use App\Repositories\Contracts\MovementRepositoryInterface;
+use App\Repositories\Contracts\PayableRepositoryInterface;
+use App\Repositories\Contracts\PlanCategoryRepositoryInterface;
+use App\Repositories\Contracts\PlanRepositoryInterface;
+use App\Repositories\Contracts\ProductRepositoryInterface;
+use App\Repositories\Contracts\PurchaseRepositoryInterface;
+use App\Repositories\Contracts\ReceivableRepositoryInterface;
+use App\Repositories\Contracts\SaleRepositoryInterface;
+use App\Repositories\Contracts\SupplierRepositoryInterface;
+use App\Repositories\Contracts\TrainerRepositoryInterface;
+use App\Repositories\Eloquent\EloquentClientRepository;
+use App\Repositories\Eloquent\EloquentContractRepository;
+use App\Repositories\Eloquent\EloquentCouponRepository;
+use App\Repositories\Eloquent\EloquentDirectLessonRepository;
+use App\Repositories\Eloquent\EloquentGatewayAccountRepository;
+use App\Repositories\Eloquent\EloquentGatewayInvoiceRepository;
+use App\Repositories\Eloquent\EloquentGatewayPaymentRepository;
+use App\Repositories\Eloquent\EloquentInvoiceRepository;
+use App\Repositories\Eloquent\EloquentModalityRepository;
+use App\Repositories\Eloquent\EloquentMovementRepository;
+use App\Repositories\Eloquent\EloquentPayableRepository;
+use App\Repositories\Eloquent\EloquentPlanCategoryRepository;
+use App\Repositories\Eloquent\EloquentPlanRepository;
+use App\Repositories\Eloquent\EloquentProductRepository;
+use App\Repositories\Eloquent\EloquentPurchaseRepository;
+use App\Repositories\Eloquent\EloquentReceivableRepository;
+use App\Repositories\Eloquent\EloquentSaleRepository;
+use App\Repositories\Eloquent\EloquentSupplierRepository;
+use App\Repositories\Eloquent\EloquentTrainerRepository;
+use App\Services\Billing\BillingSourceResolver;
+use App\Services\Billing\DiscountCalculator;
+use App\Services\Billing\InstallmentSplitter;
+use App\Services\Billing\InvoiceGenerator;
+use App\Services\Gateway\FiscalInvoiceEmitter;
+use App\Services\Gateway\FiscalSyncOrchestrator;
+use App\Services\Gateway\GatewayAdapterResolver;
+use App\Services\Gateway\GatewayBillingOrchestrator;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +73,9 @@ class AppServiceProvider extends ServiceProvider
             fn ($app): PaymentGatewayInvoicingAdapter => $app->make(AsaasPaymentGatewayAdapter::class),
         );
         $this->app->singleton(PaymentGatewayManager::class);
+
+        $this->registerRepositoryBindings();
+        $this->registerServiceBindings();
 
         // Gera rotas de forma customizada para modulos
         Route::macro('module', function (string $prefixOrController, ?string $controller = null) {
@@ -62,8 +111,51 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Bind repository interfaces to their Eloquent implementations.
      */
+    protected function registerRepositoryBindings(): void
+    {
+        $this->app->bind(ContractRepositoryInterface::class, EloquentContractRepository::class);
+        $this->app->bind(InvoiceRepositoryInterface::class, EloquentInvoiceRepository::class);
+        $this->app->bind(GatewayAccountRepositoryInterface::class, EloquentGatewayAccountRepository::class);
+        $this->app->bind(ClientRepositoryInterface::class, EloquentClientRepository::class);
+        $this->app->bind(SaleRepositoryInterface::class, EloquentSaleRepository::class);
+        $this->app->bind(PurchaseRepositoryInterface::class, EloquentPurchaseRepository::class);
+        $this->app->bind(DirectLessonRepositoryInterface::class, EloquentDirectLessonRepository::class);
+        $this->app->bind(ReceivableRepositoryInterface::class, EloquentReceivableRepository::class);
+        $this->app->bind(PayableRepositoryInterface::class, EloquentPayableRepository::class);
+        $this->app->bind(MovementRepositoryInterface::class, EloquentMovementRepository::class);
+        $this->app->bind(ProductRepositoryInterface::class, EloquentProductRepository::class);
+        $this->app->bind(PlanRepositoryInterface::class, EloquentPlanRepository::class);
+        $this->app->bind(PlanCategoryRepositoryInterface::class, EloquentPlanCategoryRepository::class);
+        $this->app->bind(ModalityRepositoryInterface::class, EloquentModalityRepository::class);
+        $this->app->bind(CouponRepositoryInterface::class, EloquentCouponRepository::class);
+        $this->app->bind(SupplierRepositoryInterface::class, EloquentSupplierRepository::class);
+        $this->app->bind(TrainerRepositoryInterface::class, EloquentTrainerRepository::class);
+        $this->app->bind(GatewayPaymentRepositoryInterface::class, EloquentGatewayPaymentRepository::class);
+        $this->app->bind(GatewayInvoiceRepositoryInterface::class, EloquentGatewayInvoiceRepository::class);
+    }
+
+    /**
+     * Bind service interfaces to their implementations.
+     */
+    protected function registerServiceBindings(): void
+    {
+        // Billing services (pure logic - stateless)
+        $this->app->singleton(DiscountCalculator::class);
+        $this->app->singleton(InstallmentSplitter::class);
+        $this->app->singleton(BillingSourceResolver::class);
+
+        // InvoiceGenerator (uses repositories)
+        $this->app->singleton(InvoiceGenerator::class);
+
+        // Gateway services
+        $this->app->singleton(GatewayAdapterResolver::class);
+        $this->app->singleton(GatewayBillingOrchestrator::class);
+        $this->app->singleton(FiscalInvoiceEmitter::class);
+        $this->app->singleton(FiscalSyncOrchestrator::class);
+    }
+
     public function boot(): void
     {
         $this->configureDefaults();

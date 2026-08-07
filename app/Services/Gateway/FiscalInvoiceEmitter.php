@@ -1,44 +1,49 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Gateway;
 
 use App\Enums\Gateway\InvoiceStatus;
-use App\Models\GatewayAccount;
 use App\Models\GatewayInvoice;
 use App\Models\GatewayPayment;
 use App\Models\Invoice;
-use App\PaymentGateways\Definitions\PaymentGatewayDefinition;
 use App\PaymentGateways\PaymentGatewayManager;
+use App\Repositories\Contracts\GatewayInvoiceRepositoryInterface;
+use App\Repositories\Contracts\GatewayPaymentRepositoryInterface;
+use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
-class GatewayInvoicingService
+class FiscalInvoiceEmitter
 {
-    public function __construct(private readonly PaymentGatewayManager $gatewayManager) {}
+    public function __construct(
+        private readonly PaymentGatewayManager $gatewayManager,
+        private readonly GatewayAdapterResolver $adapterResolver,
+        private readonly GatewayInvoiceRepositoryInterface $gatewayInvoiceRepository,
+        private readonly GatewayPaymentRepositoryInterface $gatewayPaymentRepository,
+        private readonly InvoiceRepositoryInterface $invoiceRepository,
+    ) {}
 
-    public function request(Invoice $invoice): GatewayInvoice
+    public function emit(Invoice $invoice): GatewayInvoice
     {
         [$gatewayInvoice, $shouldRequest] = DB::transaction(function () use ($invoice): array {
-            $lockedInvoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
-            $payment = $this->latestPayment($lockedInvoice)->lockForUpdate()->first();
+            $lockedInvoice = $this->invoiceRepository->findOrFail($invoice->id);
+            $payment = $this->latestPayment($lockedInvoice);
 
             if ($payment === null) {
                 throw new RuntimeException('Este recebimento não possui pagamento do gateway.');
             }
 
             $account = $payment->gatewayAccount;
-            $definition = $this->gatewayManager->find($account->name);
 
-            if (! $this->isEligible($account, $definition)) {
+            if (! $this->adapterResolver->isInvoicingEligible($account)) {
                 throw new RuntimeException('A conta do gateway não está habilitada para emissão fiscal.');
             }
 
-            $existing = GatewayInvoice::query()
-                ->where('invoice_id', $lockedInvoice->id)
-                ->where('gateway_payment_id', $payment->id)
-                ->lockForUpdate()
-                ->first();
+            $existing = $this->gatewayInvoiceRepository->firstWhere([
+                'invoice_id' => $lockedInvoice->id,
+                'gateway_payment_id' => $payment->id,
+            ]);
 
             if ($existing !== null) {
                 if (in_array($existing->status, [
@@ -54,18 +59,22 @@ class GatewayInvoicingService
                     throw new RuntimeException('Já existe uma nota fiscal para este recebimento.');
                 }
 
-                $existing->update(['status' => InvoiceStatus::PROCESSING]);
+                $existing = $this->gatewayInvoiceRepository->update($existing, [
+                    'status' => InvoiceStatus::PROCESSING->value,
+                ]);
 
                 return [$existing, true];
             }
 
-            return [GatewayInvoice::create([
-                'status' => InvoiceStatus::PROCESSING,
+            $gatewayInvoice = $this->gatewayInvoiceRepository->create([
+                'status' => InvoiceStatus::PROCESSING->value,
                 'value' => $payment->gross_value,
                 'gateway_account_id' => $payment->gateway_account_id,
                 'gateway_payment_id' => $payment->id,
                 'invoice_id' => $lockedInvoice->id,
-            ]), true];
+            ]);
+
+            return [$gatewayInvoice, true];
         });
 
         if (! $shouldRequest || $gatewayInvoice->gateway_reference_key !== null) {
@@ -77,12 +86,11 @@ class GatewayInvoicingService
         $configuration = data_get($account->settings, 'invoicing', []);
 
         try {
-            return $this->gatewayManager
-                ->invoicingAdapter($account)
+            return $this->adapterResolver->invoicingAdapter($account)
                 ->requestInvoice($payment, $configuration, $gatewayInvoice);
         } catch (\Throwable $exception) {
-            $gatewayInvoice->update([
-                'status' => InvoiceStatus::ERROR,
+            $this->gatewayInvoiceRepository->update($gatewayInvoice, [
+                'status' => InvoiceStatus::ERROR->value,
                 'error_message' => $exception->getMessage(),
             ]);
 
@@ -122,18 +130,13 @@ class GatewayInvoicingService
             ]);
     }
 
-    private function latestPayment(Invoice $invoice): Builder
+    private function latestPayment(Invoice $invoice): ?GatewayPayment
     {
-        return GatewayPayment::query()
+        return $this->gatewayPaymentRepository->newQuery()
             ->where('invoice_id', $invoice->id)
             ->with('gatewayAccount')
             ->orderByDesc('created_at')
-            ->orderByDesc('id');
-    }
-
-    private function isEligible(GatewayAccount $account, ?PaymentGatewayDefinition $definition): bool
-    {
-        return $account->isInvoicingEligible()
-            && $definition?->supportsInvoicing() === true;
+            ->orderByDesc('id')
+            ->first();
     }
 }

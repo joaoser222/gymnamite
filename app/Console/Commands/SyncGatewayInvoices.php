@@ -7,7 +7,7 @@ use App\Enums\OperationType;
 use App\Enums\PaymentMethod;
 use App\Models\GatewayPayment;
 use App\Models\Invoice;
-use App\Services\GatewayBillingService;
+use App\Services\Gateway\GatewayBillingOrchestrator;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Collection;
 #[Description('Synchronize eligible receivable invoices with the configured payment gateway')]
 class SyncGatewayInvoices extends Command
 {
-    public function handle(GatewayBillingService $gatewayBillingService): int
+    public function handle(GatewayBillingOrchestrator $gatewayBillingOrchestrator): int
     {
         $invoices = $this->invoices();
 
@@ -32,7 +32,7 @@ class SyncGatewayInvoices extends Command
 
         foreach ($invoices as $invoice) {
             try {
-                if ($gatewayBillingService->syncInvoice($invoice)) {
+                if ($gatewayBillingOrchestrator->syncInvoice($invoice)) {
                     $synced++;
                 }
             } catch (\Throwable $e) {

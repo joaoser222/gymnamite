@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\GatewayFiscalSyncService;
+use App\Services\Gateway\FiscalSyncOrchestrator;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
 #[Description('Reconcile issued fiscal invoices (NFS-e) with the payment gateway via polling fallback')]
 class SyncFiscalInvoices extends Command
 {
-    public function handle(GatewayFiscalSyncService $service): int
+    public function handle(FiscalSyncOrchestrator $service): int
     {
         $accountIds = array_map('intval', (array) $this->option('account'));
         $statuses = array_map('strval', (array) $this->option('status'));

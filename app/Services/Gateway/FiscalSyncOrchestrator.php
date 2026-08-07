@@ -1,15 +1,16 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Gateway;
 
 use App\Enums\Gateway\InvoiceStatus;
 use App\Models\GatewayAccount;
 use App\Models\GatewayInvoice;
-use App\PaymentGateways\Contracts\PaymentGatewayInvoicingAdapter;
 use App\PaymentGateways\PaymentGatewayManager;
+use App\Repositories\Contracts\GatewayAccountRepositoryInterface;
+use App\Repositories\Contracts\GatewayInvoiceRepositoryInterface;
 use Illuminate\Support\Collection;
 
-class GatewayFiscalSyncService
+class FiscalSyncOrchestrator
 {
     /**
      * Statuses in which the invoice still exists at the provider and its local
@@ -22,13 +23,18 @@ class GatewayFiscalSyncService
         InvoiceStatus::UNKNOWN,
     ];
 
-    public function __construct(private readonly PaymentGatewayManager $gatewayManager) {}
+    public function __construct(
+        private readonly PaymentGatewayManager $gatewayManager,
+        private readonly GatewayAdapterResolver $adapterResolver,
+        private readonly GatewayAccountRepositoryInterface $accountRepository,
+        private readonly GatewayInvoiceRepositoryInterface $invoiceRepository,
+    ) {}
 
     /**
-     * Reconcilia as notas fiscais já emitidas no provedor com o estado local.
+     * Reconcile fiscal invoices already issued at provider with local state.
      *
-     * @param  array<int, int>  $accountIds  Filtra por contas gateway (vazio = todas as elegíveis).
-     * @param  array<int, string>  $statuses  Filtra por status de nota (vazio = todos).
+     * @param  array<int, int>  $accountIds  Filter by gateway accounts (empty = all eligible).
+     * @param  array<int, string>  $statuses  Filter by invoice status (empty = all).
      * @return array<int, array<string, int>>
      */
     public function syncAll(array $accountIds = [], array $statuses = [], bool $force = false): array
@@ -43,19 +49,6 @@ class GatewayFiscalSyncService
     }
 
     /**
-     * @param  array<int, int>  $accountIds
-     * @return Collection<int, GatewayAccount>
-     */
-    private function accounts(array $accountIds): Collection
-    {
-        return GatewayAccount::query()
-            ->invoicingEligible()
-            ->when($accountIds !== [], fn ($query) => $query->whereKey($accountIds))
-            ->orderBy('id')
-            ->get();
-    }
-
-    /**
      * @param  array<int, string>  $statuses
      * @return array<string, int>
      */
@@ -64,7 +57,7 @@ class GatewayFiscalSyncService
         $result = ['found' => 0, 'updated' => 0, 'unchanged' => 0, 'failed' => 0];
 
         try {
-            $adapter = $this->invoicingAdapter($account);
+            $adapter = $this->adapterResolver->invoicingAdapter($account);
         } catch (\Throwable $exception) {
             report($exception);
 
@@ -96,12 +89,25 @@ class GatewayFiscalSyncService
     }
 
     /**
-     * @param  array<int, string>  $statuses
-     * @return \Illuminate\Database\Eloquent\Collection<int, GatewayInvoice>
+     * @param  array<int, int>  $accountIds
+     * @return Collection<int, GatewayAccount>
      */
-    private function invoices(GatewayAccount $account, array $statuses): \Illuminate\Database\Eloquent\Collection
+    private function accounts(array $accountIds): Collection
     {
-        return GatewayInvoice::query()
+        return $this->accountRepository->newQuery()
+            ->invoicingEligible()
+            ->when($accountIds !== [], fn ($query) => $query->whereKey($accountIds))
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * @param  array<int, string>  $statuses
+     * @return Collection<int, GatewayInvoice>
+     */
+    private function invoices(GatewayAccount $account, array $statuses): Collection
+    {
+        return $this->invoiceRepository->newQuery()
             ->where('gateway_account_id', $account->id)
             ->whereNotNull('gateway_reference_key')
             ->when(
@@ -112,19 +118,14 @@ class GatewayFiscalSyncService
             ->get();
     }
 
-    private function invoicingAdapter(GatewayAccount $account): PaymentGatewayInvoicingAdapter
-    {
-        return $this->gatewayManager->invoicingAdapter($account);
-    }
-
     private function markNotFound(GatewayInvoice $invoice): void
     {
         if (in_array($invoice->status, self::TERMINAL_NOT_FOUND_STATUSES, true)) {
             return;
         }
 
-        $invoice->update([
-            'status' => InvoiceStatus::ERROR,
+        $this->invoiceRepository->update($invoice, [
+            'status' => InvoiceStatus::ERROR->value,
             'status_description' => 'Nota não encontrada no provedor',
             'error_message' => 'not found on provider',
         ]);

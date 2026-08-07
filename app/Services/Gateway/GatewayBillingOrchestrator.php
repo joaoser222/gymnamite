@@ -1,26 +1,33 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Gateway;
 
 use App\Contracts\BillingInvoiceSource;
 use App\Enums\InvoiceStatus;
 use App\Enums\OperationType;
-use App\Models\GatewayPayment;
 use App\Models\Invoice;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
+use App\Repositories\Contracts\GatewayPaymentRepositoryInterface;
+use App\Services\Billing\InvoiceGenerator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
-class GatewayBillingService
+class GatewayBillingOrchestrator
 {
     public function __construct(
-        private readonly BillingInvoiceService $billingInvoiceService,
+        private readonly InvoiceGenerator $invoiceGenerator,
         private readonly PaymentGatewayAdapter $gateway,
+        private readonly GatewayPaymentRepositoryInterface $gatewayPaymentRepository,
     ) {}
 
-    public function generate(BillingInvoiceSource&Model $source): Collection
+    /**
+     * Generate invoices and attempt to sync with gateway.
+     *
+     * @return Collection<int, Invoice>
+     */
+    public function generateAndSync(BillingInvoiceSource&Model $source): Collection
     {
-        $invoices = $this->billingInvoiceService->generate($source);
+        $invoices = $this->invoiceGenerator->generate($source);
 
         try {
             $this->syncInvoices($invoices);
@@ -31,17 +38,34 @@ class GatewayBillingService
         return $invoices;
     }
 
-    public function syncInvoices(Collection $invoices): int
+    /**
+     * Sync pending invoices with gateway.
+     */
+    public function syncPendingInvoices(): int
     {
         $synced = 0;
 
-        foreach ($invoices as $invoice) {
+        foreach ($this->invoicesEligibleForSync() as $invoice) {
             if ($this->syncInvoice($invoice)) {
                 $synced++;
             }
         }
 
         return $synced;
+    }
+
+    /**
+     * @return Collection<int, Invoice>
+     */
+    private function invoicesEligibleForSync(): Collection
+    {
+        return Invoice::query()
+            ->where('operation_type', OperationType::RECEIVABLE)
+            ->where('uses_gateway_payment_method', true)
+            ->where('should_generate_gateway_transaction', true)
+            ->where('status', InvoiceStatus::PENDING)
+            ->whereDoesntHave('gatewayPayment')
+            ->get();
     }
 
     public function syncInvoice(Invoice $invoice): bool
@@ -64,7 +88,7 @@ class GatewayBillingService
             return false;
         }
 
-        if (GatewayPayment::query()->where('invoice_id', $invoice->id)->exists()) {
+        if ($this->gatewayPaymentRepository->existsWhere(['invoice_id' => $invoice->id])) {
             return false;
         }
 
@@ -83,11 +107,6 @@ class GatewayBillingService
         ]);
 
         return true;
-    }
-
-    public function resolveDiscountInstallments(BillingInvoiceSource $source, array $grossValueInstallments): array
-    {
-        return $this->billingInvoiceService->resolveDiscountInstallments($source, $grossValueInstallments);
     }
 
     private function buildDescription(?Model $source, Invoice $invoice): string
