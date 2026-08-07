@@ -50,6 +50,25 @@ class GatewayPostbackReceiveTest extends TestCase
         $this->assertSame(['id' => 'pay_123'], $postback->payload['payment']);
     }
 
+    public function test_gateway_postback_receive_rejects_unsupported_gateway_provider(): void
+    {
+        $gatewayAccount = $this->gatewayAccount();
+        $gatewayAccount->update(['name' => 'Unsupported']);
+
+        $response = $this->postJson(route('gateway-postbacks.receive', $gatewayAccount), [
+            'event' => 'PAYMENT_CREATED',
+            'payment' => ['id' => 'pay_123'],
+        ], [
+            'asaas-access-token' => 'valid-token',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertSee('Gateway provider is not supported.');
+
+        $this->assertDatabaseCount('gateway_postbacks', 0);
+    }
+
     private function gatewayAccount(): GatewayAccount
     {
         return GatewayAccount::query()->create([

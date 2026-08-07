@@ -115,13 +115,18 @@ class UserModuleTest extends TestCase
 
         $role->permissions()->attach($permission);
 
+        $permissionOutsideRole = Permission::query()->create([
+            'name' => 'settings.update',
+            'description' => 'settings.update',
+        ]);
+
         $response = $this->actingAs($admin)->post(route('users.store'), [
             'name' => 'Novo Usuario',
             'email' => 'novo.usuario@example.com',
             'role_id' => $role->id,
             'password' => 'secure-password',
             'password_confirmation' => 'secure-password',
-            'permission_ids' => [$permission->id],
+            'permission_ids' => [$permission->id, $permissionOutsideRole->id],
         ]);
 
         $response->assertRedirect(route('users.index'));

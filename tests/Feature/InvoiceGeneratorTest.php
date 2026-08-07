@@ -11,12 +11,12 @@ use App\Models\Coupon;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\Supplier;
-use App\Services\BillingInvoiceService;
+use App\Services\Billing\InvoiceGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use Tests\TestCase;
 
-class BillingInvoiceServiceTest extends TestCase
+class InvoiceGeneratorTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -36,7 +36,7 @@ class BillingInvoiceServiceTest extends TestCase
             'client_id' => $client->id,
         ]);
 
-        $service = app(BillingInvoiceService::class);
+        $service = app(InvoiceGenerator::class);
         $invoices = $service->generate($sale);
 
         $this->assertCount(3, $invoices);
@@ -70,7 +70,7 @@ class BillingInvoiceServiceTest extends TestCase
             'supplier_id' => $supplier->id,
         ]);
 
-        $service = app(BillingInvoiceService::class);
+        $service = app(InvoiceGenerator::class);
         $invoices = $service->generate($purchase);
 
         $this->assertCount(1, $invoices);
@@ -98,7 +98,7 @@ class BillingInvoiceServiceTest extends TestCase
             'client_id' => $client->id,
         ]);
 
-        $service = app(BillingInvoiceService::class);
+        $service = app(InvoiceGenerator::class);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Billing first due date is required to generate invoices.');
@@ -161,7 +161,7 @@ class BillingInvoiceServiceTest extends TestCase
             'client_id' => $client->id,
         ]);
 
-        $service = app(BillingInvoiceService::class);
+        $service = app(InvoiceGenerator::class);
         $invoices = $service->generate($contract);
 
         $this->assertCount(4, $invoices);

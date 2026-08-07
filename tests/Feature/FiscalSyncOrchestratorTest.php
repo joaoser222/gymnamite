@@ -13,18 +13,18 @@ use App\Models\GatewayInvoice;
 use App\Models\GatewayPayment;
 use App\Models\GatewayPostback;
 use App\Models\Invoice;
-use App\Services\GatewayFiscalSyncService;
+use App\Services\Gateway\FiscalSyncOrchestrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-class GatewayFiscalSyncServiceTest extends TestCase
+class FiscalSyncOrchestratorTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function service(): GatewayFiscalSyncService
+    private function service(): FiscalSyncOrchestrator
     {
-        return app(GatewayFiscalSyncService::class);
+        return app(FiscalSyncOrchestrator::class);
     }
 
     private function makeAccount(): GatewayAccount

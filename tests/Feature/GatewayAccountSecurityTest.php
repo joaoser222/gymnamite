@@ -84,4 +84,30 @@ class GatewayAccountSecurityTest extends TestCase
             'invoicing' => [],
         ], $gatewayAccount->refresh()->settings);
     }
+
+    public function test_gateway_account_json_update_does_not_return_sensitive_settings(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'gateway_accounts.update');
+
+        $gatewayAccount = GatewayAccount::factory()->create([
+            'name' => 'Asaas',
+            'settings' => [
+                'api_key' => 'secret-api-key',
+                'base_url' => 'https://sandbox.asaas.com/api/v3',
+            ],
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('gateway-accounts.update', $gatewayAccount), [
+            'name' => 'Asaas',
+            'settings' => [
+                'base_url' => 'https://api.asaas.com/api/v3',
+            ],
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('settings.base_url', 'https://api.asaas.com/api/v3')
+            ->assertJsonMissingPath('settings.api_key');
+    }
 }

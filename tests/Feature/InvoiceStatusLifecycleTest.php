@@ -13,7 +13,7 @@ use App\Models\GatewayCustomer;
 use App\Models\GatewayPayment;
 use App\Models\Invoice;
 use App\Models\Sale;
-use App\Services\BillingInvoiceService;
+use App\Services\Billing\InvoiceGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Date;
 use Tests\TestCase;
@@ -37,7 +37,7 @@ class InvoiceStatusLifecycleTest extends TestCase
             'client_id' => $client->id,
         ]);
 
-        $invoice = app(BillingInvoiceService::class)->generate($sale)->first();
+        $invoice = app(InvoiceGenerator::class)->generate($sale)->first();
 
         $this->assertSame(InvoiceStatus::PENDING, $invoice->status);
 
