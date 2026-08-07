@@ -4,35 +4,36 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\Contracts\CancelContractAction;
+use App\Actions\Contracts\CreateContractAction;
+use App\Actions\Contracts\FindClientAction;
+use App\Actions\Contracts\UpdateContractAction;
+use App\DTOs\Contracts\CancelContractDTO;
+use App\DTOs\Contracts\CreateContractDTO;
+use App\DTOs\Contracts\UpdateContractDTO;
 use App\Enums\BillableStatus;
 use App\Enums\GenderType;
-use App\Enums\InvoiceStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\ContractWizardRequest;
-use App\Models\Client;
 use App\Models\Contract;
 use App\Models\Coupon;
 use App\Models\Plan;
 use App\Models\PlanTier;
 use App\Models\Uf;
-use App\Services\BillingInvoiceService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ContractController extends CrudModuleController
 {
     public function __construct(
-        private readonly BillingInvoiceService $billingInvoiceService,
+        private readonly CreateContractAction $createContract,
+        private readonly UpdateContractAction $updateContract,
+        private readonly FindClientAction $findClient,
+        private readonly CancelContractAction $cancelContract,
     ) {}
 
     /**
@@ -104,147 +105,22 @@ class ContractController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $validated = $this->validatedRequestData($request, ContractWizardRequest::class);
-        $generateInvoices = ! array_key_exists('generate_invoices', $validated)
-            || (bool) $validated['generate_invoices'];
+        $result = $this->createContract->execute(
+            CreateContractDTO::fromArray(
+                $this->validatedRequestData($request, ContractWizardRequest::class)
+            )
+        );
 
-        /** @var Plan $plan */
-        $plan = Plan::query()
-            ->with(['tiers', 'planCategory'])
-            ->where('visibility', 'visible')
-            ->whereKey($validated['plan_id'])
-            ->firstOrFail();
-
-        /** @var PlanTier|null $tier */
-        $tier = $plan->tiers->firstWhere('quantity', (int) $validated['installments']);
-
-        if ($tier === null) {
-            throw ValidationException::withMessages([
-                'installments' => 'A duracao selecionada nao esta disponivel para este plano.',
-            ]);
+        if (! $result->success) {
+            return back()->withErrors($result->errors ?? ['contract' => $result->message])->withInput();
         }
-
-        $coupon = null;
-
-        if (! empty($validated['coupon_code'])) {
-            /** @var Coupon|null $coupon */
-            $coupon = Coupon::query()
-                ->where('code', mb_strtoupper((string) $validated['coupon_code']))
-                ->where('visibility', 'visible')
-                ->first();
-
-            if ($coupon === null) {
-                throw ValidationException::withMessages([
-                    'coupon_code' => 'O cupom informado nao esta disponivel.',
-                ]);
-            }
-
-            if ($coupon->expiration_date !== null && $coupon->expiration_date->isBefore(Date::today())) {
-                throw ValidationException::withMessages([
-                    'coupon_code' => 'O cupom informado esta expirado.',
-                ]);
-            }
-
-        }
-
-        $grossValue = round((float) $tier->price * (int) $validated['installments'], 4);
-
-        DB::transaction(function () use ($validated, $plan, $coupon, $grossValue, $generateInvoices): void {
-            $clientData = Arr::only($validated, [
-                'name',
-                'email',
-                'phone',
-                'document',
-                'gender',
-                'birth_date',
-                'legal_representative',
-                'legal_representative_name',
-                'legal_representative_document',
-                'legal_representative_birth_date',
-                'address_postal_code',
-                'address',
-                'address_number',
-                'address_complement',
-                'address_district',
-                'address_state',
-                'address_city',
-            ]);
-
-            /** @var Client $client */
-            $client = isset($validated['client_id'])
-                ? Client::query()->findOrFail($validated['client_id'])
-                : new Client;
-
-            if ($client->exists) {
-                $client->update($clientData);
-            } else {
-                $client = Client::query()->create($clientData);
-            }
-
-            $contract = Contract::query()->create([
-                'plan_name' => $plan->name,
-                'modality_quantity' => (string) $plan->modality_quantity,
-                'gross_value' => $grossValue,
-                'discount_value' => 0,
-                'total' => $grossValue,
-                'payment_method' => PaymentMethod::CASH,
-                'first_due_date' => Date::today()->format('Y-m-d'),
-                'installments' => (int) $validated['installments'],
-                'accepted_terms' => $generateInvoices ? 'accepted' : 'pending',
-                'annotations' => $validated['annotations'] ?? null,
-                'coupon_id' => $coupon?->id,
-                'plan_id' => $plan->id,
-                'client_id' => $client->id,
-                'visibility' => 'visible',
-            ]);
-
-            if ($generateInvoices) {
-                $invoices = $this->billingInvoiceService->generate($contract);
-                $discountTotal = round($invoices->sum('discount_value'), 4);
-
-                $this->queueGatewayInvoiceSync($invoices);
-
-                $contract->update([
-                    'discount_value' => $discountTotal,
-                    'total' => round($grossValue - $discountTotal, 4),
-                ]);
-
-                return;
-            }
-
-            $grossInstallments = $this->splitAmount($grossValue, (int) $validated['installments']);
-            $discountTotal = round(array_sum($this->billingInvoiceService->resolveDiscountInstallments(
-                $contract->loadMissing('coupon'),
-                $grossInstallments,
-            )), 4);
-
-            $contract->update([
-                'discount_value' => $discountTotal,
-                'total' => round($grossValue - $discountTotal, 4),
-            ]);
-        });
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => 'Contrato criado com sucesso.',
+            'message' => $result->message,
         ]);
 
         return redirect()->route('contracts.index');
-    }
-
-    private function queueGatewayInvoiceSync(Collection $invoices): void
-    {
-        $invoicesToSync = $invoices->filter(
-            fn ($invoice): bool => $invoice->shouldGenerateGatewayTransaction(),
-        );
-
-        if ($invoicesToSync->isEmpty()) {
-            return;
-        }
-
-        Artisan::queue('gateway:sync-invoices', [
-            '--invoice' => $invoicesToSync->modelKeys(),
-        ])->afterCommit();
     }
 
     public function findClient(Request $request): JsonResponse
@@ -257,33 +133,10 @@ class ContractController extends CrudModuleController
             return response()->json(['client' => null]);
         }
 
-        /** @var Client|null $client */
-        $client = Client::query()
-            ->where('document', $document)
-            ->first();
+        $result = $this->findClient->execute($document);
 
         return response()->json([
-            'client' => $client?->only([
-                'id',
-                'name',
-                'email',
-                'phone',
-                'document',
-                'gender',
-                'birth_date',
-                'legal_representative',
-                'legal_representative_name',
-                'legal_representative_document',
-                'legal_representative_birth_date',
-                'address_postal_code',
-                'address',
-                'address_number',
-                'address_complement',
-                'address_district',
-                'address_state',
-                'address_city',
-                'status',
-            ]),
+            'client' => $result->data,
         ]);
     }
 
@@ -319,33 +172,77 @@ class ContractController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::CANCEL);
 
-        /** @var Contract $contract */
         $contract = $this->modelFromRoute($request);
 
-        DB::transaction(function () use ($contract): void {
-            $contract->update([
-                'status' => BillableStatus::CANCELED,
-            ]);
+        $result = $this->cancelContract->execute(
+            CancelContractDTO::fromArray([
+                ...$request->validate(['reason' => ['nullable', 'string', 'max:500']]),
+                'contract_id' => $contract->getKey(),
+            ])
+        );
 
-            $contract->loadMissing('invoices');
-
-            $contract->invoices()
-                ->where('status', '!=', InvoiceStatus::PAID->value)
-                ->update(['status' => InvoiceStatus::CANCELED->value]);
-        });
+        if (! $result->success) {
+            return $this->actionFailureResponse($request, $result->errors, $result->message);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Contrato cancelado com sucesso.',
+                'message' => $result->message,
             ]);
         }
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => 'Contrato cancelado com sucesso.',
+            'message' => $result->message,
         ]);
 
         return redirect()->route('contracts.index');
+    }
+
+    public function update(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->authorizeAccess(AccessAction::UPDATE);
+
+        $contract = $this->modelFromRoute($request);
+
+        $result = $this->updateContract->execute(
+            UpdateContractDTO::fromArray([
+                ...$request->validate(['annotations' => ['nullable', 'string', 'max:500']]),
+                'id' => $contract->getKey(),
+            ])
+        );
+
+        if (! $result->success) {
+            return $this->actionFailureResponse($request, $result->errors, $result->message);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json($contract->refresh());
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $result->message,
+        ]);
+
+        return redirect()->route('contracts.index');
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $errors
+     */
+    private function actionFailureResponse(Request $request, ?array $errors, ?string $message): RedirectResponse|JsonResponse
+    {
+        $message ??= 'Não foi possível concluir a operação.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'errors' => $errors,
+            ], 422);
+        }
+
+        return back()->withErrors($errors ?? ['contract' => $message])->withInput();
     }
 
     protected function moduleIndexProps(Request $request): array
@@ -437,23 +334,5 @@ class ContractController extends CrudModuleController
                 ];
             })
             ->all();
-    }
-
-    /**
-     * @return array<int, float>
-     */
-    private function splitAmount(float $amount, int $installments): array
-    {
-        $scale = 10000;
-        $total = (int) round($amount * $scale);
-        $baseInstallmentValue = intdiv($total, $installments);
-        $remainder = $total % $installments;
-        $parts = [];
-
-        for ($index = 0; $index < $installments; $index++) {
-            $parts[] = ($baseInstallmentValue + ($index < $remainder ? 1 : 0)) / $scale;
-        }
-
-        return $parts;
     }
 }

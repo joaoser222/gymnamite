@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\AccessControl\AccessModule;
+use App\Actions\GatewayPostbacks\ProcessGatewayPostbackAction;
+use App\DTOs\GatewayPostbacks\ProcessGatewayPostbackDTO;
 use App\Enums\Gateway\PostbackStatus;
 use App\Models\GatewayAccount;
 use App\Models\GatewayPostback;
-use App\PaymentGateways\Adapters\AsaasPaymentGatewayAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,6 +15,10 @@ use Symfony\Component\HttpFoundation\Response;
 class GatewayPostbackController extends ReadOnlyModuleController
 {
     private const AUTH_HEADER = 'asaas-access-token';
+
+    public function __construct(
+        private readonly ProcessGatewayPostbackAction $processGatewayPostback,
+    ) {}
 
     /**
      * @var array<int, string>
@@ -66,11 +71,12 @@ class GatewayPostbackController extends ReadOnlyModuleController
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $postback = match ($gatewayAccount->name) {
-            'Asaas' => app(AsaasPaymentGatewayAdapter::class, ['gatewayAccount' => $gatewayAccount])
-                ->processPostback($request->all()),
-            default => abort(Response::HTTP_UNPROCESSABLE_ENTITY, 'Gateway provider is not supported.'),
-        };
+        $postback = $this->processGatewayPostback->execute(
+            ProcessGatewayPostbackDTO::fromArray([
+                'gateway_account_id' => $gatewayAccount->getKey(),
+                'payload' => $request->all(),
+            ]),
+        );
 
         return response()->json([
             'id' => $postback->id,

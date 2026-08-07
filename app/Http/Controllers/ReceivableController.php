@@ -4,30 +4,32 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\Receivables\MarkReceivablePaidAction;
+use App\Actions\Receivables\RequestGatewayInvoiceAction;
+use App\DTOs\Receivables\MarkReceivablePaidDTO;
+use App\DTOs\Receivables\RequestGatewayInvoiceDTO;
 use App\Enums\InvoiceStatus;
-use App\Enums\MovementType;
 use App\Enums\OperationType;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\ReceivableSettlementRequest;
-use App\Models\Movement;
 use App\Models\Receivable;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
-use App\Services\GatewayInvoicingService;
+use App\Services\Gateway\FiscalInvoiceEmitter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use RuntimeException;
 
 class ReceivableController extends CrudModuleController
 {
     public function __construct(
-        private readonly GatewayInvoicingService $invoicingService,
+        private readonly FiscalInvoiceEmitter $fiscalInvoiceEmitter,
+        private readonly MarkReceivablePaidAction $markReceivablePaid,
+        private readonly RequestGatewayInvoiceAction $requestGatewayInvoice,
     ) {}
 
     /**
@@ -130,25 +132,14 @@ class ReceivableController extends CrudModuleController
             'Este recebimento já foi baixado.',
         );
 
-        $data = $request->validated();
+        $result = $this->markReceivablePaid->execute(MarkReceivablePaidDTO::from([
+            ...$request->validated(),
+            'id' => $receivable->getKey(),
+        ]));
 
-        DB::transaction(function () use ($receivable, $data): void {
-            $receivable->update([
-                'payment_date' => $data['payment_date'],
-                'paid_value' => $receivable->total,
-                'status' => InvoiceStatus::PAID,
-            ]);
-
-            Movement::query()->create([
-                'operation_type' => OperationType::RECEIVABLE,
-                'movement_type' => $receivable->payment_method === PaymentMethod::CASH
-                    ? MovementType::INTERNAL
-                    : MovementType::EXTERNAL,
-                'value' => $receivable->total,
-                'invoice_id' => $receivable->id,
-                'visibility' => 'visible',
-            ]);
-        });
+        if (! $result->success) {
+            return $this->actionFailureResponse($request, $result->errors, $result->message);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -169,7 +160,7 @@ class ReceivableController extends CrudModuleController
         $this->authorizeAccess(AccessAction::VIEW);
 
         /** @var Receivable $receivable */
-        $receivable = $this->invoicingService->eligibilityQuery($this->newModelQuery())
+        $receivable = $this->fiscalInvoiceEmitter->eligibilityQuery($this->newModelQuery())
             ->whereKey($this->modelFromRoute($request)->getKey())
             ->with('gatewayPayment')
             ->firstOrFail();
@@ -195,17 +186,21 @@ class ReceivableController extends CrudModuleController
         abort_unless($receivable->operation_type === OperationType::RECEIVABLE, 404);
 
         try {
-            $gatewayInvoice = $this->invoicingService->request($receivable);
-        } catch (RuntimeException $exception) {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => $exception->getMessage()], 422);
-            }
+            $result = $this->requestGatewayInvoice->execute(
+                RequestGatewayInvoiceDTO::from(['id' => $receivable->getKey()]),
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
 
-            return back()->withErrors(['gateway_invoice' => $exception->getMessage()]);
+            return $this->actionFailureResponse($request, null, $exception->getMessage());
+        }
+
+        if (! $result->success) {
+            return $this->actionFailureResponse($request, $result->errors, $result->message);
         }
 
         if ($request->expectsJson()) {
-            return response()->json($gatewayInvoice, 201);
+            return response()->json($result->data, 201);
         }
 
         Inertia::flash('toast', [
@@ -214,6 +209,23 @@ class ReceivableController extends CrudModuleController
         ]);
 
         return back();
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $errors
+     */
+    private function actionFailureResponse(Request $request, ?array $errors, ?string $message): RedirectResponse|JsonResponse
+    {
+        $message ??= 'Não foi possível concluir a operação.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'errors' => $errors,
+            ], 422);
+        }
+
+        return back()->withErrors($errors ?? ['action' => $message])->withInput();
     }
 
     private function pixQrCode(Receivable $receivable): ?array

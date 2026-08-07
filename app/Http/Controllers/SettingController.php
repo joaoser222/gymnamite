@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\Settings\UpdateSettingsAction;
+use App\DTOs\Settings\UpdateSettingsDTO;
 use App\Http\Requests\UpdateSettingsRequest;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
@@ -12,6 +14,10 @@ use Inertia\Response;
 
 class SettingController extends AbstractModuleController
 {
+    public function __construct(
+        private readonly UpdateSettingsAction $updateSettings,
+    ) {}
+
     protected function accessModule(): AccessModule
     {
         return AccessModule::SETTING;
@@ -49,22 +55,7 @@ class SettingController extends AbstractModuleController
     {
         $this->authorizeAccess(AccessAction::UPDATE);
 
-        $validated = $request->validated();
-        $values = $validated['settings'];
-
-        Setting::query()
-            ->select(['id', 'name'])
-            ->orderBy('id')
-            ->get()
-            ->each(function (Setting $setting) use ($values): void {
-                if (! array_key_exists($setting->name, $values)) {
-                    return;
-                }
-
-                $setting->update([
-                    'content' => $values[$setting->name] ?? '',
-                ]);
-            });
+        $this->updateSettings->execute(UpdateSettingsDTO::fromArray($request->validated()));
 
         Inertia::flash('toast', [
             'type' => 'success',

@@ -4,25 +4,26 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\DirectLessons\CreateDirectLessonAction;
+use App\Actions\DirectLessons\UpdateDirectLessonAction;
+use App\Actions\Exceptions\UpdateBillableBlockedException;
+use App\DTOs\DirectLessons\CreateDirectLessonDTO;
+use App\DTOs\DirectLessons\UpdateDirectLessonDTO;
 use App\Enums\BillableStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\DirectLessonRequest;
 use App\Models\DirectLesson;
-use App\Services\BillingInvoiceService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DirectLessonController extends CrudModuleController
 {
     public function __construct(
-        private readonly BillingInvoiceService $billingInvoiceService,
+        private readonly CreateDirectLessonAction $createDirectLessonAction,
+        private readonly UpdateDirectLessonAction $updateDirectLessonAction,
     ) {}
 
     /**
@@ -99,21 +100,10 @@ class DirectLessonController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $directLesson = DB::transaction(function () use ($request): DirectLesson {
-            $data = $this->validatedRequestData($request, $this->storeRequestClass());
-            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
-
-            /** @var DirectLesson $directLesson */
-            $directLesson = $this->newModelQuery()->create($data);
-
-            if ($generateInvoices) {
-                $invoices = $this->billingInvoiceService->generate($directLesson);
-
-                $this->queueGatewayInvoiceSync($invoices);
-            }
-
-            return $directLesson;
-        });
+        /** @var DirectLesson $directLesson */
+        $directLesson = $this->createDirectLessonAction->execute(CreateDirectLessonDTO::fromValidatedData(
+            $this->validatedRequestData($request, $this->storeRequestClass()),
+        ));
 
         if ($request->expectsJson()) {
             return response()->json($directLesson, 201);
@@ -134,28 +124,14 @@ class DirectLessonController extends CrudModuleController
         /** @var DirectLesson $directLesson */
         $directLesson = $this->modelFromRoute($request);
 
-        if ($directLesson->invoices()->whereHas('gatewayPayment')->exists()) {
-            return $this->blockedDirectLessonUpdateResponse(
-                $request,
-                'Aulas avulsas com faturas vinculadas a transações no gateway não podem ser atualizadas.',
-            );
+        try {
+            $directLesson = $this->updateDirectLessonAction->execute(UpdateDirectLessonDTO::fromValidatedData(
+                $directLesson,
+                $this->validatedRequestData($request, $this->updateRequestClass()),
+            ));
+        } catch (UpdateBillableBlockedException $exception) {
+            return $this->blockedDirectLessonUpdateResponse($request, $exception->getMessage());
         }
-
-        $directLesson = DB::transaction(function () use ($request, $directLesson): DirectLesson {
-            $data = $this->validatedRequestData($request, $this->updateRequestClass());
-            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
-
-            $directLesson->invoices()->delete();
-            $directLesson->update($data);
-
-            if ($generateInvoices) {
-                $invoices = $this->billingInvoiceService->generate($directLesson->refresh());
-
-                $this->queueGatewayInvoiceSync($invoices);
-            }
-
-            return $directLesson->refresh();
-        });
 
         if ($request->expectsJson()) {
             return response()->json($directLesson);
@@ -167,21 +143,6 @@ class DirectLessonController extends CrudModuleController
         ]);
 
         return redirect()->route($this->routePrefix().'.index');
-    }
-
-    private function queueGatewayInvoiceSync(Collection $invoices): void
-    {
-        $invoicesToSync = $invoices->filter(
-            fn ($invoice): bool => $invoice->shouldGenerateGatewayTransaction(),
-        );
-
-        if ($invoicesToSync->isEmpty()) {
-            return;
-        }
-
-        Artisan::queue('gateway:sync-invoices', [
-            '--invoice' => $invoicesToSync->modelKeys(),
-        ])->afterCommit();
     }
 
     private function blockedDirectLessonUpdateResponse(Request $request, string $message): RedirectResponse|JsonResponse

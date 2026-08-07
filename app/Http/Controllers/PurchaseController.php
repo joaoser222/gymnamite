@@ -4,28 +4,27 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\Exceptions\UpdateBillableBlockedException;
+use App\Actions\Purchases\CreatePurchaseAction;
+use App\Actions\Purchases\UpdatePurchaseAction;
+use App\DTOs\Purchases\CreatePurchaseDTO;
+use App\DTOs\Purchases\UpdatePurchaseDTO;
 use App\Enums\BillableStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\PurchaseRequest;
 use App\Models\Purchase;
-use App\Services\BillableItemService;
-use App\Services\BillingInvoiceService;
-use App\Services\StockRecalculationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PurchaseController extends CrudModuleController
 {
     public function __construct(
-        private readonly BillableItemService $billableItemService,
-        private readonly BillingInvoiceService $billingInvoiceService,
-        private readonly StockRecalculationService $stockRecalculationService,
+        private readonly CreatePurchaseAction $createPurchaseAction,
+        private readonly UpdatePurchaseAction $updatePurchaseAction,
     ) {}
 
     /**
@@ -120,36 +119,10 @@ class PurchaseController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $purchase = DB::transaction(function () use ($request): Purchase {
-            $data = $this->validatedRequestData($request, $this->storeRequestClass());
-            $items = Arr::pull($data, 'items', []);
-            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
-
-            if ($generateInvoices) {
-                $data['status'] = BillableStatus::COMPLETED->value;
-            }
-
-            /** @var Purchase $purchase */
-            $purchase = $this->newModelQuery()->create($data);
-
-            $this->billableItemService->syncPurchaseItems(
-                $purchase,
-                $items,
-                (float) ($data['discount_value'] ?? 0),
-            );
-
-            $purchase = $purchase->refresh();
-
-            if ($generateInvoices) {
-                $this->billingInvoiceService->generate($purchase);
-            }
-
-            return $purchase->load('items');
-        });
-
-        $this->stockRecalculationService->recalculateProducts(
-            $purchase->items->pluck('product_id')->filter()->all(),
-        );
+        /** @var Purchase $purchase */
+        $purchase = $this->createPurchaseAction->execute(CreatePurchaseDTO::fromValidatedData(
+            $this->validatedRequestData($request, $this->storeRequestClass()),
+        ));
 
         if ($request->expectsJson()) {
             return response()->json($purchase, 201);
@@ -167,53 +140,17 @@ class PurchaseController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::UPDATE);
 
-        $purchase = DB::transaction(function () use ($request): Purchase {
-            /** @var Purchase $purchase */
-            $purchase = $this->modelFromRoute($request);
+        /** @var Purchase $purchase */
+        $purchase = $this->modelFromRoute($request);
 
-            abort_if(
-                $purchase->status !== BillableStatus::OPEN->value,
-                403,
-                'Somente compras pendentes podem ser atualizadas.',
-            );
-
-            $productIdsBeforeUpdate = $purchase->items()->pluck('product_id')->filter()->all();
-            $data = $this->validatedRequestData($request, $this->updateRequestClass());
-            $items = Arr::pull($data, 'items', []);
-            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', false);
-
-            if ($generateInvoices) {
-                $data['status'] = BillableStatus::COMPLETED->value;
-            }
-
-            $purchase->update($data);
-
-            $this->billableItemService->syncPurchaseItems(
+        try {
+            $purchase = $this->updatePurchaseAction->execute(UpdatePurchaseDTO::fromValidatedData(
                 $purchase,
-                $items,
-                (float) ($data['discount_value'] ?? 0),
-            );
-
-            $purchase = $purchase->refresh()->load('items');
-
-            if ($generateInvoices && ! $purchase->invoices()->exists()) {
-                $this->billingInvoiceService->generate($purchase);
-            }
-
-            $purchase->setAttribute(
-                'recalculation_product_ids',
-                array_values(array_unique([
-                    ...$productIdsBeforeUpdate,
-                    ...$purchase->items->pluck('product_id')->filter()->all(),
-                ])),
-            );
-
-            return $purchase;
-        });
-
-        $this->stockRecalculationService->recalculateProducts(
-            $purchase->getAttribute('recalculation_product_ids') ?? [],
-        );
+                $this->validatedRequestData($request, $this->updateRequestClass()),
+            ));
+        } catch (UpdateBillableBlockedException $exception) {
+            abort(403, $exception->getMessage());
+        }
 
         if ($request->expectsJson()) {
             return response()->json($purchase);

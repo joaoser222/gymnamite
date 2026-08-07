@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\Users\SaveUserWithPermissionsAction;
+use App\DTOs\Users\SaveUserWithPermissionsDTO;
 use App\Http\Requests\UserRequest;
 use App\Models\Permission;
 use App\Models\Role;
@@ -13,12 +15,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class UserController extends CrudModuleController
 {
+    public function __construct(
+        private readonly SaveUserWithPermissionsAction $saveUserWithPermissions,
+    ) {}
+
     /**
      * @var array<int, string>
      */
@@ -91,19 +95,11 @@ class UserController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $payload = $this->validatedRequestData($request, $this->storeRequestClass());
-        $permissionIds = Arr::pull($payload, 'permission_ids', []);
-        $permissionIds = $this->resolveUserPermissions(
-            $payload['role_id'] ?? null,
-            $permissionIds,
+        $user = $this->saveUserWithPermissions->execute(
+            SaveUserWithPermissionsDTO::fromArray(
+                $this->validatedRequestData($request, $this->storeRequestClass()),
+            ),
         );
-
-        $user = DB::transaction(function () use ($payload, $permissionIds): User {
-            $user = $this->newModelQuery()->create($payload);
-            $user->permissions()->sync($permissionIds);
-
-            return $user;
-        });
 
         if ($request->expectsJson()) {
             return response()->json($user->load(['role:id,name', 'permissions:id,name,description']), 201);
@@ -123,17 +119,12 @@ class UserController extends CrudModuleController
 
         /** @var User $user */
         $user = $this->modelFromRoute($request);
-        $payload = $this->validatedRequestData($request, $this->updateRequestClass());
-        $permissionIds = Arr::pull($payload, 'permission_ids', []);
-        $permissionIds = $this->resolveUserPermissions(
-            $payload['role_id'] ?? $user->role_id,
-            $permissionIds,
+        $this->saveUserWithPermissions->execute(
+            SaveUserWithPermissionsDTO::fromArray([
+                ...$this->validatedRequestData($request, $this->updateRequestClass()),
+                'id' => $user->getKey(),
+            ]),
         );
-
-        DB::transaction(function () use ($user, $payload, $permissionIds): void {
-            $user->update($payload);
-            $user->permissions()->sync($permissionIds);
-        });
 
         if ($request->expectsJson()) {
             return response()->json($user->fresh()->load(['role:id,name', 'permissions:id,name,description']));
@@ -200,24 +191,5 @@ class UserController extends CrudModuleController
                 $role->id => $role->permissions->pluck('id')->all(),
             ])
             ->all();
-    }
-
-    /**
-     * @param  array<int, int|string>  $selectedPermissionIds
-     * @return array<int, int>
-     */
-    private function resolveUserPermissions(?int $roleId, array $selectedPermissionIds): array
-    {
-        $editablePermissionIds = collect($this->rolePermissionsById()[$roleId] ?? [])
-            ->map(fn (int $permissionId): int => $permissionId)
-            ->values();
-
-        $selectedIds = collect($selectedPermissionIds)
-            ->map(fn (int|string $permissionId): int => (int) $permissionId)
-            ->filter(fn (int $permissionId): bool => $editablePermissionIds->contains($permissionId))
-            ->unique()
-            ->values();
-
-        return $selectedIds->all();
     }
 }

@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\Plans\CreatePlanAction;
+use App\Actions\Plans\UpdatePlanAction;
+use App\DTOs\Plans\CreatePlanDTO;
+use App\DTOs\Plans\UpdatePlanDTO;
 use App\Http\Requests\PlanRequest;
 use App\Models\Modality;
 use App\Models\Plan;
@@ -11,13 +15,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PlanController extends CrudModuleController
 {
+    public function __construct(
+        private readonly CreatePlanAction $createPlan,
+        private readonly UpdatePlanAction $updatePlan,
+    ) {}
+
     /**
      * @var array<int, string>
      */
@@ -99,11 +106,14 @@ class PlanController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $plan = DB::transaction(function () use ($request): Plan {
-            $data = $this->validatedRequestData($request, $this->storeRequestClass());
+        $result = $this->createPlan->execute(
+            CreatePlanDTO::fromArray(
+                $this->validatedRequestData($request, $this->storeRequestClass())
+            )
+        );
 
-            return $this->persistPlan(new Plan, $data);
-        });
+        /** @var Plan $plan */
+        $plan = $result->data;
 
         if ($request->expectsJson()) {
             return response()->json($plan, 201);
@@ -121,13 +131,18 @@ class PlanController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::UPDATE);
 
-        $plan = DB::transaction(function () use ($request): Plan {
-            /** @var Plan $plan */
-            $plan = $this->modelFromRoute($request);
-            $data = $this->validatedRequestData($request, $this->updateRequestClass());
+        /** @var Plan $model */
+        $model = $this->modelFromRoute($request);
 
-            return $this->persistPlan($plan, $data);
-        });
+        $result = $this->updatePlan->execute(
+            UpdatePlanDTO::fromArray([
+                ...$this->validatedRequestData($request, $this->updateRequestClass()),
+                'id' => $model->getKey(),
+            ])
+        );
+
+        /** @var Plan $plan */
+        $plan = $result->data;
 
         if ($request->expectsJson()) {
             return response()->json($plan);
@@ -139,31 +154,5 @@ class PlanController extends CrudModuleController
         ]);
 
         return redirect()->route($this->routePrefix().'.index');
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function persistPlan(Plan $plan, array $data): Plan
-    {
-        $tiers = Arr::pull($data, 'tiers', []);
-        $planModalities = Arr::pull($data, 'plan_modalities', []);
-
-        if (! $plan->exists) {
-            $plan = $this->newModelQuery()->create($data);
-        } else {
-            $plan->update($data);
-        }
-
-        $plan->tiers()->delete();
-        $plan->tiers()->createMany($tiers);
-
-        $plan->modalities()->delete();
-        $plan->modalities()->createMany(array_map(
-            fn (int $modalityId): array => ['modality_id' => $modalityId],
-            $planModalities,
-        ));
-
-        return $plan->refresh()->load(['tiers', 'modalities']);
     }
 }

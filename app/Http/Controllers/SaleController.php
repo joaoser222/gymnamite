@@ -4,30 +4,27 @@ namespace App\Http\Controllers;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
+use App\Actions\Exceptions\UpdateBillableBlockedException;
+use App\Actions\Sales\CreateSaleAction;
+use App\Actions\Sales\UpdateSaleAction;
+use App\DTOs\Sales\CreateSaleDTO;
+use App\DTOs\Sales\UpdateSaleDTO;
 use App\Enums\BillableStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Requests\SaleRequest;
 use App\Models\Sale;
-use App\Services\BillableItemService;
-use App\Services\BillingInvoiceService;
-use App\Services\StockRecalculationService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SaleController extends CrudModuleController
 {
     public function __construct(
-        private readonly BillableItemService $billableItemService,
-        private readonly BillingInvoiceService $billingInvoiceService,
-        private readonly StockRecalculationService $stockRecalculationService,
+        private readonly CreateSaleAction $createSaleAction,
+        private readonly UpdateSaleAction $updateSaleAction,
     ) {}
 
     /**
@@ -122,34 +119,10 @@ class SaleController extends CrudModuleController
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
-        $sale = DB::transaction(function () use ($request): Sale {
-            $data = $this->validatedRequestData($request, $this->storeRequestClass());
-            $items = Arr::pull($data, 'items', []);
-            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
-
-            /** @var Sale $sale */
-            $sale = $this->newModelQuery()->create($data);
-
-            $this->billableItemService->syncSaleItems(
-                $sale,
-                $items,
-                (float) ($data['discount_value'] ?? 0),
-            );
-
-            $sale = $sale->refresh();
-
-            if ($generateInvoices) {
-                $invoices = $this->billingInvoiceService->generate($sale);
-
-                $this->queueGatewayInvoiceSync($invoices);
-            }
-
-            return $sale->load('items');
-        });
-
-        $this->stockRecalculationService->recalculateProducts(
-            $sale->items->pluck('product_id')->filter()->all(),
-        );
+        /** @var Sale $sale */
+        $sale = $this->createSaleAction->execute(CreateSaleDTO::fromValidatedData(
+            $this->validatedRequestData($request, $this->storeRequestClass()),
+        ));
 
         if ($request->expectsJson()) {
             return response()->json($sale, 201);
@@ -170,58 +143,14 @@ class SaleController extends CrudModuleController
         /** @var Sale $sale */
         $sale = $this->modelFromRoute($request);
 
-        if ($sale->status !== BillableStatus::OPEN->value) {
-            return $this->blockedSaleUpdateResponse(
-                $request,
-                'Somente vendas pendentes podem ser atualizadas.',
-            );
-        }
-
-        if ($sale->invoices()->whereHas('gatewayPayment')->exists()) {
-            return $this->blockedSaleUpdateResponse(
-                $request,
-                'Vendas com faturas vinculadas a transações no gateway não podem ser atualizadas.',
-            );
-        }
-
-        $sale = DB::transaction(function () use ($request, $sale): Sale {
-            $productIdsBeforeUpdate = $sale->items()->pluck('product_id')->filter()->all();
-            $data = $this->validatedRequestData($request, $this->updateRequestClass());
-            $items = Arr::pull($data, 'items', []);
-            $generateInvoices = (bool) Arr::pull($data, 'generate_invoices', true);
-
-            $sale->invoices()->delete();
-
-            $sale->update($data);
-
-            $this->billableItemService->syncSaleItems(
+        try {
+            $sale = $this->updateSaleAction->execute(UpdateSaleDTO::fromValidatedData(
                 $sale,
-                $items,
-                (float) ($data['discount_value'] ?? 0),
-            );
-
-            $sale = $sale->refresh()->load('items');
-
-            if ($generateInvoices) {
-                $invoices = $this->billingInvoiceService->generate($sale);
-
-                $this->queueGatewayInvoiceSync($invoices);
-            }
-
-            $sale->setAttribute(
-                'recalculation_product_ids',
-                array_values(array_unique([
-                    ...$productIdsBeforeUpdate,
-                    ...$sale->items->pluck('product_id')->filter()->all(),
-                ])),
-            );
-
-            return $sale;
-        });
-
-        $this->stockRecalculationService->recalculateProducts(
-            $sale->getAttribute('recalculation_product_ids') ?? [],
-        );
+                $this->validatedRequestData($request, $this->updateRequestClass()),
+            ));
+        } catch (UpdateBillableBlockedException $exception) {
+            return $this->blockedSaleUpdateResponse($request, $exception->getMessage());
+        }
 
         if ($request->expectsJson()) {
             return response()->json($sale);
@@ -233,21 +162,6 @@ class SaleController extends CrudModuleController
         ]);
 
         return redirect()->route($this->routePrefix().'.index');
-    }
-
-    private function queueGatewayInvoiceSync(Collection $invoices): void
-    {
-        $invoicesToSync = $invoices->filter(
-            fn ($invoice): bool => $invoice->shouldGenerateGatewayTransaction(),
-        );
-
-        if ($invoicesToSync->isEmpty()) {
-            return;
-        }
-
-        Artisan::queue('gateway:sync-invoices', [
-            '--invoice' => $invoicesToSync->modelKeys(),
-        ])->afterCommit();
     }
 
     private function blockedSaleUpdateResponse(Request $request, string $message): RedirectResponse|JsonResponse
