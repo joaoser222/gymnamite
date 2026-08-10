@@ -112,7 +112,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('gateway-accounts/{gateway_account}/invoicing/municipal-options', [GatewayAccountController::class, 'municipalOptions'])->name('gateway-accounts.invoicing.municipal-options');
     Route::get('gateway-accounts/{gateway_account}/invoicing/municipal-services', [GatewayAccountController::class, 'municipalServices'])->name('gateway-accounts.invoicing.municipal-services');
     Route::put('gateway-accounts/{gateway_account}/invoicing/municipal-configuration', [GatewayAccountController::class, 'configureFiscalData'])->name('gateway-accounts.invoicing.municipal-configuration');
-    Route::module(RoleController::class);
+    Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+    Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
+    Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
     Route::module(UserController::class);
     Route::get('settings', [SettingController::class, 'index'])->name('settings.show');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');

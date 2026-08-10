@@ -76,22 +76,59 @@ class SyncAccessControlCommandTest extends TestCase
         $this->assertSame([], $user->fresh()->permissions()->pluck('permissions.id')->all());
     }
 
-    public function test_it_syncs_permissions_for_users_with_existing_roles(): void
+    public function test_it_preserves_existing_role_and_user_permissions(): void
     {
         $role = Role::query()->create([
             'name' => AccessRole::MANAGER->value,
             'description' => AccessRole::MANAGER->label(),
         ]);
 
+        $rolePermission = Permission::query()->create([
+            'name' => 'custom.role.permission',
+            'description' => 'Custom role permission',
+        ]);
+        $userPermission = Permission::query()->create([
+            'name' => 'custom.user.permission',
+            'description' => 'Custom user permission',
+        ]);
+        $role->permissions()->attach($rolePermission);
+
         $user = User::factory()->create(['role_id' => $role->id]);
+        $user->permissions()->attach($userPermission);
 
         $this->artisan('access-control:sync --without-users')
             ->assertSuccessful();
 
-        $this->assertEqualsCanonicalizing(
-            $role->fresh()->permissions()->pluck('permissions.id')->all(),
-            $user->fresh()->permissions()->pluck('permissions.id')->all(),
-        );
+        $this->assertTrue($role->fresh()->permissions()->whereKey($rolePermission->id)->exists());
+        $this->assertTrue($user->fresh()->permissions()->whereKey($userPermission->id)->exists());
+    }
+
+    public function test_it_can_reset_role_permissions_and_apply_only_the_delta_to_users(): void
+    {
+        $this->artisan('access-control:sync --without-users')->assertSuccessful();
+
+        $role = Role::query()
+            ->where('name', AccessRole::MANAGER->value)
+            ->firstOrFail();
+        $previousPermissionIds = $role->permissions()->pluck('permissions.id')->all();
+        $removedPermissionId = $previousPermissionIds[0];
+        $customPermission = Permission::query()->create([
+            'name' => 'custom.user.permission',
+            'description' => 'Custom user permission',
+        ]);
+        $user = User::factory()->create(['role_id' => $role->id]);
+        $user->permissions()->attach(array_values(array_filter(
+            [...$previousPermissionIds, $customPermission->id],
+            fn (int $permissionId): bool => $permissionId !== $removedPermissionId,
+        )));
+        $role->permissions()->detach($removedPermissionId);
+
+        $this->artisan('access-control:sync --without-users --reset-role-permissions')
+            ->assertSuccessful();
+
+        $this->assertTrue($role->fresh()->permissions()->whereKey($removedPermissionId)->exists());
+        $this->assertTrue($user->fresh()->permissions()->whereKey($removedPermissionId)->exists());
+        $this->assertTrue($user->fresh()->permissions()->whereKey($customPermission->id)->exists());
     }
 
     public function test_it_fails_with_invalid_default_role(): void

@@ -13,7 +13,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-#[Signature('access-control:sync {--default-role=administrator : Role assigned to users without a role} {--without-users : Do not assign a default role to users}')]
+#[Signature('access-control:sync {--default-role=administrator : Role assigned to users without a role} {--without-users : Do not assign a default role to users} {--reset-role-permissions : Restore role permissions from RolePermissionMap}')]
 #[Description('Synchronize access control roles, permissions, role permissions, and optionally users without a role')]
 class SyncAccessControl extends Command
 {
@@ -24,6 +24,7 @@ class SyncAccessControl extends Command
     {
         $defaultRole = (string) $this->option('default-role');
         $assignUsers = ! (bool) $this->option('without-users');
+        $resetRolePermissions = (bool) $this->option('reset-role-permissions');
 
         if ($assignUsers && AccessRole::tryFrom($defaultRole) === null) {
             $this->error("Invalid default role [{$defaultRole}].");
@@ -31,16 +32,14 @@ class SyncAccessControl extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($assignUsers, $defaultRole): void {
+        DB::transaction(function () use ($assignUsers, $defaultRole, $resetRolePermissions): void {
             $roles = $this->syncRoles();
             $permissions = $this->syncPermissions();
-            $this->syncRolePermissions($roles, $permissions);
+            $this->syncRolePermissions($roles, $permissions, $resetRolePermissions);
 
             if ($assignUsers) {
                 $this->assignDefaultRoleToUsers($roles[$defaultRole]);
             }
-
-            $this->syncUserPermissions();
         });
 
         $this->components->info('Access control synchronized successfully.');
@@ -94,11 +93,15 @@ class SyncAccessControl extends Command
      * @param  array<string, Role>  $roles
      * @param  array<string, Permission>  $permissions
      */
-    private function syncRolePermissions(array $roles, array $permissions): void
+    private function syncRolePermissions(array $roles, array $permissions, bool $resetRolePermissions): void
     {
         $rolePermissionMap = (new RolePermissionMap)->getMap();
 
         foreach ($rolePermissionMap as $roleName => $modulePermissions) {
+            if (! $resetRolePermissions && ! $roles[$roleName]->wasRecentlyCreated) {
+                continue;
+            }
+
             $permissionIds = [];
 
             foreach ($modulePermissions as $module => $actions) {
@@ -111,33 +114,48 @@ class SyncAccessControl extends Command
                 }
             }
 
-            $roles[$roleName]->permissions()->sync($permissionIds);
+            $role = $roles[$roleName];
+            $previousPermissionIds = $role->permissions()->pluck('permissions.id')->all();
+            $addedPermissionIds = array_values(array_diff($permissionIds, $previousPermissionIds));
+            $removedPermissionIds = array_values(array_diff($previousPermissionIds, $permissionIds));
+
+            $role->permissions()->sync($permissionIds);
+            $this->syncUsersForRole($role, $addedPermissionIds, $removedPermissionIds);
         }
 
-        $this->components->twoColumnDetail('Role permissions', 'synced');
+        $this->components->twoColumnDetail('Role permissions', $resetRolePermissions ? 'reset' : 'initialized');
     }
 
     private function assignDefaultRoleToUsers(Role $defaultRole): void
     {
-        $updatedUsers = User::query()
+        $users = User::query()
             ->whereNull('role_id')
-            ->update(['role_id' => $defaultRole->id]);
+            ->get();
 
-        $this->components->twoColumnDetail('Users updated', (string) $updatedUsers);
+        $users->each(function (User $user) use ($defaultRole): void {
+            $user->update(['role_id' => $defaultRole->id]);
+            $user->permissions()->sync($defaultRole->permissions()->pluck('permissions.id')->all());
+        });
+
+        $this->components->twoColumnDetail('Users updated', (string) $users->count());
     }
 
-    private function syncUserPermissions(): void
+    /**
+     * @param  array<int, int>  $addedPermissionIds
+     * @param  array<int, int>  $removedPermissionIds
+     */
+    private function syncUsersForRole(Role $role, array $addedPermissionIds, array $removedPermissionIds): void
     {
         User::query()
-            ->with('role.permissions:id')
-            ->whereNotNull('role_id')
-            ->get()
-            ->each(function (User $user): void {
-                $user->permissions()->sync(
-                    $user->role?->permissions->pluck('id')->all() ?? []
-                );
-            });
+            ->where('role_id', $role->id)
+            ->eachById(function (User $user) use ($addedPermissionIds, $removedPermissionIds): void {
+                if ($addedPermissionIds !== []) {
+                    $user->permissions()->syncWithoutDetaching($addedPermissionIds);
+                }
 
-        $this->components->twoColumnDetail('User permissions', 'synced');
+                if ($removedPermissionIds !== []) {
+                    $user->permissions()->detach($removedPermissionIds);
+                }
+            });
     }
 }

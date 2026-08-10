@@ -2,13 +2,17 @@
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
 import { formatDate } from '@/plugins/formatters';
-import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
+import type { PaginatedResponse } from '@/shared/page';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps<{
     roles: PaginatedResponse<any>;
-    routes: IndexRoutes;
+    routes: {
+        index: string;
+        show: string;
+        update: string;
+    };
 }>();
 
 const headers: TableHeader[] = [
@@ -20,10 +24,7 @@ const headers: TableHeader[] = [
 
 const routes: TableRoutes = {
     index: props.routes.index,
-    create: props.routes.create,
     show: props.routes.show,
-    changeVisibility: props.routes.changeVisibility,
-    destroy: props.routes.destroy,
 };
 </script>
 
@@ -38,6 +39,9 @@ const routes: TableRoutes = {
         :routes="routes"
         module="users"
         title="Perfis"
+        hide-selection
+        hide-visibility-filter
+        :permission-map="{ create: false, delete: false, visibility: false }"
         :custom-slots="['created_at']"
     >
         <template #column-created_at="{ item }">

@@ -247,6 +247,12 @@ const menuGroups: MenuGroup[] = [
                 permission: 'users.view',
             },
             {
+                title: 'Perfis e permissões',
+                icon: 'ti ti-key',
+                href: '/roles',
+                permission: 'users.view',
+            },
+            {
                 title: 'Configurações',
                 icon: 'ti ti-adjustments',
                 href: '/settings',
