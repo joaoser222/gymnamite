@@ -1,19 +1,19 @@
 ---
-name: planner
+name: project-planning
 description: >
-  Plans and structures development work in this Laravel + Inertia/Vue + Vuetify project.
-  Use this skill whenever the user asks to plan, organize, design, architect, or structure
-  a task before executing it. It analyzes the request against the project's existing skills
-  and produces a detailed implementation plan.
+  Plans, scopes, and sequences development work in the Gymnamite Laravel,
+  Inertia Vue, and Vuetify project. Use this skill only when the user explicitly
+  asks to plan, organize, design, architect, estimate, or discuss an implementation
+  before coding. It produces a plan for the current conversation and never delegates
+  work to agents or starts implementation without a direct user request.
 ---
-# Gymnamite Planner
+# Gymnamite Project Planning
 
-You are the official planner for the Gymnamite project. Your role is to analyze
-development requests and produce clear implementation plans before any code is
-written.
+Analyze the request and produce a practical implementation plan before code is
+written. This is a consultation skill, not an orchestration workflow.
 
-**Communication:** Speak to the user in Portuguese. All internal reasoning,
-skill references, and planning definitions are in English.
+Communicate with the user in Portuguese. Keep this skill's content and technical
+terms in English.
 
 ## Project Context
 
@@ -22,7 +22,7 @@ Backend stack: PHP 8.3, MySQL, CRUD/read-only modules with access control.
 
 ## Project Skills
 
-Always consult the following skills to understand project patterns before planning:
+Load only the skills relevant to the requested work:
 
 1. **gymnamite-project-patterns** — Module controllers (CrudModuleController,
    ReadOnlyModuleController, AbstractModuleController), access control (AccessModule,
@@ -32,17 +32,13 @@ Always consult the following skills to understand project patterns before planni
 2. **saas-php-laravel** — SaaS flows: tenant isolation, billing/subscriptions,
    external integrations, authorization, jobs, queues, idempotent webhooks.
 
-3. **inertia-vue-development** — Inertia v3 patterns: client-side navigation,
-   forms (Form, useForm), useHttp, deferred props, polling, optimistic updates,
-   instant visits, InfiniteScroll, WhenVisible, layout props.
-
-4. **vuetify-development** — Vuetify 3 UI: components, Tabler icons, spacing,
+3. **vuetify-development** — Vuetify 3 UI: components, Tabler icons, spacing,
    forms, tables, dialogs.
 
-5. **laravel-best-practices** — Laravel best practices: N+1 prevention, caching,
+4. **laravel-best-practices** — Laravel best practices: N+1 prevention, caching,
    Eloquent, validation, security, jobs, queues, HTTP client, testing.
 
-6. **asaas-payment-gateway** — Asaas gateway integration: adapters, definitions,
+5. **asaas-payment-gateway** — Asaas gateway integration: adapters, definitions,
    postbacks, sync, billing.
 
 ## Planning Protocol
@@ -118,7 +114,6 @@ Produce plans using this structure:
 
 ### 5. Final Output
 
-After presenting the plan, ask the user if they want to:
-- Proceed with execution
-- Adjust any steps
-- Add/remove stages
+Present the plan and wait for the user's next instruction. If they ask to
+implement it, work directly in the current conversation; do not invoke a
+planner, commander, executor, or any other orchestration agent.
