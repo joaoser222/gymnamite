@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ClientStatus;
 use App\Enums\ProductType;
 use App\Models\Client;
+use App\Models\Permission;
 use App\Models\Product;
 use App\Models\ProductUnity;
 use App\Models\User;
@@ -18,6 +19,7 @@ class SelectBoxControllerTest extends TestCase
     public function test_authenticated_users_can_load_initial_client_options_without_search(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.view');
 
         foreach (range(1, 18) as $index) {
             Client::factory()->create([
@@ -42,6 +44,7 @@ class SelectBoxControllerTest extends TestCase
     public function test_authenticated_users_can_filter_client_options_by_search(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.view');
 
         Client::factory()->create(['name' => 'Ana Maria']);
         Client::factory()->create(['name' => 'Bruno Silva']);
@@ -60,6 +63,7 @@ class SelectBoxControllerTest extends TestCase
     public function test_authenticated_users_can_load_selected_client_outside_the_initial_limit(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'clients.view');
 
         foreach (range(1, 18) as $index) {
             Client::factory()->create([
@@ -84,6 +88,7 @@ class SelectBoxControllerTest extends TestCase
     public function test_product_options_include_purchase_price_metadata(): void
     {
         $user = User::factory()->create();
+        $this->grantPermission($user, 'products.view');
 
         ProductUnity::query()->create([
             'name' => 'Unidade',
@@ -111,5 +116,24 @@ class SelectBoxControllerTest extends TestCase
             ->assertJsonPath('0.label', 'Produto Teste')
             ->assertJsonPath('0.purchase_price', 12.5)
             ->assertJsonPath('0.sale_price', 20);
+    }
+
+    public function test_users_without_the_module_view_permission_cannot_load_options(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson(route('select-box', ['objectName' => 'client']))
+            ->assertForbidden();
+    }
+
+    private function grantPermission(User $user, string $permissionName): void
+    {
+        $permission = Permission::query()->create([
+            'name' => $permissionName,
+            'description' => $permissionName,
+        ]);
+
+        $user->permissions()->attach($permission);
     }
 }

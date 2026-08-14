@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\UserPermissionsController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CostCenterController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\DirectLessonController;
@@ -61,7 +62,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('auth/permissions', UserPermissionsController::class)->name('auth.permissions');
 
-    Route::get('dashboard', fn () => inertia('Dashboard'))->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('select-box/{objectName}', SelectBoxController::class)->name('select-box');
     Route::get('contracts/find-client', [ContractController::class, 'findClient'])->name('contracts.find-client');
     Route::get('contracts/find-coupon', [ContractController::class, 'findCoupon'])->name('contracts.find-coupon');

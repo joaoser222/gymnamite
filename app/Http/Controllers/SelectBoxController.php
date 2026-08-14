@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\AccessControl\AccessAction;
+use App\AccessControl\AccessModule;
 use App\Models\Client;
 use App\Models\CostCenter;
 use App\Models\Coupon;
@@ -18,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class SelectBoxController extends Controller
 {
@@ -29,7 +32,34 @@ class SelectBoxController extends Controller
             abort(404, "Select para '{$objectName}' não encontrado.");
         }
 
+        $this->authorizeAccess($request, $this->accessModuleFor($objectName));
+
         return $this->{$method}($request);
+    }
+
+    private function authorizeAccess(Request $request, AccessModule $module): void
+    {
+        abort_unless(
+            $request->user()?->permissions()->where('name', $module->value.'.'.AccessAction::VIEW->value)->exists(),
+            Response::HTTP_FORBIDDEN,
+        );
+    }
+
+    private function accessModuleFor(string $objectName): AccessModule
+    {
+        return match ($objectName) {
+            'client' => AccessModule::CLIENT,
+            'financial-category' => AccessModule::FINANCIAL_CATEGORY,
+            'cost-center' => AccessModule::COST_CENTER,
+            'coupon' => AccessModule::COUPON,
+            'modality' => AccessModule::MODALITY,
+            'plan' => AccessModule::PLAN,
+            'plan-category' => AccessModule::PLAN_CATEGORY,
+            'product', 'product-unity' => AccessModule::PRODUCT,
+            'financial-account' => AccessModule::FINANCIAL_ACCOUNT,
+            'supplier' => AccessModule::SUPPLIER,
+            'trainer' => AccessModule::TRAINER,
+        };
     }
 
     private function selectClient(Request $request): JsonResponse

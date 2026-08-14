@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -36,16 +37,34 @@ class DashboardTest extends TestCase
             );
     }
 
-    public function test_authenticated_users_can_visit_the_dashboard()
+    public function test_users_without_dashboard_permission_cannot_visit_the_dashboard(): void
     {
         $user = User::factory()->create();
-        $this->actingAs($user);
 
-        $this->get(route('dashboard'))
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertForbidden();
+    }
+
+    public function test_users_with_dashboard_permission_can_visit_the_dashboard(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'dashboard.view');
+
+        $this->actingAs($user)->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->where('auth.user.id', $user->id)
             );
+    }
+
+    private function grantPermission(User $user, string $permissionName): void
+    {
+        $permission = Permission::query()->create([
+            'name' => $permissionName,
+            'description' => $permissionName,
+        ]);
+
+        $user->permissions()->attach($permission);
     }
 }
