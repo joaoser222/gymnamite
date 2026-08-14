@@ -1,6 +1,6 @@
 x-environment-file: &environment-file
   env_file:
-    - ${ENV_FILE:-.develop}
+    - ${ENV_FILE:-.env.develop}
 
 services:
   app:

@@ -15,8 +15,7 @@
 *.env
 *.env.backup
 *.env.production
-.develop
-.production
+.env.develop
 .env.testing
 .phpactor.json
 .phpunit.result.cache
