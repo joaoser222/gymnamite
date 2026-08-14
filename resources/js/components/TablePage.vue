@@ -1,6 +1,5 @@
 <!-- resources/js/Components/GenericTable.vue -->
 <script setup lang="ts">
-import type { FormDataConvertible } from '@inertiajs/core';
 import { computed, onMounted, ref, useSlots, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import DateField from '@/components/inputs/DateField.vue';
@@ -275,7 +274,7 @@ const loadItems = (options?: {
     internalLoading.value = true;
     emit('reload');
 
-    const params: Record<string, FormDataConvertible> = {
+    const params = {
         page: options?.page ?? pagination.value.page,
         per_page: pagination.value.perPage,
         [props.searchKey]: search.value ?? '',
@@ -337,7 +336,7 @@ const handleDelete = () => {
 
     if (route !== null) {
         internalLoading.value = true;
-        const payload: Record<string, FormDataConvertible> = {
+        const payload = {
             items: selectedItems.value,
         };
 
@@ -409,6 +408,21 @@ const handleRowDoubleClick = (
     payload: { item: unknown },
 ) => {
     handleEdit(payload.item);
+};
+
+const formatItemDateTime = (
+    item: unknown,
+    attribute: 'created_at' | 'updated_at',
+): string => {
+    if (typeof item !== 'object' || item === null) {
+        return formatDateTime(null);
+    }
+
+    const value = (item as Record<string, unknown>)[attribute];
+
+    return value instanceof Date || typeof value === 'string' || typeof value === 'number'
+        ? formatDateTime(value)
+        : formatDateTime(null);
 };
 
 // ─── Watchers ────────────────────────────────────────────────────────────────
@@ -585,13 +599,13 @@ defineExpose({ loadItems, selectedItems, internalLoading });
 
             <template #item.created_at="{ item }">
                 <slot name="column-created_at" :item="item">
-                    {{ formatDateTime((item as { created_at?: string | number | Date | null }).created_at) }}
+                    {{ formatItemDateTime(item, 'created_at') }}
                 </slot>
             </template>
 
             <template #item.updated_at="{ item }">
                 <slot name="column-updated_at" :item="item">
-                    {{ formatDateTime((item as { updated_at?: string | number | Date | null }).updated_at) }}
+                    {{ formatItemDateTime(item, 'updated_at') }}
                 </slot>
             </template>
 
