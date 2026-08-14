@@ -585,13 +585,13 @@ defineExpose({ loadItems, selectedItems, internalLoading });
 
             <template #item.created_at="{ item }">
                 <slot name="column-created_at" :item="item">
-                    {{ formatDateTime(item.created_at) }}
+                    {{ formatDateTime((item as { created_at?: string | number | Date | null }).created_at) }}
                 </slot>
             </template>
 
             <template #item.updated_at="{ item }">
                 <slot name="column-updated_at" :item="item">
-                    {{ formatDateTime(item.updated_at) }}
+                    {{ formatDateTime((item as { updated_at?: string | number | Date | null }).updated_at) }}
                 </slot>
             </template>
 
