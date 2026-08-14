@@ -18,7 +18,7 @@ terms in English.
 ## Project Context
 
 This is a Laravel 13 SaaS with Inertia.js v3 + Vue 3 + Vuetify 3 on the frontend.
-Backend stack: PHP 8.3, MySQL, CRUD/read-only modules with access control.
+Backend stack: PHP 8.3, PostgreSQL, CRUD/read-only modules with access control.
 
 ## Project Skills
 

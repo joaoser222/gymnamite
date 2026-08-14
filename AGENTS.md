@@ -13,7 +13,7 @@ existing project convention requires Portuguese UI text.
 
 ## Stack
 
-- Laravel 13, PHP 8.3, MySQL
+- Laravel 13, PHP 8.3, PostgreSQL
 - Inertia.js v3, Vue 3, Vuetify 3
 - PHPUnit and Laravel Pint
 
@@ -27,6 +27,7 @@ user explicitly requests and approves that change.
 3. Reuse established project patterns and make the smallest correct change.
 4. Never undo unrelated worktree changes.
 5. Do not add dependencies, base directories, or documentation files unless explicitly requested.
+6. Always ask the user before executing any Docker command.
 
 ## Skill Selection
 

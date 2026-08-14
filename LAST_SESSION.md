@@ -14,7 +14,7 @@ Updated: 2026-08-11
 ## Docker Environment
 
 - Docker files added: `Dockerfile`, `docker-compose.yml`, `.dockerignore`,
-  `docker/mysql/init-test-database.sql`, and `docker/php/test-memory-limit.ini`.
+  `docker/postgres/init-test-database.sql`, and `docker/php/test-memory-limit.ini`.
 - `app` is available at `http://localhost:8000` and `db` is healthy.
 - Start the application with `docker compose up --build`.
 - Run isolated tests with `docker compose --profile test run --rm test`.
