@@ -130,7 +130,7 @@ abstract class AbstractModuleController extends Controller
 
         return array_map(
             fn (string $field) => isset($mapping[$field])
-                ? \DB::raw("{$mapping[$field]} AS `{$field}`")
+                ? \DB::raw("{$mapping[$field]} AS ".\DB::getQueryGrammar()->wrap($field))
                 : $field,
             $this->fields(),
         );
