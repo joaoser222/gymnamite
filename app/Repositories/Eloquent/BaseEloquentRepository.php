@@ -25,7 +25,7 @@ abstract class BaseEloquentRepository implements RepositoryInterface
 
     protected array $filterableFields = [];
 
-    protected function newQuery(): Builder
+    public function newQuery(): Builder
     {
         $query = call_user_func([$this->modelClass(), 'query']);
 
