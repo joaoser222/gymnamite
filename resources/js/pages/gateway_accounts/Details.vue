@@ -104,6 +104,7 @@ const loadingMunicipalOptions = ref(false);
 const loadingMunicipalServices = ref(false);
 const savingMunicipal = ref(false);
 const municipalError = ref('');
+const municipalErrors = ref<Record<string, string[]>>({});
 
 const fiscalState = computed(() => {
     if (savingMunicipal.value) {
@@ -262,6 +263,7 @@ async function saveMunicipalConfiguration(): Promise<void> {
 
     savingMunicipal.value = true;
     municipalError.value = '';
+    municipalErrors.value = {};
 
     try {
         const response = await fetch(municipalRoutes.value.configuration, {
@@ -277,6 +279,15 @@ async function saveMunicipalConfiguration(): Promise<void> {
         if (!response.ok) {
             const body = await response.json().catch(() => ({}));
             const message = body?.message ?? 'Falha ao salvar a configuração municipal.';
+
+            if (body?.errors && typeof body.errors === 'object') {
+                municipalErrors.value = Object.fromEntries(
+                    Object.entries(body.errors).map(([field, messages]) => [
+                        field,
+                        Array.isArray(messages) ? messages.map(String) : [String(messages)],
+                    ]),
+                );
+            }
 
             throw new Error(message);
         }
@@ -508,12 +519,14 @@ onMounted(() => {
                                     label="Código do serviço municipal"
                                     :rules="[required]"
                                     required
+                                    :error-messages="municipalErrors.municipal_service_code"
                                 />
                             </v-col>
                             <v-col cols="12" md="6">
                                 <v-text-field
                                     v-model="municipalForm.municipal_service_name"
                                     label="Nome do serviço municipal"
+                                    :error-messages="municipalErrors.municipal_service_name"
                                 />
                             </v-col>
                             <v-col cols="12">
@@ -522,12 +535,14 @@ onMounted(() => {
                                     label="Descrição do serviço"
                                     :rules="[required]"
                                     required
+                                    :error-messages="municipalErrors.service_description"
                                 />
                             </v-col>
                             <v-col cols="12">
                                 <v-textarea
                                     v-model="municipalForm.observations"
                                     label="Observações"
+                                    :error-messages="municipalErrors.observations"
                                 />
                             </v-col>
                             <v-col cols="12">
@@ -537,6 +552,7 @@ onMounted(() => {
                                     color="primary"
                                     hint="Marque quando o serviço for enquadrado em regime de tributação incentivada."
                                     persistent-hint
+                                    :error-messages="municipalErrors.incentivized_tax"
                                 />
                             </v-col>
                         </v-row>
