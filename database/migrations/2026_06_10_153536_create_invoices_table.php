@@ -23,7 +23,7 @@ return new class extends Migration
             $table->decimal('discount_value', 13, 4)->default(0);
             $table->decimal('interest_value', 13, 4)->default(0);
             $table->decimal('fine_value', 13, 4)->default(0);
-            $table->decimal('total', 13, 4)->virtualAs('ROUND((gross_value - discount_value) + interest_value + fine_value,4)');
+            $table->decimal('total', 13, 4)->storedAs('ROUND((gross_value - discount_value) + interest_value + fine_value,4)');
             $table->decimal('paid_value', 13, 4)->default(0);
             $table->integer('installment_number')->default(1);
             $table->string('status', 20);

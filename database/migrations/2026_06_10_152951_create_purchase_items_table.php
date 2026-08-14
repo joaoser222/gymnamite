@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('product_name', 255);
             $table->decimal('price', 13, 4)->default(0);
             $table->integer('quantity')->default(0);
-            $table->decimal('total', 13, 4)->virtualAs('price * quantity');
+            $table->decimal('total', 13, 4)->storedAs('price * quantity');
             $table->foreignId('product_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('purchase_id')->constrained()->onDelete('cascade');
             $table->timestamps();
