@@ -1,69 +1,64 @@
-# Refactoring Plan - Gymnamite Laravel Application
+# Refactoring Status - Gymnamite Laravel Application
 
 ## Overview
-Migration from monolithic controllers/services to clean architecture with DTOs, Domain Services, and Actions.
+Migration from monolithic controllers and services to Actions, DTOs, repositories, and focused billing/gateway collaborators.
 
 ---
 
 ## Phase 1: Foundation (Completed)
 - [x] Install `spatie/laravel-data` for DTOs with validation attributes
-- [x] Create BaseDTO with `fromRequest()`, `fromArray()`, `toActionArray()`
-- [x] Define `ActionResultDTO` pattern (success/failure with data, message, errors)
-- [x] Create `BaseAction` with authorization, validation, and transaction handling
+- [x] Create `App\DTOs\Contracts\BaseDTO` with `fromRequest()`, `fromArray()`, and `toActionArray()`
+- [x] Establish module-scoped `ActionResultDTO` value objects where Actions return success/failure payloads
+- [x] Create `BaseAction` and `ActionInterface` with authorization, transaction execution, logging, and result-wrapping hooks
 
 ---
 
 ## Phase 2: Repository Layer (Completed)
 - [x] Define `RepositoryInterface` with CRUD methods
-- [x] Implement Eloquent repositories for all modules
+- [x] Implement Eloquent repositories for the covered domain modules
 - [x] Add specialized finder methods (withRelations, findByDocument, etc.)
 - [x] Register bindings in `AppServiceProvider`
 
 **Modules with repositories:**
-- Client, Contract, Plan, Modality, Product, Sale, Purchase
-- DirectLesson, Receivable, Payable, GatewayAccount, GatewayInvoice
-- Trainer, Coupon, Supplier, PlanCategory, CostCenter, FinancialAccount
+- Client, Contract, Coupon, DirectLesson, GatewayAccount, GatewayInvoice, GatewayPayment, Invoice
+- Modality, Movement, Payable, Plan, PlanCategory, Product, Purchase, Receivable, Sale, Supplier, Trainer
 
 ---
 
 ## Phase 3: DTOs (Completed) ✅
-28 DTO files across 14 modules (Create/Update/Result DTOs per module)
+50 DTO files across 17 namespaces. DTO shapes follow each module's actual command/query needs; they are not uniformly Create/Update/Result triplets.
 
-| Module | Create DTO | Update DTO | Result DTO | ActionResultDTO |
-|--------|------------|------------|------------|-----------------|
-| Clients | ✅ | ✅ | ✅ | ✅ |
-| Contracts | ✅ | ✅ | ✅ | ✅ |
-| Plans | ✅ | ✅ | ✅ | ✅ |
-| Modalities | ✅ | ✅ | ✅ | ✅ |
-| Products | ✅ | ✅ | ✅ | ✅ |
-| Sales | ✅ | ✅ | ✅ | ✅ |
-| Purchases | ✅ | ✅ | ✅ | ✅ |
-| DirectLessons | ✅ | ✅ | ✅ | ✅ |
-| Receivables | ✅ | ✅ | ✅ | ✅ |
-| Payables | ✅ | ✅ | ✅ | ✅ |
-| GatewayAccounts | ✅ | ✅ | ✅ | ✅ |
-| GatewayInvoices | - | - | ✅ | - |
-| Invoices (Fiscal) | ✅ | ✅ | ✅ | - |
-| GatewayCustomers | ✅ | ✅ | ✅ | - |
+| Namespace | DTOs |
+|-----------|------|
+| Clients | `CreateClientDTO`, `UpdateClientDTO`, `ClientResultDTO`, `ActionResultDTO` |
+| Contracts | `BaseDTO`, `CreateContractDTO`, `UpdateContractDTO`, `CancelContractDTO`, `ContractResultDTO`, `ActionResultDTO` |
+| DirectLessons | `CreateDirectLessonDTO`, `UpdateDirectLessonDTO`, `DirectLessonResultDTO` |
+| GatewayAccounts | `CreateGatewayAccountDTO`, `UpdateGatewayAccountDTO`, `ConfigureFiscalDataDTO`, `GatewayAccountResultDTO`, `ActionResultDTO` |
+| GatewayInvoices / GatewayPayments / GatewayPostbacks | `GatewayInvoiceResultDTO`; `GatewayPaymentResultDTO`; `ProcessGatewayPostbackDTO` |
+| Invoices | `FiscalSyncDTO`, `InvoiceResultDTO` |
+| Modalities / Plans / Products | Module create/update/result DTOs; module `ActionResultDTO` values; `PlanTierDTO` for plans |
+| Payables | `PayableDTO`, `PayableResultDTO` |
+| Purchases / Sales | Module create/update/result DTOs |
+| Receivables | `MarkReceivablePaidDTO`, `RequestGatewayInvoiceDTO`, `ReceivableResultDTO`, `ActionResultDTO` |
+| Settings / Users | `UpdateSettingsDTO`; `SaveUserWithPermissionsDTO` |
 
 ---
 
-## Phase 4: Domain Services - Pure Logic (Completed) ✅
-8 new services in `app/Services/Billing/` and `app/Services/Gateway/`
+## Phase 4: Billing and Gateway Collaborators (Completed) ✅
+Eight collaborators are organized under `app/Services/Billing/` and `app/Services/Gateway/`.
 
 | Service | Location | Responsibility |
 |---------|----------|----------------|
 | DiscountCalculator | `Billing/DiscountCalculator.php` | Calculate percentage/fixed discounts |
 | InstallmentSplitter | `Billing/InstallmentSplitter.php` | Split values into installments with rounding |
 | BillingSourceResolver | `Billing/BillingSourceResolver.php` | Resolve billable items (plans, modalities, products) |
-| InvoiceGenerator | `Billing/InvoiceGenerator.php` | Generate invoice data arrays from billing sources |
+| InvoiceGenerator | `Billing/InvoiceGenerator.php` | Generate and persist invoices from billing sources |
 | GatewayAdapterResolver | `Gateway/GatewayAdapterResolver.php` | Resolve gateway adapter by account type |
 | GatewayBillingOrchestrator | `Gateway/GatewayBillingOrchestrator.php` | Orchestrate billing → gateway invoice flow |
 | FiscalInvoiceEmitter | `Gateway/FiscalInvoiceEmitter.php` | Emit fiscal invoices via gateway |
 | FiscalSyncOrchestrator | `Gateway/FiscalSyncOrchestrator.php` | Sync fiscal status with gateway |
 
-**Legacy services retained after Phase 7:**
-- BillableItemService, StockRecalculationService, and ReportService
+**Services outside these folders:** `BillableItemService` remains the sale/purchase-item coordinator. `StockRecalculationService` and `ReportService` remain specialized services.
 
 ---
 
@@ -73,13 +68,13 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 | Module | Actions |
 |--------|---------|
 | Contracts | CreateContract, UpdateContract, FindClient, CancelContract, GenerateContractInvoices (5) |
-| Sales | CreateSale, UpdateSale, ProcessSalePayment (3) |
+| Sales | CreateSale, UpdateSale, GenerateSaleInvoices (3) |
 | Purchases | CreatePurchase, UpdatePurchase, GeneratePurchaseInvoices (3) |
-| DirectLessons | CreateDirectLesson, UpdateDirectLesson, CompleteDirectLesson (3) |
+| DirectLessons | CreateDirectLesson, UpdateDirectLesson, GenerateDirectLessonInvoices (3) |
 | Receivables | RequestGatewayInvoice, MarkReceivablePaid (2) |
 | GatewayAccounts | CreateGatewayAccount, UpdateGatewayAccount, ConfigureFiscalData (3) |
 | Plans | CreatePlan, UpdatePlan (2) |
-| Modalities | UpdateModality (1) |
+| Modalities | CreateModality, UpdateModality (2) |
 | Products | CreateProduct, UpdateProduct (2) |
 | Clients | CreateClient, UpdateClient (2) |
 | GatewayPostbacks | ProcessGatewayPostback (1) |
@@ -99,7 +94,7 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 ## Phase 6: Controller Refactoring (IN PROGRESS)
 **Goal:** Slim controllers to HTTP-only logic, delegate to Actions
 
-### Current Controllers (22 CrudModuleController + 5 ReadOnlyModuleController)
+### Current Controllers (22 `CrudModuleController`, 7 `ReadOnlyModuleController`, and `SettingController` on `AbstractModuleController`)
 
 | Controller | Module | Refactor Status |
 |------------|--------|-----------------|
@@ -114,11 +109,11 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 | ReceivableController | Receivables | ✅ Mark paid/request fiscal invoice delegated |
 | PayableController | Payables | ✅ Retained generic CRUD (no domain use case) |
 | GatewayAccountController | GatewayAccounts | ✅ Create/Update/configure fiscal data delegated |
-| GatewayInvoiceController | GatewayInvoices | ⏳ Pending |
-| GatewayPaymentController | GatewayPayments | ⏳ Pending |
-| GatewayTransferController | GatewayTransfers | ⏳ Pending |
-| GatewayCreditCardController | GatewayCreditCards | ⏳ Pending |
-| GatewayCustomerController | GatewayCustomers | ⏳ Pending |
+| GatewayInvoiceController | GatewayInvoices | ✅ Retained read-only browsing (no write command) |
+| GatewayPaymentController | GatewayPayments | ✅ Retained read-only browsing (no write command) |
+| GatewayTransferController | GatewayTransfers | ✅ Retained read-only browsing (no write command) |
+| GatewayCreditCardController | GatewayCreditCards | ✅ Retained read-only browsing (no write command) |
+| GatewayCustomerController | GatewayCustomers | ✅ Retained read-only browsing (no write command) |
 | GatewayPostbackController | GatewayPostbacks | ✅ Webhook processing delegated |
 | FinancialAccountController | FinancialAccounts | ✅ Retained generic CRUD (reference data) |
 | CostCenterController | CostCenters | ✅ Retained generic CRUD (reference data) |
@@ -129,33 +124,36 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 | TransferController | Transfers | ⚠️ Deferred: transfer semantics are not defined |
 | ReportController | Reports | ✅ Retained read-only generic browsing |
 
-**Additional controllers outside the original table:** Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox also require an explicit decision: create Actions where they have business behavior, or retain the generic module controller where CRUD is sufficient.
+**Additional controllers outside the table:** Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox are not Action-migrated. Their action-vs-generic-CRUD treatment remains deferred until a domain command is identified.
 
 **Payables:** `PayableController` has no module-specific command, external integration, or invariant beyond the model-enforced `operation_type`. It is intentionally retained on the generic CRUD flow. A future payment settlement must be introduced as a dedicated Action rather than by wrapping generic create/update/delete operations.
 
-**Administrative and reference modules:** Financial Accounts, Cost Centers, and Plan Categories remain on generic CRUD because they contain no domain command. User creation/update and Settings bulk updates delegate to Actions. Roles and Transfers require lifecycle and schema decisions before their generic CRUD flows can be refactored safely. Reports remain read-only until execution requirements are defined.
+**Administrative and reference modules:** Financial Accounts, Cost Centers, and Plan Categories remain on generic CRUD because they contain no domain command. User creation/update and Settings bulk updates delegate to Actions. Roles and Transfers require lifecycle and schema decisions before their generic CRUD flows can be refactored safely. Reports and gateway operational resources remain read-only where no write command is defined.
 
 ### Refactor Pattern
 ```php
-// Before (monolithic)
-public function store(StoreClientRequest $request) {
-    // 100+ lines: validation, business logic, gateway calls, responses
-}
+// After (controller validates the HTTP request and delegates the use case)
+public function store(Request $request): RedirectResponse|JsonResponse
+{
+    $this->authorizeAccess(AccessAction::CREATE);
 
-// After (delegated to Action)
-public function store(StoreClientRequest $request) {
-    $dto = CreateClientDTO::fromRequest($request);
-    $result = app(CreateClientAction::class)->execute($dto);
+    $result = $this->createClient->execute(CreateClientDTO::fromArray(
+        $this->validatedRequestData($request, $this->storeRequestClass()),
+    ));
 
-    return $result->success
-        ? redirect()->route('clients.show', $result->data->id)->with('success', $result->message)
-        : back()->withErrors($result->errors ?? [$result->message])->withInput();
+    if (! $result->success) {
+        return $this->actionFailureResponse($request, $result->errors, $result->message);
+    }
+
+    return $request->expectsJson()
+        ? response()->json($result->data, 201)
+        : redirect()->route($this->routePrefix().'.index');
 }
 ```
 
 ---
 
-## Phase 7: Legacy Service Cleanup (IMPLEMENTED)
+## Phase 7: Legacy Service Cleanup (IMPLEMENTED) ✅
 **Goal:** Remove/deprecate old monolithic services after controllers use Actions
 
 ### Services Removed
@@ -174,15 +172,16 @@ public function store(StoreClientRequest $request) {
 | ReportService | Keep (specialized) |
 
 **Migration completed:**
-- Sales, Purchases, and DirectLessons Actions now inject `InvoiceGenerator`; gateway sync queuing remains unchanged.
+- `GenerateSaleInvoicesAction`, `GeneratePurchaseInvoicesAction`, and `GenerateDirectLessonInvoicesAction` inject `InvoiceGenerator`; gateway sync queuing remains unchanged.
 - `gateway:sync-invoices` uses `GatewayBillingOrchestrator::syncInvoice()`.
 - `gateway:sync-fiscal-invoices` uses `FiscalSyncOrchestrator::syncAll()`.
 - Receivable fiscal requests and eligibility queries use `FiscalInvoiceEmitter`.
-- `FiscalSyncOrchestratorTest` replaces `GatewayFiscalSyncServiceTest`; billing coverage now resolves `InvoiceGenerator`.
+- `InvoiceGeneratorTest` replaces `BillingInvoiceServiceTest`; `FiscalSyncOrchestratorTest` replaces `GatewayFiscalSyncServiceTest`.
 
 **Verification status (2026-08-06):**
 - [x] `vendor/bin/pint --dirty --format agent` passed.
-- [ ] Focused feature tests could not complete: PHPUnit terminated the PHP process prematurely before executing assertions in Sales, Purchases, DirectLessons, Receivables, FiscalSyncOrchestrator, and fiscal sync command tests.
+- [x] PHP lint and `git diff --check` passed.
+- [ ] Focused feature tests did not complete: PHPUnit was terminated by resource constraints before assertions ran in the Sales, Purchases, DirectLessons, Receivables, `FiscalSyncOrchestrator`, and fiscal-sync command coverage.
 
 ---
 
@@ -194,12 +193,9 @@ public function store(StoreClientRequest $request) {
 - [x] Code style: `vendor/bin/pint --dirty --format agent`
 - [ ] Static analysis: `php artisan stan` (if Larastan configured)
 
-**Verification completed during Phase 6:**
-- [x] Pint, PHP lint, class-load checks, route checks, and `git diff --check` for each migrated block.
-- [x] Sales, Purchases, and DirectLessons focused tests: 17 tests, 105 assertions.
-- [x] Test database connection and `migrate:fresh` validation completed after normalizing `.env.testing` to `127.0.0.1`.
-- [x] Unit tests independent of the database: 3 tests, 6 assertions (`ReportServiceTest`).
-- [ ] Feature tests for Receivables, Gateway Accounts, Gateway Postbacks, Users, and Settings need rerun: the PHPUnit process is intermittently terminated with signal 9 or exceeds the resource limit.
+**Current verification record:**
+- [x] Pint, PHP lint, and `git diff --check` passed.
+- [ ] Focused feature coverage must be rerun in an environment with sufficient resources; PHPUnit was interrupted before assertions, so no focused feature-test result is recorded as passing.
 
 ---
 
@@ -218,7 +214,8 @@ Current frontend payloads were kept compatible for migrated modules. A final aud
 app/
 ├── Actions/
 │   ├── BaseAction.php
-│   ├── Contracts/
+│   ├── Contracts/ (including `ActionInterface.php`)
+│   ├── Exceptions/
 │   ├── Sales/
 │   ├── Purchases/
 │   ├── DirectLessons/
@@ -245,8 +242,8 @@ app/
 │   ├── GatewayAccounts/
 │   ├── GatewayPostbacks/
 │   ├── GatewayInvoices/
+│   ├── GatewayPayments/
 │   ├── Invoices/
-│   ├── GatewayCustomers/
 │   ├── Settings/
 │   └── Users/
 ├── Services/
@@ -261,6 +258,7 @@ app/
 │   │   ├── FiscalInvoiceEmitter.php
 │   │   └── FiscalSyncOrchestrator.php
 │   ├── StockRecalculationService.php
+│   ├── BillableItemService.php
 │   └── ReportService.php
 ├── Repositories/
 │   ├── Contracts/ (interfaces)
@@ -275,13 +273,13 @@ app/
 | Phase | Status | Tests | Notes |
 |-------|--------|-------|-------|
 | 1. Foundation | ✅ Done | - | Base classes created |
-| 2. Repositories | ✅ Done | - | All modules covered |
-| 3. DTOs | ✅ Done | - | 28 files, validation attributes |
-| 4. Domain Services | ✅ Done | - | 8 new pure-logic services |
+| 2. Repositories | ✅ Done | - | 19 Eloquent bindings for covered modules |
+| 3. DTOs | ✅ Done | - | 50 files across 17 namespaces |
+| 4. Billing/Gateway Collaborators | ✅ Done | - | 8 focused collaborators |
 | 5. Actions | ✅ Integrated | Partial | Actions corrected and used by 13 controllers |
 | 6. Controller Refactor | 🚧 In progress | Partial | 13 controllers migrated; role, transfer, and additional controllers remain pending lifecycle decisions |
-| 7. Legacy Cleanup | ✅ Implemented | Focused tests blocked | Four legacy billing/gateway services removed; PHPUnit resource/process termination prevented focused test completion |
-| 8. Testing | 🚧 In progress | 20 pass / 111 assertions | Database connectivity/migrations and unit tests pass; feature-suite execution remains resource-constrained |
+| 7. Legacy Cleanup | ✅ Implemented | Focused tests incomplete | Four legacy billing/gateway services removed; PHPUnit resource constraints interrupted focused tests before assertions |
+| 8. Testing | 🚧 In progress | Focused tests incomplete | Re-run focused feature coverage, then full suite and static analysis in a sufficiently provisioned environment |
 | 9. Frontend | ⏳ Pending | - | Inertia/Vue integration |
 
 ---
@@ -291,7 +289,7 @@ app/
 1. **Phase 6**: Define the Role lifecycle and Transfer semantics before refactoring their generic CRUD flows.
 2. **Phase 6**: Decide the treatment for Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox.
 3. **Authorization**: Integrate the custom module permission system with Laravel Gates/Policies, or formally retain controller-level authorization as the Action standard.
-4. **Phase 8**: Resolve the PHPUnit resource termination, add Action/controller delegation and gateway integration tests, then run the full suite and static analysis.
+4. **Phase 8**: Resolve the PHPUnit resource termination, rerun the interrupted focused feature tests, add missing Action/controller delegation and gateway integration tests, then run the full suite and static analysis.
 5. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
 
 ---
@@ -314,4 +312,4 @@ php artisan code:inspect
 
 ---
 
-*Updated: 2026-08-06 | Phase 6 in progress: 13 controllers migrated; Phase 7 implemented; Phase 8 verification remains constrained by PHPUnit process termination; Phase 9 pending*
+*Updated: 2026-08-06 | Phases 1–5 completed; Phase 6 has 13 Action-migrated controllers with retained/deferred controller decisions; Phase 7 completed; Phase 8 focused feature tests remain interrupted by resource constraints before assertions; Phase 9 pending.*
