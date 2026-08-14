@@ -59,7 +59,6 @@ final class RolePermissionMap
         return self::generate(
             [
                 AccessModule::SETTING,
-                ...self::gatewayModules(),
             ],
             [AccessAction::DELETE]
         );
@@ -81,7 +80,6 @@ final class RolePermissionMap
                 AccessModule::USER,
                 AccessModule::MODALITY,
                 AccessModule::PLAN_CATEGORY,
-                AccessModule::TRANSFER,
                 AccessModule::MOVEMENT,
                 AccessModule::FINANCIAL_ACCOUNT,
                 AccessModule::FINANCIAL_CATEGORY,

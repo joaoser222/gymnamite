@@ -247,6 +247,7 @@ class AsaasPaymentGatewayAdapter implements PaymentGatewayAdapter, PaymentGatewa
             'fee_value' => ($body['value'] - ($body['netValue'] ?? $body['value'])),
             'status' => $this->mapTransferStatus($body['status']),
             'gateway_account_id' => $this->gatewayAccount->id,
+            'gateway_transfer_recipient_id' => $data['gateway_transfer_recipient_id'] ?? null,
         ]);
 
         return $transfer;

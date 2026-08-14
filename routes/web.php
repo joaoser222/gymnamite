@@ -34,7 +34,6 @@ use App\Http\Controllers\SelectBoxController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TrainerController;
-use App\Http\Controllers\TransferController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -94,11 +93,11 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('receivables/{receivable}/mark-paid', [ReceivableController::class, 'markPaid'])->name('receivables.mark-paid');
     Route::post('receivables/{receivable}/request-gateway-invoice', [ReceivableController::class, 'requestGatewayInvoice'])->name('receivables.request-gateway-invoice');
     Route::module(MovementController::class);
-    Route::module(TransferController::class);
 
     // Gateway de Pagamentos
     Route::moduleReadOnly(GatewayPaymentController::class);
     Route::moduleReadOnly(GatewayTransferController::class);
+    Route::post('gateway-transfers', [GatewayTransferController::class, 'store'])->name('gateway-transfers.store');
     Route::moduleReadOnly(GatewayPostbackController::class);
     Route::moduleReadOnly(GatewayCustomerController::class);
     Route::moduleReadOnly(GatewayCreditCardController::class);

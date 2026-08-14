@@ -178,12 +178,6 @@ const menuGroups: MenuGroup[] = [
                 href: '/movements',
                 permission: 'movements.view',
             },
-            {
-                title: 'Transferências',
-                icon: 'ti ti-cash-banknote-move',
-                href: '/transfers',
-                permission: 'transfers.view',
-            },
         ],
     },
     {

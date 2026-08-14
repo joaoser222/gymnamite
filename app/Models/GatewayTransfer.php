@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GatewayTransfer extends Model
 {
@@ -13,8 +14,12 @@ class GatewayTransfer extends Model
         'total',
         'status',
         'gateway_account_id',
+        'gateway_transfer_recipient_id',
         'gateway_postback_id',
     ];
 
-    //
+    public function recipient(): BelongsTo
+    {
+        return $this->belongsTo(GatewayTransferRecipient::class, 'gateway_transfer_recipient_id');
+    }
 }
