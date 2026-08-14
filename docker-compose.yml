@@ -3,9 +3,9 @@ x-app-environment: &app-environment
   APP_DEBUG: "true"
   APP_KEY: ${APP_KEY:-base64:Ee91F82h/mhRvlNkDWE2aCWP1OSGzHA4wYWGylrMkqI=}
   APP_URL: http://localhost:8000
-  DB_CONNECTION: mysql
+  DB_CONNECTION: pgsql
   DB_HOST: db
-  DB_PORT: 3306
+  DB_PORT: 5432
   DB_DATABASE: gymnamite
   DB_USERNAME: gymnamite
   DB_PASSWORD: gymnamite
@@ -25,20 +25,19 @@ services:
       - "8000:8000"
 
   db:
-    image: mysql:8.4
+    image: postgres:17
     environment:
-      MYSQL_DATABASE: gymnamite
-      MYSQL_USER: gymnamite
-      MYSQL_PASSWORD: gymnamite
-      MYSQL_ROOT_PASSWORD: root
+      POSTGRES_DB: gymnamite
+      POSTGRES_USER: gymnamite
+      POSTGRES_PASSWORD: gymnamite
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping --protocol=tcp -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD-SHELL", "pg_isready -U gymnamite -d gymnamite"]
       interval: 5s
       timeout: 5s
       retries: 20
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init-test-database.sql:/docker-entrypoint-initdb.d/init-test-database.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-database.sql:/docker-entrypoint-initdb.d/init-test-database.sql:ro
 
   queue:
     build:
@@ -73,4 +72,4 @@ services:
     profiles: ["test"]
 
 volumes:
-  mysql_data:
+  postgres_data:
