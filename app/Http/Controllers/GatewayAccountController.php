@@ -139,7 +139,7 @@ class GatewayAccountController extends CrudModuleController
         $this->authorizeAccess(AccessAction::CREATE);
 
         $result = $this->createGatewayAccount->execute(
-            CreateGatewayAccountDTO::fromArray(
+            CreateGatewayAccountDTO::from(
                 $this->validatedRequestData($request, $this->storeRequestClass()),
             ),
         );
@@ -164,7 +164,7 @@ class GatewayAccountController extends CrudModuleController
         $gatewayAccount = $this->modelFromRoute($request);
 
         $result = $this->updateGatewayAccount->execute(
-            UpdateGatewayAccountDTO::fromArray([
+            UpdateGatewayAccountDTO::from([
                 ...$this->validatedRequestData($request, $this->updateRequestClass()),
                 'id' => $gatewayAccount->getKey(),
             ]),
@@ -207,7 +207,7 @@ class GatewayAccountController extends CrudModuleController
         $this->authorizeAccess(AccessAction::UPDATE);
 
         $result = $this->configureFiscalData->execute(
-            ConfigureFiscalDataDTO::fromArray([
+            ConfigureFiscalDataDTO::from([
                 ...$request->validated(),
                 'id' => $gatewayAccount->getKey(),
             ]),

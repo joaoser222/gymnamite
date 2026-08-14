@@ -55,7 +55,7 @@ class SettingController extends AbstractModuleController
     {
         $this->authorizeAccess(AccessAction::UPDATE);
 
-        $this->updateSettings->execute(UpdateSettingsDTO::fromArray($request->validated()));
+        $this->updateSettings->execute(UpdateSettingsDTO::from($request->validated()));
 
         Inertia::flash('toast', [
             'type' => 'success',

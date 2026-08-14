@@ -106,7 +106,7 @@ class ContractController extends CrudModuleController
         $this->authorizeAccess(AccessAction::CREATE);
 
         $result = $this->createContract->execute(
-            CreateContractDTO::fromArray(
+            CreateContractDTO::from(
                 $this->validatedRequestData($request, ContractWizardRequest::class)
             )
         );
@@ -175,7 +175,7 @@ class ContractController extends CrudModuleController
         $contract = $this->modelFromRoute($request);
 
         $result = $this->cancelContract->execute(
-            CancelContractDTO::fromArray([
+            CancelContractDTO::from([
                 ...$request->validate(['reason' => ['nullable', 'string', 'max:500']]),
                 'contract_id' => $contract->getKey(),
             ])
@@ -206,7 +206,7 @@ class ContractController extends CrudModuleController
         $contract = $this->modelFromRoute($request);
 
         $result = $this->updateContract->execute(
-            UpdateContractDTO::fromArray([
+            UpdateContractDTO::from([
                 ...$request->validate(['annotations' => ['nullable', 'string', 'max:500']]),
                 'id' => $contract->getKey(),
             ])

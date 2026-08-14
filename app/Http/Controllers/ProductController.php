@@ -87,7 +87,7 @@ class ProductController extends CrudModuleController
         $this->authorizeAccess(AccessAction::CREATE);
 
         $result = $this->createProduct->execute(
-            CreateProductDTO::fromArray($this->validatedProductData($request))
+            CreateProductDTO::from($this->validatedProductData($request))
         );
 
         if ($request->expectsJson()) {
@@ -110,7 +110,7 @@ class ProductController extends CrudModuleController
         $product = $this->modelFromRoute($request);
 
         $result = $this->updateProduct->execute(
-            UpdateProductDTO::fromArray([
+            UpdateProductDTO::from([
                 ...$this->validatedProductData($request),
                 'id' => $product->getKey(),
             ])

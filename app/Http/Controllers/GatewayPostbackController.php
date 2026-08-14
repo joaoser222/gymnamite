@@ -72,7 +72,7 @@ class GatewayPostbackController extends ReadOnlyModuleController
         }
 
         $postback = $this->processGatewayPostback->execute(
-            ProcessGatewayPostbackDTO::fromArray([
+            ProcessGatewayPostbackDTO::from([
                 'gateway_account_id' => $gatewayAccount->getKey(),
                 'payload' => $request->all(),
             ]),

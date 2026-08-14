@@ -51,7 +51,7 @@ class ModalityController extends CrudModuleController
         $this->authorizeAccess(AccessAction::CREATE);
 
         $result = $this->createModality->execute(
-            CreateModalityDTO::fromArray($request->validate([
+            CreateModalityDTO::from($request->validate([
                 'name' => ['required', 'string', 'max:255'],
             ]))
         );
@@ -76,7 +76,7 @@ class ModalityController extends CrudModuleController
         $modality = $this->modelFromRoute($request);
 
         $result = $this->updateModality->execute(
-            UpdateModalityDTO::fromArray([
+            UpdateModalityDTO::from([
                 ...$request->validate([
                     'name' => ['required', 'string', 'max:255'],
                 ]),

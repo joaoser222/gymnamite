@@ -66,7 +66,7 @@ abstract class BaseEloquentRepository implements RepositoryInterface
     public function create(array $data): Model
     {
         return DB::transaction(function () use ($data) {
-            $model = new $this->modelClass;
+            $model = new ($this->modelClass());
             $model->fill($data);
             $model->save();
 

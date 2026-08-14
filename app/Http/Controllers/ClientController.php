@@ -66,7 +66,7 @@ class ClientController extends CrudModuleController
         $this->authorizeAccess(AccessAction::CREATE);
 
         $result = $this->createClient->execute(
-            CreateClientDTO::fromArray(
+            CreateClientDTO::from(
                 $this->validatedRequestData($request, $this->storeRequestClass())
             )
         );
@@ -94,7 +94,7 @@ class ClientController extends CrudModuleController
         $model = $this->modelFromRoute($request);
 
         $result = $this->updateClient->execute(
-            UpdateClientDTO::fromArray([
+            UpdateClientDTO::from([
                 ...$this->validatedRequestData($request, $this->updateRequestClass()),
                 'id' => $model->getKey(),
             ])

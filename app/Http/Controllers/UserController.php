@@ -96,7 +96,7 @@ class UserController extends CrudModuleController
         $this->authorizeAccess(AccessAction::CREATE);
 
         $user = $this->saveUserWithPermissions->execute(
-            SaveUserWithPermissionsDTO::fromArray(
+            SaveUserWithPermissionsDTO::from(
                 $this->validatedRequestData($request, $this->storeRequestClass()),
             ),
         );
@@ -120,7 +120,7 @@ class UserController extends CrudModuleController
         /** @var User $user */
         $user = $this->modelFromRoute($request);
         $this->saveUserWithPermissions->execute(
-            SaveUserWithPermissionsDTO::fromArray([
+            SaveUserWithPermissionsDTO::from([
                 ...$this->validatedRequestData($request, $this->updateRequestClass()),
                 'id' => $user->getKey(),
             ]),
