@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { DetailsRoutes } from '@/shared/page';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import { required } from '@/plugins/validators';
@@ -56,6 +56,7 @@ const defaults = {
 };
 
 const pixQrCodeText = computed(() => props.pixQrCode?.payload ?? props.pixQrCode?.qrCode ?? '');
+const gatewayInvoiceRequestErrors = ref<Record<string, string>>({});
 const pixQrCodeImage = computed(() => {
     const encodedImage = props.pixQrCode?.encodedImage;
 
@@ -74,6 +75,24 @@ const copyPixCode = async (): Promise<void> => {
     }
 
     await navigator.clipboard.writeText(pixQrCodeText.value);
+};
+
+const requestGatewayInvoice = (): void => {
+    if (!props.receivable?.id || !props.routes.requestGatewayInvoice) {
+        return;
+    }
+
+    gatewayInvoiceRequestErrors.value = {};
+    router.post(
+        props.routes.requestGatewayInvoice.replace(':id', String(props.receivable.id)),
+        {},
+        {
+            preserveScroll: true,
+            onError: (errors) => {
+                gatewayInvoiceRequestErrors.value = errors;
+            },
+        },
+    );
 };
 
 const calculatedTotal = (form: Record<string, unknown>): number => {
@@ -214,6 +233,17 @@ const calculatedTotal = (form: Record<string, unknown>): number => {
                     </v-row>
                 </v-card-text>
             </v-card>
+
+            <v-alert
+                v-for="(error, field) in gatewayInvoiceRequestErrors"
+                :key="field"
+                type="error"
+                variant="tonal"
+                density="compact"
+                class="mt-4"
+            >
+                {{ error }}
+            </v-alert>
         </template>
         <template #actions>
             <v-btn
@@ -221,7 +251,7 @@ const calculatedTotal = (form: Record<string, unknown>): number => {
                 color="secondary"
                 variant="tonal"
                 prepend-icon="ti ti-file-invoice"
-                @click="router.post(props.routes.requestGatewayInvoice.replace(':id', String(props.receivable?.id)))"
+                @click="requestGatewayInvoice"
             >
                 Solicitar nota fiscal
             </v-btn>
