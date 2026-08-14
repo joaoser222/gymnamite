@@ -31,6 +31,7 @@ class CreatePlanAction extends BaseAction
         $plan = $this->planRepository->create([
             'name' => $dto->name,
             'description' => $dto->description,
+            'modality_quantity' => $dto->modality_quantity,
             'plan_category_id' => $dto->plan_category_id,
         ]);
 

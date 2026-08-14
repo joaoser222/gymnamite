@@ -24,6 +24,9 @@ class CreatePlanDTO extends BaseDTO
         #[Nullable, StringType, Max(500)]
         public ?string $description = null,
 
+        #[Required, IntegerType, Min(1)]
+        public int $modality_quantity = 1,
+
         #[Required, ArrayType(PlanTierDTO::class), Min(1)]
         public array $tiers = [],
 
@@ -38,6 +41,7 @@ class CreatePlanDTO extends BaseDTO
             name: $data['name'],
             plan_category_id: $data['plan_category_id'],
             description: $data['description'] ?? null,
+            modality_quantity: $data['modality_quantity'],
             tiers: array_map(
                 fn (array $tier): PlanTierDTO => PlanTierDTO::from($tier),
                 $data['tiers'],

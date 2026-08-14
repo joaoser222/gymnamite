@@ -32,6 +32,7 @@ class UpdatePlanAction extends BaseAction
         $this->planRepository->update($plan, [
             'name' => $dto->name,
             'description' => $dto->description,
+            'modality_quantity' => $dto->modality_quantity,
             'plan_category_id' => $dto->plan_category_id,
         ]);
 

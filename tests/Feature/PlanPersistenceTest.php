@@ -40,6 +40,7 @@ class PlanPersistenceTest extends TestCase
             'name' => 'Plano Gold',
             'plan_category_id' => $planCategory->id,
             'description' => 'Plano com durações variáveis.',
+            'modality_quantity' => 2,
             'tiers' => [
                 ['quantity' => 1, 'price' => 99.9],
                 ['quantity' => 12, 'price' => 999.9],
@@ -60,6 +61,7 @@ class PlanPersistenceTest extends TestCase
         $plan = Plan::query()->with(['tiers', 'modalities'])->firstOrFail();
 
         $this->assertSame('Plano Gold', $plan->name);
+        $this->assertSame(2, $plan->modality_quantity);
         $this->assertSame(2, $plan->tiers->count());
         $this->assertCount(0, $plan->modalities);
 
@@ -83,6 +85,20 @@ class PlanPersistenceTest extends TestCase
         $response->assertSessionHasErrors(['tiers']);
         $this->assertDatabaseCount('plans', 0);
         $this->assertDatabaseCount('plan_tiers', 0);
+    }
+
+    public function test_modality_quantity_must_be_a_positive_integer_when_creating_a_plan(): void
+    {
+        $user = User::factory()->create();
+        $this->grantPermission($user, 'plans.create');
+
+        $payload = $this->validPayload();
+        $payload['modality_quantity'] = 0;
+
+        $response = $this->actingAs($user)->post(route('plans.store'), $payload);
+
+        $response->assertSessionHasErrors(['modality_quantity']);
+        $this->assertDatabaseCount('plans', 0);
     }
 
     public function test_authenticated_users_can_update_plan_and_clear_specific_modalities(): void
@@ -132,6 +148,7 @@ class PlanPersistenceTest extends TestCase
             'name' => 'Plano Atualizado',
             'plan_category_id' => $planCategory->id,
             'description' => 'Sem modalidades específicas.',
+            'modality_quantity' => 3,
             'tiers' => [
                 ['quantity' => 6, 'price' => 450],
             ],
@@ -143,6 +160,7 @@ class PlanPersistenceTest extends TestCase
         $plan->refresh();
 
         $this->assertSame('Plano Atualizado', $plan->name);
+        $this->assertSame(3, $plan->modality_quantity);
         $this->assertDatabaseHas('plan_tiers', [
             'plan_id' => $plan->id,
             'quantity' => 6,

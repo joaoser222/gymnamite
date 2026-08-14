@@ -24,6 +24,7 @@ class PlanRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'plan_category_id' => ['required', 'integer', Rule::exists('plan_categories', 'id')],
             'description' => ['nullable', 'string', 'max:500'],
+            'modality_quantity' => ['required', 'integer', 'min:1'],
             'tiers' => ['required', 'array', 'min:1'],
             'tiers.*.quantity' => ['required', 'integer', 'min:1'],
             'tiers.*.price' => ['required', 'numeric', 'min:0'],
