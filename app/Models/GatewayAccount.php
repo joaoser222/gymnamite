@@ -5,11 +5,12 @@ namespace App\Models;
 use App\PaymentGateways\PaymentGatewayManager;
 use App\Traits\HasVisibility;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class GatewayAccount extends Model
 {
-    use HasVisibility;
+    use HasFactory, HasVisibility;
 
     protected $table = 'gateway_accounts';
 
