@@ -1,0 +1,76 @@
+x-app-environment: &app-environment
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_KEY: ${APP_KEY:-base64:Ee91F82h/mhRvlNkDWE2aCWP1OSGzHA4wYWGylrMkqI=}
+  APP_URL: http://localhost:8000
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: 3306
+  DB_DATABASE: gymnamite
+  DB_USERNAME: gymnamite
+  DB_PASSWORD: gymnamite
+
+services:
+  app:
+    build:
+      context: .
+    image: gymnamite:local
+    command: >-
+      sh -c 'php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *app-environment
+    ports:
+      - "8000:8000"
+
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: gymnamite
+      MYSQL_USER: gymnamite
+      MYSQL_PASSWORD: gymnamite
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --protocol=tcp -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init-test-database.sql:/docker-entrypoint-initdb.d/init-test-database.sql:ro
+
+  queue:
+    build:
+      context: .
+    image: gymnamite:local
+    command: php artisan queue:work --tries=1 --timeout=0
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *app-environment
+    profiles: ["worker"]
+
+  test:
+    build:
+      context: .
+    image: gymnamite:local
+    command: >-
+      sh -c 'php artisan migrate:fresh --force --env=testing && php artisan test --compact'
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *app-environment
+      APP_ENV: testing
+      DB_DATABASE: gymnamite_test
+      CACHE_STORE: array
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+    volumes:
+      - ./docker/php/test-memory-limit.ini:/usr/local/etc/php/conf.d/zz-test-memory-limit.ini:ro
+    profiles: ["test"]
+
+volumes:
+  mysql_data:
