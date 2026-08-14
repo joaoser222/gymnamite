@@ -103,7 +103,7 @@ class FiscalInvoiceEmitter
         return $query
             ->addSelect([
                 'can_request_gateway_invoice' => GatewayPayment::query()
-                    ->selectRaw('COALESCE(CASE WHEN gateway_accounts.invoicing_supported = 1 AND gateway_accounts.invoicing_configured = 1 AND gateway_accounts.invoicing_enabled = 1 THEN 1 ELSE 0 END, 0)')
+                    ->selectRaw('COALESCE(CASE WHEN gateway_accounts.invoicing_supported = true AND gateway_accounts.invoicing_configured = true AND gateway_accounts.invoicing_enabled = true THEN 1 ELSE 0 END, 0)')
                     ->join('gateway_accounts', 'gateway_accounts.id', '=', 'gateway_payments.gateway_account_id')
                     ->whereColumn('gateway_payments.invoice_id', 'invoices.id')
                     ->whereNotExists(function ($query): void {
@@ -121,7 +121,7 @@ class FiscalInvoiceEmitter
             ])
             ->addSelect([
                 'gateway_invoice_request_reason' => GatewayPayment::query()
-                    ->selectRaw("COALESCE(CASE WHEN gateway_accounts.name IS NULL THEN 'no_gateway_payment' WHEN gateway_accounts.invoicing_supported = 0 THEN 'provider_not_supported' WHEN gateway_accounts.invoicing_enabled = 0 THEN 'account_not_enabled' WHEN gateway_accounts.invoicing_configured = 0 THEN 'invoicing_not_configured' WHEN EXISTS (SELECT 1 FROM gateway_invoices WHERE gateway_invoices.invoice_id = invoices.id AND gateway_invoices.gateway_payment_id = gateway_payments.id AND gateway_invoices.status <> 'error') THEN 'already_requested' ELSE 'eligible' END, 'no_gateway_payment')")
+                    ->selectRaw("COALESCE(CASE WHEN gateway_accounts.name IS NULL THEN 'no_gateway_payment' WHEN gateway_accounts.invoicing_supported = false THEN 'provider_not_supported' WHEN gateway_accounts.invoicing_enabled = false THEN 'account_not_enabled' WHEN gateway_accounts.invoicing_configured = false THEN 'invoicing_not_configured' WHEN EXISTS (SELECT 1 FROM gateway_invoices WHERE gateway_invoices.invoice_id = invoices.id AND gateway_invoices.gateway_payment_id = gateway_payments.id AND gateway_invoices.status <> 'error') THEN 'already_requested' ELSE 'eligible' END, 'no_gateway_payment')")
                     ->join('gateway_accounts', 'gateway_accounts.id', '=', 'gateway_payments.gateway_account_id')
                     ->whereColumn('gateway_payments.invoice_id', 'invoices.id')
                     ->orderByDesc('gateway_payments.created_at')
