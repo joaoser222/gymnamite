@@ -1,14 +1,6 @@
-x-app-environment: &app-environment
-  APP_ENV: local
-  APP_DEBUG: "true"
-  APP_KEY: ${APP_KEY:-base64:Ee91F82h/mhRvlNkDWE2aCWP1OSGzHA4wYWGylrMkqI=}
-  APP_URL: http://localhost:8000
-  DB_CONNECTION: pgsql
-  DB_HOST: db
-  DB_PORT: 5432
-  DB_DATABASE: gymnamite
-  DB_USERNAME: gymnamite
-  DB_PASSWORD: gymnamite
+x-environment-file: &environment-file
+  env_file:
+    - ${ENV_FILE:-.develop}
 
 services:
   app:
@@ -20,18 +12,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment: *app-environment
+    <<: *environment-file
     ports:
       - "8000:8000"
 
   db:
     image: postgres:17
-    environment:
-      POSTGRES_DB: gymnamite
-      POSTGRES_USER: gymnamite
-      POSTGRES_PASSWORD: gymnamite
+    <<: *environment-file
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gymnamite -d gymnamite"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -47,7 +36,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment: *app-environment
+    <<: *environment-file
     profiles: ["worker"]
 
   test:
@@ -59,8 +48,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    <<: *environment-file
     environment:
-      <<: *app-environment
       APP_ENV: testing
       DB_DATABASE: gymnamite_test
       CACHE_STORE: array
