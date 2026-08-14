@@ -63,7 +63,7 @@ Eight collaborators are organized under `app/Services/Billing/` and `app/Service
 ---
 
 ## Phase 5: Actions (Implemented and Integrated) ✅
-Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes, and the `BaseAction::handle(mixed $input)` contract. Thirteen controllers now execute Actions in production paths.
+Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes, and the `BaseAction::handle(mixed $input)` contract. Fourteen controllers now execute Actions in production paths.
 
 | Module | Actions |
 |--------|---------|
@@ -79,6 +79,7 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 | Clients | CreateClient, UpdateClient (2) |
 | GatewayPostbacks | ProcessGatewayPostback (1) |
 | Users | SaveUserWithPermissions (1) |
+| Roles | UpdateRolePermissions (1) |
 | Settings | UpdateSettings (1) |
 
 **Pattern per Action:**
@@ -111,24 +112,23 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 | GatewayAccountController | GatewayAccounts | ✅ Create/Update/configure fiscal data delegated |
 | GatewayInvoiceController | GatewayInvoices | ✅ Retained read-only browsing (no write command) |
 | GatewayPaymentController | GatewayPayments | ✅ Retained read-only browsing (no write command) |
-| GatewayTransferController | GatewayTransfers | ✅ Retained read-only browsing (no write command) |
+| GatewayTransferController | GatewayTransfers | 🚧 Browsing retained; PIX transfer creation delegates to `CreateGatewayTransferAction` |
 | GatewayCreditCardController | GatewayCreditCards | ✅ Retained read-only browsing (no write command) |
 | GatewayCustomerController | GatewayCustomers | ✅ Retained read-only browsing (no write command) |
 | GatewayPostbackController | GatewayPostbacks | ✅ Webhook processing delegated |
 | FinancialAccountController | FinancialAccounts | ✅ Retained generic CRUD (reference data) |
 | CostCenterController | CostCenters | ✅ Retained generic CRUD (reference data) |
 | PlanCategoryController | PlanCategories | ✅ Retained generic CRUD (reference data) |
-| RoleController | Roles | ⚠️ Deferred: generic CRUD is incompatible with the role schema |
+| RoleController | Roles | ✅ Permission updates delegated; generic CRUD remains intentionally absent |
 | UserController | Users | ✅ Create/update permissions delegated |
 | SettingController | Settings | ✅ Bulk update delegated |
-| TransferController | Transfers | ⚠️ Deferred: transfer semantics are not defined |
 | ReportController | Reports | ✅ Retained read-only generic browsing |
 
-**Additional controllers outside the table:** Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox are not Action-migrated. Their action-vs-generic-CRUD treatment remains deferred until a domain command is identified.
+**Additional controllers outside the table:** Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox are not Action-migrated. Their action-vs-generic-CRUD treatment remains deferred until a domain command is identified. SelectBox now enforces the existing `*.view` permission for its mapped module.
 
 **Payables:** `PayableController` has no module-specific command, external integration, or invariant beyond the model-enforced `operation_type`. It is intentionally retained on the generic CRUD flow. A future payment settlement must be introduced as a dedicated Action rather than by wrapping generic create/update/delete operations.
 
-**Administrative and reference modules:** Financial Accounts, Cost Centers, and Plan Categories remain on generic CRUD because they contain no domain command. User creation/update and Settings bulk updates delegate to Actions. Roles and Transfers require lifecycle and schema decisions before their generic CRUD flows can be refactored safely. Reports and gateway operational resources remain read-only where no write command is defined.
+**Administrative and reference modules:** Financial Accounts, Cost Centers, and Plan Categories remain on generic CRUD because they contain no domain command. User creation/update, Role permission updates, and Settings bulk updates delegate to Actions. Manual Transfers were removed from the application surface. Gateway transfers are now requested through the gateway flow and recorded as `GatewayTransfer`; their subsequent status is updated from gateway data/postbacks. Reports and gateway operational resources remain read-only where no write command is defined.
 
 ### Refactor Pattern
 ```php
@@ -137,7 +137,7 @@ public function store(Request $request): RedirectResponse|JsonResponse
 {
     $this->authorizeAccess(AccessAction::CREATE);
 
-    $result = $this->createClient->execute(CreateClientDTO::fromArray(
+        $result = $this->createClient->execute(CreateClientDTO::from(
         $this->validatedRequestData($request, $this->storeRequestClass()),
     ));
 
@@ -172,16 +172,17 @@ public function store(Request $request): RedirectResponse|JsonResponse
 | ReportService | Keep (specialized) |
 
 **Migration completed:**
-- `GenerateSaleInvoicesAction`, `GeneratePurchaseInvoicesAction`, and `GenerateDirectLessonInvoicesAction` inject `InvoiceGenerator`; gateway sync queuing remains unchanged.
+- `GenerateContractInvoicesAction`, `GenerateSaleInvoicesAction`, `GeneratePurchaseInvoicesAction`, and `GenerateDirectLessonInvoicesAction` inject `InvoiceGenerator`, but are not invoked by production code and require an explicit lifecycle integration decision.
 - `gateway:sync-invoices` uses `GatewayBillingOrchestrator::syncInvoice()`.
 - `gateway:sync-fiscal-invoices` uses `FiscalSyncOrchestrator::syncAll()`.
 - Receivable fiscal requests and eligibility queries use `FiscalInvoiceEmitter`.
 - `InvoiceGeneratorTest` replaces `BillingInvoiceServiceTest`; `FiscalSyncOrchestratorTest` replaces `GatewayFiscalSyncServiceTest`.
 
-**Verification status (2026-08-06):**
+**Verification status (2026-08-14):**
 - [x] `vendor/bin/pint --dirty --format agent` passed.
 - [x] PHP lint and `git diff --check` passed.
-- [ ] Focused feature tests did not complete: PHPUnit was terminated by resource constraints before assertions ran in the Sales, Purchases, DirectLessons, Receivables, `FiscalSyncOrchestrator`, and fiscal-sync command coverage.
+- [x] Docker focused tests passed for plan persistence, dashboard/select-box authorization, catalog persistence, gateway account security, and `gateway:sync-invoices`.
+- [ ] Sales, Purchases, DirectLessons, Receivables, `FiscalSyncOrchestrator`, and fiscal-sync command coverage still require rerun.
 
 ---
 
@@ -194,8 +195,8 @@ public function store(Request $request): RedirectResponse|JsonResponse
 - [ ] Static analysis: `php artisan stan` (if Larastan configured)
 
 **Current verification record:**
-- [x] Pint, PHP lint, and `git diff --check` passed.
-- [ ] Focused feature coverage must be rerun in an environment with sufficient resources; PHPUnit was interrupted before assertions, so no focused feature-test result is recorded as passing.
+- [x] Pint, Docker focused tests, frontend build, TypeScript check, and `git diff --check` passed.
+- [ ] Full suite and static analysis remain pending.
 
 ---
 
@@ -205,6 +206,23 @@ public function store(Request $request): RedirectResponse|JsonResponse
 - [ ] Handle ActionResultDTO responses (success/error toast, redirects)
 
 Current frontend payloads were kept compatible for migrated modules. A final audit is still required for forms, errors, redirects, and JSON responses across all migrated pages.
+
+---
+
+## Gateway PIX Transfers (IN PROGRESS)
+
+- [x] Remove the legacy manual `Transfer` controller, model, routes, navigation, and pages.
+- [x] Create `GatewayTransferRecipient` with encrypted PIX key storage and a gateway-account relationship.
+- [x] Add `gateway_transfer_recipient_id` to gateway transfers.
+- [x] Add `CreateGatewayTransferAction`, which resolves the payment adapter from the selected recipient's gateway account.
+- [x] Add `POST /gateway-transfers`, requiring `gateway_transfers.create` and accepting only recipient, amount, and optional description.
+- [x] Persist the recipient reference when the Asaas adapter creates a transfer.
+- [x] Keep transfer update/delete unavailable; only gateway synchronization/postbacks may change status.
+- [x] Grant Managers the gateway modules, including gateway account configuration and transfer creation.
+- [ ] Build the recipient CRUD controller, routes, Inertia pages, and navigation.
+- [ ] Add the Inertia/Vuetify transfer request interface.
+- [ ] Add focused recipient and transfer-creation tests.
+- [ ] Start the application container and run Pint and focused tests for this flow.
 
 ---
 
@@ -276,20 +294,20 @@ app/
 | 2. Repositories | ✅ Done | - | 19 Eloquent bindings for covered modules |
 | 3. DTOs | ✅ Done | - | 50 files across 17 namespaces |
 | 4. Billing/Gateway Collaborators | ✅ Done | - | 8 focused collaborators |
-| 5. Actions | ✅ Integrated | Partial | Actions corrected and used by 13 controllers |
-| 6. Controller Refactor | 🚧 In progress | Partial | 13 controllers migrated; role, transfer, and additional controllers remain pending lifecycle decisions |
-| 7. Legacy Cleanup | ✅ Implemented | Focused tests incomplete | Four legacy billing/gateway services removed; PHPUnit resource constraints interrupted focused tests before assertions |
-| 8. Testing | 🚧 In progress | Focused tests incomplete | Re-run focused feature coverage, then full suite and static analysis in a sufficiently provisioned environment |
+| 5. Actions | ✅ Integrated | Partial | 34 module Actions used by 14 controllers |
+| 6. Controller Refactor | 🚧 In progress | Partial | Role permission updates migrated; legacy manual transfers removed; gateway PIX creation uses an Action |
+| 7. Legacy Cleanup | ✅ Implemented | Partial | Four legacy billing/gateway services removed; invoice-generation Actions still lack production call sites |
+| 8. Testing | 🚧 In progress | Focused tests passed | Continue focused coverage, then run full suite and static analysis |
 | 9. Frontend | ⏳ Pending | - | Inertia/Vue integration |
 
 ---
 
 ## Next Steps (Priority Order)
 
-1. **Phase 6**: Define the Role lifecycle and Transfer semantics before refactoring their generic CRUD flows.
+1. **Gateway PIX transfers**: Complete recipient CRUD and the transfer-request Inertia/Vuetify interface, then add focused tests.
 2. **Phase 6**: Decide the treatment for Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox.
 3. **Authorization**: Integrate the custom module permission system with Laravel Gates/Policies, or formally retain controller-level authorization as the Action standard.
-4. **Phase 8**: Resolve the PHPUnit resource termination, rerun the interrupted focused feature tests, add missing Action/controller delegation and gateway integration tests, then run the full suite and static analysis.
+4. **Phase 8**: Run the full suite and static analysis, then add remaining Action/controller delegation and gateway integration tests.
 5. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
 
 ---
@@ -312,4 +330,4 @@ php artisan code:inspect
 
 ---
 
-*Updated: 2026-08-06 | Phases 1–5 completed; Phase 6 has 13 Action-migrated controllers with retained/deferred controller decisions; Phase 7 completed; Phase 8 focused feature tests remain interrupted by resource constraints before assertions; Phase 9 pending.*
+*Updated: 2026-08-14 | Phases 1–5 completed; Phase 6 has 14 Action-migrated controllers with retained/deferred decisions; gateway PIX transfer creation is partially implemented; Phase 7 completed; focused Docker tests pass for previously verified flows; the application container was unavailable for the latest verification; Phase 8 full suite and static analysis remain pending; Phase 9 pending.*
