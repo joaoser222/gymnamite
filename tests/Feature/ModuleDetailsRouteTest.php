@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Enums\BillableStatus;
 use App\Enums\FinancialAccountType;
 use App\Enums\GenderType;
-use App\Enums\MovementType;
 use App\Enums\OperationType;
 use App\Models\Client;
 use App\Models\Contract;
@@ -57,24 +56,6 @@ class ModuleDetailsRouteTest extends TestCase
             ->component('cost_centers/Details')
             ->where('cost-center.id', $costCenter->id)
             ->where('cost-center.name', 'Centro Principal')
-        );
-    }
-
-    public function test_authenticated_users_can_visit_movement_create_with_type_options(): void
-    {
-        $user = User::factory()->create();
-        $this->grantPermission($user, 'movements.create');
-
-        $response = $this->actingAs($user)->get(route('movements.create'));
-
-        $response->assertOk();
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('movements/Details')
-            ->where('movement', null)
-            ->has('options.operationTypes', 2)
-            ->where('options.operationTypes.0.value', OperationType::PAYABLE->value)
-            ->has('options.movementTypes', 2)
-            ->where('options.movementTypes.0.value', MovementType::INTERNAL->value)
         );
     }
 

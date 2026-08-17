@@ -4,9 +4,7 @@ namespace App\Traits;
 
 use App\AccessControl\AccessAction;
 use App\AccessControl\AccessModule;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Gate;
 
 trait AuthorizesAccessControl
 {
@@ -14,22 +12,12 @@ trait AuthorizesAccessControl
 
     protected function authorizeAccess(AccessAction $action): void
     {
-        abort_unless($this->allowsAccess($action), Response::HTTP_FORBIDDEN);
+        Gate::authorize($this->accessPermissionName($action));
     }
 
     protected function allowsAccess(AccessAction $action): bool
     {
-        $user = Auth::user();
-
-        if (! $user instanceof User) {
-            return false;
-        }
-
-        $permissionName = $this->accessPermissionName($action);
-
-        return $user->permissions()
-            ->where('name', $permissionName)
-            ->exists();
+        return Gate::allows($this->accessPermissionName($action));
     }
 
     protected function accessPermissionName(AccessAction $action): string

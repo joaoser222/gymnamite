@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Gate;
 
 class SelectBoxController extends Controller
 {
@@ -32,17 +32,14 @@ class SelectBoxController extends Controller
             abort(404, "Select para '{$objectName}' não encontrado.");
         }
 
-        $this->authorizeAccess($request, $this->accessModuleFor($objectName));
+        $this->authorizeAccess($this->accessModuleFor($objectName));
 
         return $this->{$method}($request);
     }
 
-    private function authorizeAccess(Request $request, AccessModule $module): void
+    private function authorizeAccess(AccessModule $module): void
     {
-        abort_unless(
-            $request->user()?->permissions()->where('name', $module->value.'.'.AccessAction::VIEW->value)->exists(),
-            Response::HTTP_FORBIDDEN,
-        );
+        Gate::authorize($module->value.'.'.AccessAction::VIEW->value);
     }
 
     private function accessModuleFor(string $objectName): AccessModule

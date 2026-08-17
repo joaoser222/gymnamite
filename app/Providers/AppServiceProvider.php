@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\AccessControl\AccessModule;
+use App\Models\User;
 use App\PaymentGateways\Adapters\AsaasPaymentGatewayAdapter;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
 use App\PaymentGateways\Contracts\PaymentGatewayInvoicingAdapter;
@@ -55,6 +57,7 @@ use App\Services\Gateway\GatewayBillingOrchestrator;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -161,7 +164,21 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::useHotFile(storage_path('vite/hot'));
 
+        $this->registerAccessControlGates();
         $this->configureDefaults();
+    }
+
+    protected function registerAccessControlGates(): void
+    {
+        foreach (AccessModule::cases() as $module) {
+            foreach ($module->actions() as $action) {
+                $permissionName = $module->value.'.'.$action->value;
+
+                Gate::define($permissionName, static fn (User $user): bool => $user->permissions()
+                    ->where('name', $permissionName)
+                    ->exists());
+            }
+        }
     }
 
     /**

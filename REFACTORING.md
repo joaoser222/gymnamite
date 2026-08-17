@@ -85,7 +85,7 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 **Pattern per Action:**
 - Extends `BaseAction`
 - Uses `handle(mixed $input)` and validates the expected DTO/input internally
-- HTTP controllers enforce the existing module permission before executing an Action. Actions use an empty `$ability` until the custom permission system is integrated with Laravel Gates/Policies.
+- HTTP controllers enforce module permissions through Laravel Gates before executing Actions. Actions keep an empty `$ability` because their execution is initiated by authorized controllers or system commands.
 - Uses DTOs for input/output
 - Returns an `ActionResultDTO` or the domain result required by the HTTP response
 - Uses repositories via DI
@@ -304,10 +304,9 @@ app/
 
 ## Next Steps (Priority Order)
 
-1. **Authorization**: Integrate the custom module permission system with Laravel Gates/Policies, or formally retain controller-level authorization as the Action standard.
-2. **Lifecycle integration**: Define production call sites for the invoice-generation Actions.
-3. **Phase 8**: Run the full suite and static analysis, then add remaining Action/controller delegation and gateway integration tests.
-4. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
+1. **Lifecycle integration**: Define production call sites for the invoice-generation Actions.
+2. **Phase 8**: Run the full suite and static analysis, then add remaining Action/controller delegation and gateway integration tests.
+3. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
 
 ---
 
