@@ -124,7 +124,7 @@ Actions were corrected for PSR-4 loading, valid `spatie/laravel-data` attributes
 | SettingController | Settings | ✅ Bulk update delegated |
 | ReportController | Reports | ✅ Retained read-only generic browsing |
 
-**Additional controllers outside the table:** Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox are not Action-migrated. Their action-vs-generic-CRUD treatment remains deferred until a domain command is identified. SelectBox now enforces the existing `*.view` permission for its mapped module.
+**Additional controllers outside the table:** Coupon, Trainer, Supplier, and FinancialCategory remain on generic CRUD because they are reference data. SelectBox remains an authorized query endpoint. Movements are read-only because payment flows create their entries with an invoice reference.
 
 **Payables:** `PayableController` has no module-specific command, external integration, or invariant beyond the model-enforced `operation_type`. It is intentionally retained on the generic CRUD flow. A future payment settlement must be introduced as a dedicated Action rather than by wrapping generic create/update/delete operations.
 
@@ -295,7 +295,7 @@ app/
 | 3. DTOs | ✅ Done | - | 50 files across 17 namespaces |
 | 4. Billing/Gateway Collaborators | ✅ Done | - | 8 focused collaborators |
 | 5. Actions | ✅ Integrated | Partial | 34 module Actions used by 14 controllers |
-| 6. Controller Refactor | 🚧 In progress | Partial | Role permission updates migrated; legacy manual transfers removed; gateway PIX creation uses an Action |
+| 6. Controller Refactor | ✅ Complete | Partial | Domain commands delegate to Actions; reference data remains generic CRUD; movements are read-only |
 | 7. Legacy Cleanup | ✅ Implemented | Partial | Four legacy billing/gateway services removed; invoice-generation Actions still lack production call sites |
 | 8. Testing | 🚧 In progress | Focused tests passed | Continue focused coverage, then run full suite and static analysis |
 | 9. Frontend | ⏳ Pending | - | Inertia/Vue integration |
@@ -304,11 +304,10 @@ app/
 
 ## Next Steps (Priority Order)
 
-1. **Gateway PIX transfers**: Complete recipient CRUD and the transfer-request Inertia/Vuetify interface, then add focused tests.
-2. **Phase 6**: Decide the treatment for Coupon, Trainer, Supplier, FinancialCategory, Movement, and SelectBox.
-3. **Authorization**: Integrate the custom module permission system with Laravel Gates/Policies, or formally retain controller-level authorization as the Action standard.
-4. **Phase 8**: Run the full suite and static analysis, then add remaining Action/controller delegation and gateway integration tests.
-5. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
+1. **Authorization**: Integrate the custom module permission system with Laravel Gates/Policies, or formally retain controller-level authorization as the Action standard.
+2. **Lifecycle integration**: Define production call sites for the invoice-generation Actions.
+3. **Phase 8**: Run the full suite and static analysis, then add remaining Action/controller delegation and gateway integration tests.
+4. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
 
 ---
 

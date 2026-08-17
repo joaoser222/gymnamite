@@ -93,7 +93,7 @@ Route::middleware(['auth'])->group(function () {
     Route::module(ReceivableController::class);
     Route::patch('receivables/{receivable}/mark-paid', [ReceivableController::class, 'markPaid'])->name('receivables.mark-paid');
     Route::post('receivables/{receivable}/request-gateway-invoice', [ReceivableController::class, 'requestGatewayInvoice'])->name('receivables.request-gateway-invoice');
-    Route::module(MovementController::class);
+    Route::moduleReadOnly(MovementController::class);
 
     // Gateway de Pagamentos
     Route::moduleReadOnly(GatewayPaymentController::class);

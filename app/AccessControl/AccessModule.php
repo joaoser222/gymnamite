@@ -141,7 +141,7 @@ enum AccessModule: string
                 AccessAction::MARK_UNPAID,
                 AccessAction::REQUEST_INVOICE,
             ],
-            self::MOVEMENT => $default_actions,
+            self::MOVEMENT => [AccessAction::VIEW],
             self::GATEWAY_PAYMENT => [AccessAction::VIEW],
             self::GATEWAY_TRANSFER => [AccessAction::VIEW, AccessAction::CREATE],
             self::GATEWAY_TRANSFER_RECIPIENT => $default_actions,

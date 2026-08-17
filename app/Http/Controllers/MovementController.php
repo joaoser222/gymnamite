@@ -6,10 +6,9 @@ use App\AccessControl\AccessModule;
 use App\Enums\MovementType;
 use App\Enums\OperationType;
 use App\Models\Movement;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class MovementController extends CrudModuleController
+class MovementController extends ReadOnlyModuleController
 {
     /**
      * @var array<int, string>
@@ -46,13 +45,4 @@ class MovementController extends CrudModuleController
         ];
     }
 
-    protected function moduleDetailsProps(?Model $model = null): array
-    {
-        return [
-            'options' => [
-                'operationTypes' => $this->enumOptions(OperationType::class),
-                'movementTypes' => $this->enumOptions(MovementType::class),
-            ],
-        ];
-    }
 }

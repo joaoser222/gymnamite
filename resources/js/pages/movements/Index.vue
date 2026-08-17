@@ -3,14 +3,14 @@ import { usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import type { TableHeader, TableRoutes } from '@/components/TablePage.vue';
 import { formatCurrency, formatDate } from '@/plugins/formatters';
-import type { PaginatedResponse, IndexRoutes } from '@/shared/page';
+import type { PaginatedResponse } from '@/shared/page';
 import { findLabel, useSharedOptions } from '@/shared/options';
 
 defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps<{
     movements: PaginatedResponse<any>;
-    routes: IndexRoutes;
+    routes: Pick<TableRoutes, 'index' | 'show'>;
 }>();
 
 const headers: TableHeader[] = [
@@ -23,10 +23,7 @@ const headers: TableHeader[] = [
 
 const routes: TableRoutes = {
     index: props.routes.index,
-    create: props.routes.create,
     show: props.routes.show,
-    changeVisibility: props.routes.changeVisibility,
-    destroy: props.routes.destroy,
 };
 
 const sharedProps = usePage().props;
@@ -44,6 +41,9 @@ const { operationTypes, movementTypes } = useSharedOptions(sharedProps.options ?
         :routes="routes"
         module="movements"
         title="Caixa"
+        hide-selection
+        hide-visibility-filter
+        :permission-map="{ create: false, delete: false, visibility: false }"
         :custom-slots="['created_at', 'value', 'operation_type', 'movement_type']"
     >
         <template #column-created_at="{ item }">
