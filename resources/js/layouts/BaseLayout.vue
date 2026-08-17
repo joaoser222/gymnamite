@@ -1,42 +1,63 @@
 <template>
     <div>
+        <v-navigation-drawer
+            :model-value="mdAndUp || drawer"
+            :permanent="mdAndUp"
+            :temporary="!mdAndUp"
+            width="280"
+            @update:model-value="drawer = $event"
+        >
+            <div class="d-flex justify-center align-center px-4">
+                <v-img
+                    :src="logo"
+                    alt="Gymnamite"
+                    contain
+                    height="64px"
+                    max-width="132"
+                />
+            </div>
+
+            <v-list nav density="compact" class="pa-3">
+                <v-list-group v-for="group in menu" :key="group.name">
+                    <template #activator="{ props: groupProps }">
+                        <v-list-item
+                            v-bind="groupProps"
+                            :prepend-icon="group.icon"
+                            :title="group.title"
+                        />
+                    </template>
+
+                    <v-list-item
+                        v-if="group.name === 'start'"
+                        :active="isApplicationsHome"
+                        prepend-icon="ti ti-apps"
+                        title="Todos"
+                        @click="navigateTo('/')"
+                    />
+
+                    <v-list-item
+                        v-for="item in group.items"
+                        :key="item.href"
+                        :active="isItemActive(item.href)"
+                        :prepend-icon="item.icon"
+                        :title="item.title"
+                        @click="navigateTo(item.href)"
+                    />
+                </v-list-group>
+            </v-list>
+        </v-navigation-drawer>
+
         <v-app-bar
-            v-if="!isApplicationsHome"
             flat
             density="compact"
             border="b"
             class="border-surface-variant"
         >
-            <v-menu>
-                <template #activator="{ props: menuProps }">
-                    <v-btn
-                        icon="ti ti-apps"
-                        variant="text"
-                        size="small"
-                        v-bind="menuProps"
-                    />
-                </template>
-
-                <v-list density="compact" min-width="280" max-height="480">
-                    <v-list-item
-                        prepend-icon="ti ti-home"
-                        title="Aplicativos"
-                        @click="navigateTo('/')"
-                    />
-                    <v-divider />
-                    <template v-for="group in menu" :key="group.name">
-                        <v-list-subheader>{{ group.title }}</v-list-subheader>
-                        <v-list-item
-                            v-for="item in group.items"
-                            :key="item.href"
-                            :active="isItemActive(item.href)"
-                            :prepend-icon="item.icon"
-                            :title="item.title"
-                            @click="navigateTo(item.href)"
-                        />
-                    </template>
-                </v-list>
-            </v-menu>
+            <v-app-bar-nav-icon
+                v-if="!mdAndUp"
+                icon="ti ti-menu-2"
+                @click="drawer = !drawer"
+            />
 
             <v-app-bar-title>
                 <h3>{{ currentPageTitle }}</h3>
@@ -92,7 +113,9 @@
 
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { useDisplay } from 'vuetify';
+import logo from '@/assets/logo.webp';
 import { usePermissions } from '@/composables/usePermissions';
 import type { MenuGroup } from '@/navigation';
 
@@ -122,10 +145,10 @@ const props = defineProps<{
 
 const page = usePage();
 const { clearPermissionsCache } = usePermissions();
+const { mdAndUp } = useDisplay();
+const drawer = ref(false);
 
 const sharedProps = computed(() => page.props as SharedProps);
-
-const appName = computed(() => sharedProps.value.name ?? 'Gymnamite');
 
 const user = computed<AuthUser>(() => {
     return (
@@ -163,7 +186,7 @@ const currentMenuItem = computed(() => {
 });
 
 const currentPageTitle = computed(
-    () => currentMenuItem.value?.title ?? 'Dashboard',
+    () => currentMenuItem.value?.title ?? (isApplicationsHome.value ? 'Todos' : 'Dashboard'),
 );
 
 function normalizePath(href: string): string {
@@ -184,6 +207,7 @@ function isItemActive(href: string): boolean {
 }
 
 function navigateTo(href: string): void {
+    drawer.value = false;
     router.visit(href);
 }
 

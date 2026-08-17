@@ -31,7 +31,7 @@ const filteredMenuGroups = computed(() => {
 <template>
     <div class="mx-auto" style="max-width: 1200px">
         <div class="mb-8">
-            <h1 class="text-h4">Aplicativos</h1>
+            <h1 class="text-h4">Todos</h1>
             <p class="text-medium-emphasis mt-1">
                 Acesse os módulos disponíveis para você.
             </p>
