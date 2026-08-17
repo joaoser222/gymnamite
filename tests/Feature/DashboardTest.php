@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -56,15 +55,5 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->where('auth.user.id', $user->id)
             );
-    }
-
-    private function grantPermission(User $user, string $permissionName): void
-    {
-        $permission = Permission::query()->create([
-            'name' => $permissionName,
-            'description' => $permissionName,
-        ]);
-
-        $user->permissions()->attach($permission);
     }
 }

@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Enums\ClientStatus;
 use App\Enums\ProductType;
 use App\Models\Client;
-use App\Models\Permission;
 use App\Models\Product;
 use App\Models\ProductUnity;
 use App\Models\User;
@@ -125,15 +124,5 @@ class SelectBoxControllerTest extends TestCase
         $this->actingAs($user)
             ->getJson(route('select-box', ['objectName' => 'client']))
             ->assertForbidden();
-    }
-
-    private function grantPermission(User $user, string $permissionName): void
-    {
-        $permission = Permission::query()->create([
-            'name' => $permissionName,
-            'description' => $permissionName,
-        ]);
-
-        $user->permissions()->attach($permission);
     }
 }
