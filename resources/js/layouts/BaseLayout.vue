@@ -18,7 +18,11 @@
             </div>
 
             <v-list nav density="compact" class="pa-3">
-                <v-list-group v-for="group in menu" :key="group.name">
+                <v-list-group
+                    v-for="group in menu"
+                    :key="group.name"
+                    fluid
+                >
                     <template #activator="{ props: groupProps }">
                         <v-list-item
                             v-bind="groupProps"
@@ -33,6 +37,7 @@
                         prepend-icon="ti ti-apps"
                         title="Todos"
                         @click="navigateTo('/')"
+                        class="ml-4"
                     />
 
                     <v-list-item
@@ -42,6 +47,7 @@
                         :prepend-icon="item.icon"
                         :title="item.title"
                         @click="navigateTo(item.href)"
+                        class="ml-4"
                     />
                 </v-list-group>
             </v-list>
