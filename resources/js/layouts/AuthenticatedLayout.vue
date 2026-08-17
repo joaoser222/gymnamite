@@ -204,6 +204,12 @@ const menuGroups: MenuGroup[] = [
                 permission: 'gateway_transfers.view',
             },
             {
+                title: 'Destinatários',
+                icon: 'ti ti-user-dollar',
+                href: '/gateway-transfer-recipients',
+                permission: 'gateway_transfer_recipients.view',
+            },
+            {
                 title: 'Postbacks',
                 icon: 'ti ti-webhook',
                 href: '/gateway-postbacks',

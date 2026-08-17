@@ -3,6 +3,7 @@
 namespace App\PaymentGateways;
 
 use App\Models\GatewayAccount;
+use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
 use App\PaymentGateways\Contracts\PaymentGatewayInvoicingAdapter;
 use App\PaymentGateways\Definitions\AsaasPaymentGatewayDefinition;
 use App\PaymentGateways\Definitions\PaymentGatewayDefinition;
@@ -56,6 +57,13 @@ class PaymentGatewayManager
             ],
             array_values($this->definitions),
         );
+    }
+
+    public function adapter(GatewayAccount $gatewayAccount): PaymentGatewayAdapter
+    {
+        $adapterClass = $this->findOrFail($gatewayAccount->name)->adapterClass();
+
+        return app($adapterClass, ['gatewayAccount' => $gatewayAccount]);
     }
 
     public function invoicingAdapter(GatewayAccount $gatewayAccount): PaymentGatewayInvoicingAdapter

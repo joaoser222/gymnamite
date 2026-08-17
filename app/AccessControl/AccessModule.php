@@ -40,6 +40,7 @@ enum AccessModule: string
     // Gateway de Pagamentos
     case GATEWAY_PAYMENT = 'gateway_payments';
     case GATEWAY_TRANSFER = 'gateway_transfers';
+    case GATEWAY_TRANSFER_RECIPIENT = 'gateway_transfer_recipients';
     case GATEWAY_POSTBACK = 'gateway_postbacks';
     case GATEWAY_CUSTOMER = 'gateway_customers';
     case GATEWAY_CREDIT_CARD = 'gateway_credit_cards';
@@ -75,6 +76,7 @@ enum AccessModule: string
             self::MOVEMENT => 'Caixa',
             self::GATEWAY_PAYMENT => 'Pagamentos do Gateway',
             self::GATEWAY_TRANSFER => 'Transferências do Gateway',
+            self::GATEWAY_TRANSFER_RECIPIENT => 'Destinatários de Transferências',
             self::GATEWAY_POSTBACK => 'Postbacks do Gateway',
             self::GATEWAY_CUSTOMER => 'Clientes do Gateway',
             self::GATEWAY_CREDIT_CARD => 'Cartões do Gateway',
@@ -142,6 +144,7 @@ enum AccessModule: string
             self::MOVEMENT => $default_actions,
             self::GATEWAY_PAYMENT => [AccessAction::VIEW],
             self::GATEWAY_TRANSFER => [AccessAction::VIEW, AccessAction::CREATE],
+            self::GATEWAY_TRANSFER_RECIPIENT => $default_actions,
             self::GATEWAY_POSTBACK => [AccessAction::VIEW],
             self::GATEWAY_CUSTOMER => [AccessAction::VIEW],
             self::GATEWAY_CREDIT_CARD => [AccessAction::VIEW],

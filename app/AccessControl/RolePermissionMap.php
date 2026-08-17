@@ -13,6 +13,7 @@ final class RolePermissionMap
             AccessModule::GATEWAY_ACCOUNT,
             AccessModule::GATEWAY_PAYMENT,
             AccessModule::GATEWAY_TRANSFER,
+            AccessModule::GATEWAY_TRANSFER_RECIPIENT,
             AccessModule::GATEWAY_POSTBACK,
             AccessModule::GATEWAY_CUSTOMER,
             AccessModule::GATEWAY_CREDIT_CARD,

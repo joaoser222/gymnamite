@@ -19,6 +19,7 @@ use App\Http\Controllers\GatewayInvoiceController;
 use App\Http\Controllers\GatewayPaymentController;
 use App\Http\Controllers\GatewayPostbackController;
 use App\Http\Controllers\GatewayTransferController;
+use App\Http\Controllers\GatewayTransferRecipientController;
 use App\Http\Controllers\ModalityController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\PayableController;
@@ -96,8 +97,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Gateway de Pagamentos
     Route::moduleReadOnly(GatewayPaymentController::class);
+    Route::get('gateway-transfers/create', [GatewayTransferController::class, 'create'])->name('gateway-transfers.create');
     Route::moduleReadOnly(GatewayTransferController::class);
     Route::post('gateway-transfers', [GatewayTransferController::class, 'store'])->name('gateway-transfers.store');
+    Route::module(GatewayTransferRecipientController::class);
     Route::moduleReadOnly(GatewayPostbackController::class);
     Route::moduleReadOnly(GatewayCustomerController::class);
     Route::moduleReadOnly(GatewayCreditCardController::class);

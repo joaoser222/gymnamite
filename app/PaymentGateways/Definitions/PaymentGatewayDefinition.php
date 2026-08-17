@@ -2,6 +2,8 @@
 
 namespace App\PaymentGateways\Definitions;
 
+use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
+
 abstract class PaymentGatewayDefinition
 {
     abstract public function name(): string;
@@ -9,6 +11,11 @@ abstract class PaymentGatewayDefinition
     abstract public function description(): string;
 
     abstract public function settings(): array;
+
+    /**
+     * @return class-string<PaymentGatewayAdapter>
+     */
+    abstract public function adapterClass(): string;
 
     public function supportsInvoicing(): bool
     {

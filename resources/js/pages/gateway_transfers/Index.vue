@@ -10,7 +10,7 @@ defineOptions({ layout: AuthenticatedLayout });
 
 const props = defineProps<{
     gatewayTransfers: PaginatedResponse<any>;
-    routes: Pick<TableRoutes, 'index' | 'show'>;
+    routes: Pick<TableRoutes, 'index' | 'create' | 'show'>;
 }>();
 
 const headers: TableHeader[] = [
@@ -34,6 +34,7 @@ const headers: TableHeader[] = [
 
 const routes: TableRoutes = {
     index: props.routes.index,
+    create: props.routes.create,
     show: props.routes.show,
 };
 
@@ -54,7 +55,7 @@ const { transactionStatus } = useSharedOptions(sharedProps.options ?? {});
         title="Transferências do Gateway"
         hide-selection
         hide-visibility-filter
-        :permission-map="{ create: false, delete: false, visibility: false }"
+        :permission-map="{ delete: false, visibility: false }"
         :custom-slots="[
             'gross_value',
             'fee_value',

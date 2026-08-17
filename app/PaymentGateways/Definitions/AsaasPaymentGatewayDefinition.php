@@ -58,6 +58,11 @@ class AsaasPaymentGatewayDefinition extends PaymentGatewayDefinition
         ];
     }
 
+    public function adapterClass(): string
+    {
+        return AsaasPaymentGatewayAdapter::class;
+    }
+
     public function supportsInvoicing(): bool
     {
         return true;

@@ -219,10 +219,10 @@ Current frontend payloads were kept compatible for migrated modules. A final aud
 - [x] Persist the recipient reference when the Asaas adapter creates a transfer.
 - [x] Keep transfer update/delete unavailable; only gateway synchronization/postbacks may change status.
 - [x] Grant Managers the gateway modules, including gateway account configuration and transfer creation.
-- [ ] Build the recipient CRUD controller, routes, Inertia pages, and navigation.
-- [ ] Add the Inertia/Vuetify transfer request interface.
-- [ ] Add focused recipient and transfer-creation tests.
-- [ ] Start the application container and run Pint and focused tests for this flow.
+- [x] Build the recipient CRUD controller, routes, Inertia pages, and navigation.
+- [x] Add the Inertia/Vuetify transfer request interface.
+- [x] Add focused recipient and transfer-creation tests.
+- [x] Start the application container and run Pint and focused tests for this flow.
 
 ---
 

@@ -7,8 +7,12 @@ use App\AccessControl\AccessModule;
 use App\Actions\GatewayTransfers\CreateGatewayTransferAction;
 use App\Enums\Gateway\TransactionStatus;
 use App\Models\GatewayTransfer;
+use App\Models\GatewayTransferRecipient;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class GatewayTransferController extends ReadOnlyModuleController
 {
@@ -56,7 +60,34 @@ class GatewayTransferController extends ReadOnlyModuleController
         ];
     }
 
-    public function store(Request $request): JsonResponse
+    protected function getModuleRoutes(): array
+    {
+        return [
+            ...parent::getModuleRoutes(),
+            'create' => route('gateway-transfers.create'),
+            'store' => route('gateway-transfers.store'),
+        ];
+    }
+
+    public function create(): Response
+    {
+        $this->authorizeAccess(AccessAction::CREATE);
+
+        return Inertia::render('gateway_transfers/Request', [
+            'recipients' => GatewayTransferRecipient::query()
+                ->where('visibility', 'visible')
+                ->orderBy('label')
+                ->get(['id', 'label', 'holder_name'])
+                ->map(fn (GatewayTransferRecipient $recipient): array => [
+                    'value' => $recipient->id,
+                    'label' => "{$recipient->label} - {$recipient->holder_name}",
+                ])
+                ->all(),
+            'routes' => $this->getModuleRoutes(),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorizeAccess(AccessAction::CREATE);
 
@@ -66,6 +97,15 @@ class GatewayTransferController extends ReadOnlyModuleController
             'description' => ['nullable', 'string', 'max:500'],
         ]));
 
-        return response()->json($transfer, 201);
+        if ($request->expectsJson()) {
+            return response()->json($transfer, 201);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Transferência solicitada com sucesso.',
+        ]);
+
+        return redirect()->route('gateway-transfers.index');
     }
 }
