@@ -33,7 +33,7 @@ export default defineConfig({
         }),
         Components({
             dirs: ['resources/js/components'],
-            dts: 'resources/js/components.d.ts',
+            dts: 'storage/vite/components.d.ts',
         }),
     ],
     resolve: {
