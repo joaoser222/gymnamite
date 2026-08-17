@@ -8,7 +8,7 @@ RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npm run build
 
-FROM php:8.3-cli-bookworm
+FROM php:8.3-fpm-bookworm
 
 WORKDIR /var/www/html
 
@@ -26,3 +26,4 @@ COPY . .
 RUN composer dump-autoload --optimize --no-scripts
 
 COPY --from=frontend /app/public/build ./public/build
+RUN mv public /opt/public

@@ -1,0 +1,78 @@
+services:
+  app:
+    env_file:
+      - develop.env
+    command: >-
+      sh -c 'set -e;
+      [ -f vendor/autoload.php ] || composer install --no-interaction --prefer-dist;
+      mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing storage/logs bootstrap/cache;
+      chown -R www-data:www-data storage bootstrap/cache;
+      php artisan migrate --force;
+      exec php-fpm'
+    volumes:
+      - ./:/var/www/html
+      - composer_vendor:/var/www/html/vendor
+      - laravel_storage:/var/www/html/storage
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+      - vite_hot:/var/www/html/storage/vite
+  caddy:
+    container_name: gymnamite_caddy
+    volumes:
+      - ./public:/var/www/html/public:ro
+  frontend:
+    container_name: gymnamite_frontend
+    image: node:22-bookworm-slim
+    working_dir: /app
+    env_file:
+      - develop.env
+    command: >-
+      sh -c 'mkdir -p storage/vite && npm ci --legacy-peer-deps && npm run dev -- --host=0.0.0.0'
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_HOT_FILE: /app/storage/vite/hot
+    volumes:
+      - ./:/app
+      - frontend_node_modules:/app/node_modules
+      - vite_hot:/app/storage/vite
+    profiles: ["frontend"]
+  db:
+    env_file:
+      - develop.env
+  queue:
+    env_file:
+      - develop.env
+  test:
+    container_name: gymnamite_test
+    build:
+      context: .
+    image: ${APP_IMAGE:-gymnamite:local}
+    command: >-
+      sh -c 'php artisan migrate:fresh --force --env=testing && php artisan test --compact'
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - develop.env
+    environment:
+      APP_ENV: testing
+      DB_DATABASE: gymnamite_test
+      CACHE_STORE: array
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+    volumes:
+      - ./docker/php/test-memory-limit.ini:/usr/local/etc/php/conf.d/zz-test-memory-limit.ini:ro
+    profiles: ["test"]
+
+volumes:
+  composer_vendor:
+    name: gymnamite_composer_vendor
+  bootstrap_cache:
+    name: gymnamite_bootstrap_cache
+  frontend_node_modules:
+    name: gymnamite_frontend_node_modules
+  laravel_storage:
+    name: gymnamite_laravel_storage
+  vite_hot:
+    name: gymnamite_vite_hot

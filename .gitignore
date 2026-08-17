@@ -14,9 +14,7 @@
 .DS_Store
 *.env
 *.env.backup
-*.env.production
-.env.develop
-.env.testing
+.env.*
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

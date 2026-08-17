@@ -6,11 +6,15 @@ import { defineConfig } from 'vite';
 import vuetify from 'vite-plugin-vuetify';
 import Components from 'unplugin-vue-components/vite';
 
+const hmrHost = process.env.VITE_HMR_HOST;
+const hmrClientPort = Number(process.env.VITE_HMR_CLIENT_PORT ?? 5173);
+
 export default defineConfig({
     plugins: [
         laravel({
             input: ['resources/js/app.ts'],
             refresh: true,
+            hotFile: process.env.VITE_HOT_FILE,
             fonts: [
                 google('Barlow', {
                     weights: [400, 500, 600],
@@ -36,6 +40,16 @@ export default defineConfig({
         alias: {
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
         },
+    },
+    server: {
+        host: '0.0.0.0',
+        origin: hmrHost === undefined ? undefined : `http://${hmrHost}`,
+        cors: hmrHost === undefined
+            ? undefined
+            : { origin: [`http://${hmrHost}`, `https://${hmrHost}`] },
+        hmr: hmrHost === undefined
+            ? undefined
+            : { host: hmrHost, clientPort: hmrClientPort, path: '/vite-hmr' },
     },
     build: {
         minify: 'terser',
