@@ -196,7 +196,9 @@ public function store(Request $request): RedirectResponse|JsonResponse
 
 **Current verification record:**
 - [x] Pint, Docker focused tests, frontend build, TypeScript check, and `git diff --check` passed.
-- [ ] Full suite and static analysis remain pending.
+- [x] Gateway PIX transfers: focused tests passed (recipient CRUD, transfer creation, module access permissions).
+- [x] `GatewayModuleAccessTest` corrected to match current permission model (admin: all actions, manager: without delete, billing: no gateway modules).
+- [ ] Full suite blocked by pre-existing `ViteManifestNotFoundException` in test container (missing `public/build/manifest.json`); static analysis pending.
 
 ---
 
@@ -209,7 +211,7 @@ Current frontend payloads were kept compatible for migrated modules. A final aud
 
 ---
 
-## Gateway PIX Transfers (IN PROGRESS)
+## Gateway PIX Transfers (Completed) ✅
 
 - [x] Remove the legacy manual `Transfer` controller, model, routes, navigation, and pages.
 - [x] Create `GatewayTransferRecipient` with encrypted PIX key storage and a gateway-account relationship.
@@ -240,6 +242,7 @@ app/
 │   ├── Receivables/
 │   ├── GatewayAccounts/
 │   ├── GatewayPostbacks/
+│   ├── GatewayTransfers/
 │   ├── Plans/
 │   ├── Modalities/
 │   ├── Products/
@@ -299,13 +302,14 @@ app/
 | 7. Legacy Cleanup | ✅ Implemented | Partial | Four legacy billing/gateway services removed; invoice-generation Actions still lack production call sites |
 | 8. Testing | 🚧 In progress | Focused tests passed | Continue focused coverage, then run full suite and static analysis |
 | 9. Frontend | ⏳ Pending | - | Inertia/Vue integration |
+| Gateway PIX | ✅ Completed | Focused tests passed | Recipient CRUD, transfer request, permissions, Pint verified |
 
 ---
 
 ## Next Steps (Priority Order)
 
 1. **Lifecycle integration**: Define production call sites for the invoice-generation Actions.
-2. **Phase 8**: Run the full suite and static analysis, then add remaining Action/controller delegation and gateway integration tests.
+2. **Phase 8**: Resolve Vite manifest issue in test container, then run full suite and static analysis.
 3. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
 
 ---
@@ -328,4 +332,4 @@ php artisan code:inspect
 
 ---
 
-*Updated: 2026-08-14 | Phases 1–5 completed; Phase 6 has 14 Action-migrated controllers with retained/deferred decisions; gateway PIX transfer creation is partially implemented; Phase 7 completed; focused Docker tests pass for previously verified flows; the application container was unavailable for the latest verification; Phase 8 full suite and static analysis remain pending; Phase 9 pending.*
+*Updated: 2026-08-14 | Phases 1–5 completed; Phase 6 has 14 Action-migrated controllers with retained/deferred decisions; gateway PIX transfers completed; Phase 7 completed; focused Docker tests pass for previously verified flows; Phase 8 full suite and static analysis remain pending (full suite has pre-existing Vite manifest failures in test container); Phase 9 pending.*
