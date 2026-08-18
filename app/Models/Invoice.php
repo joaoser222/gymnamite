@@ -85,6 +85,11 @@ class Invoice extends Model
         return $this->belongsTo(FinancialAccount::class);
     }
 
+    public function financialCategory()
+    {
+        return $this->belongsTo(FinancialCategory::class);
+    }
+
     public function holder()
     {
         return $this->morphTo();

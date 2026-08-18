@@ -40,10 +40,10 @@ class FiscalInvoiceEmitter
                 throw new RuntimeException('A conta do gateway não está habilitada para emissão fiscal.');
             }
 
-            $existing = $this->gatewayInvoiceRepository->firstWhere([
-                'invoice_id' => $lockedInvoice->id,
-                'gateway_payment_id' => $payment->id,
-            ]);
+            $existing = $this->gatewayInvoiceRepository->newQuery()
+                ->where('invoice_id', $lockedInvoice->id)
+                ->where('gateway_payment_id', $payment->id)
+                ->first();
 
             if ($existing !== null) {
                 if (in_array($existing->status, [
