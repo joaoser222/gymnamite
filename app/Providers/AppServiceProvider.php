@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\AccessControl\AccessModule;
+use App\Models\Invoice;
 use App\Models\User;
 use App\PaymentGateways\Adapters\AsaasPaymentGatewayAdapter;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
@@ -55,6 +56,7 @@ use App\Services\Gateway\FiscalSyncOrchestrator;
 use App\Services\Gateway\GatewayAdapterResolver;
 use App\Services\Gateway\GatewayBillingOrchestrator;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -162,10 +164,25 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerMorphMaps();
+
         Vite::useHotFile(storage_path('vite/hot'));
 
         $this->registerAccessControlGates();
         $this->configureDefaults();
+    }
+
+    /**
+     * Register the global polymorphic maps so morph aliases resolve
+     * consistently before any model is booted.
+     */
+    protected function registerMorphMaps(): void
+    {
+        $invoice = new Invoice;
+
+        foreach ($invoice->getAllMorphConfigs() as $config) {
+            Relation::morphMap($config['map']);
+        }
     }
 
     protected function registerAccessControlGates(): void

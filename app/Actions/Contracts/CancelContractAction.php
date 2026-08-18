@@ -39,7 +39,7 @@ class CancelContractAction extends BaseAction
 
         $this->invoiceRepository->newQuery()
             ->where('billable_id', $contract->id)
-            ->where('billable_type', Contract::class)
+            ->where('billable_type', $contract->getMorphClass())
             ->where('status', '!=', InvoiceStatus::PAID->value)
             ->update(['status' => InvoiceStatus::CANCELED->value]);
 

@@ -39,7 +39,7 @@ class GenerateContractInvoicesAction extends BaseAction
         // Delete existing unpaid invoices
         $this->invoiceRepository->newQuery()
             ->where('billable_id', $contract->id)
-            ->where('billable_type', Contract::class)
+            ->where('billable_type', $contract->getMorphClass())
             ->where('status', '!=', 'paid')
             ->delete();
 

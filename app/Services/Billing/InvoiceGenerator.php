@@ -71,9 +71,9 @@ class InvoiceGenerator
                 'financial_category_id' => $source->billingFinancialCategoryId(),
                 'visibility' => 'visible',
                 'holder_id' => $holder->getKey(),
-                'holder_type' => get_class($holder),
+                'holder_type' => $holder->getMorphClass(),
                 'billable_id' => $source->getKey(),
-                'billable_type' => get_class($source),
+                'billable_type' => $source->getMorphClass(),
             ]);
 
             $invoices->push($invoice);
