@@ -172,7 +172,7 @@ public function store(Request $request): RedirectResponse|JsonResponse
 | ReportService | Keep (specialized) |
 
 **Migration completed:**
-- `GenerateContractInvoicesAction`, `GenerateSaleInvoicesAction`, `GeneratePurchaseInvoicesAction`, and `GenerateDirectLessonInvoicesAction` inject `InvoiceGenerator`, but are not invoked by production code and require an explicit lifecycle integration decision.
+- `GenerateContractInvoicesAction`, `GenerateSaleInvoicesAction`, `GeneratePurchaseInvoicesAction`, and `GenerateDirectLessonInvoicesAction` are now invoked by the module Create/Update Actions as their invoice-generation step, replacing the duplicated inline `InvoiceGenerator` + gateway-sync calls.
 - `gateway:sync-invoices` uses `GatewayBillingOrchestrator::syncInvoice()`.
 - `gateway:sync-fiscal-invoices` uses `FiscalSyncOrchestrator::syncAll()`.
 - Receivable fiscal requests and eligibility queries use `FiscalInvoiceEmitter`.
@@ -194,11 +194,13 @@ public function store(Request $request): RedirectResponse|JsonResponse
 - [x] Code style: `vendor/bin/pint --dirty --format agent`
 - [ ] Static analysis: `php artisan stan` (if Larastan configured)
 
-**Current verification record:**
-- [x] Pint, Docker focused tests, frontend build, TypeScript check, and `git diff --check` passed.
-- [x] Gateway PIX transfers: focused tests passed (recipient CRUD, transfer creation, module access permissions).
-- [x] `GatewayModuleAccessTest` corrected to match current permission model (admin: all actions, manager: without delete, billing: no gateway modules).
-- [ ] Full suite blocked by pre-existing `ViteManifestNotFoundException` in test container (missing `public/build/manifest.json`); static analysis pending.
+**Current verification record (2026-08-18):**
+- [x] Pint passed; full suite with corrected test env: **176 passed, 6 pre-existing failures** (down from 24 failures before the invoice-generation fixes). No regressions introduced.
+- [x] Lifecycle integration verified end-to-end: Sales, Purchases, DirectLessons, Contracts (`HiringFlowTest`), `InvoiceGeneratorTest`, and `InvoiceStatusLifecycleTest` pass.
+- [x] Fixed pre-existing morph-alias bugs that blocked invoice generation: `InvoiceGenerator` now stores `holder_type`/`billable_type` via `getMorphClass()`, global morph maps are registered in `AppServiceProvider::boot()`, and `CancelContractAction`/`GenerateContractInvoicesAction` query by the morph alias.
+- [ ] Remaining pre-existing failures (unrelated to this step): `GatewayModuleAccessTest`, `ModuleDetailsRouteTest`, `ReceivableGatewayInvoiceRequestTest` (Invoice model missing `financialCategory()` relationship referenced by `EloquentInvoiceRepository::$with`), and `UserModuleTest` (permission ID ordering assertion).
+- [ ] Full suite requires `APP_ENV=testing` at runtime: the container exports `APP_ENV=local`, so phpunit.xml `<env>` without `force="true"` does not override it and the CSRF middleware is not skipped during tests (HTTP POSTs return 419).
+- [ ] Static analysis pending.
 
 ---
 
@@ -299,7 +301,7 @@ app/
 | 4. Billing/Gateway Collaborators | ✅ Done | - | 8 focused collaborators |
 | 5. Actions | ✅ Integrated | Partial | 34 module Actions used by 14 controllers |
 | 6. Controller Refactor | ✅ Complete | Partial | Domain commands delegate to Actions; reference data remains generic CRUD; movements are read-only |
-| 7. Legacy Cleanup | ✅ Implemented | Partial | Four legacy billing/gateway services removed; invoice-generation Actions still lack production call sites |
+| 7. Legacy Cleanup | ✅ Implemented | Partial | Four legacy billing/gateway services removed; invoice-generation Actions wired into module Create/Update Actions |
 | 8. Testing | 🚧 In progress | Focused tests passed | Continue focused coverage, then run full suite and static analysis |
 | 9. Frontend | ⏳ Pending | - | Inertia/Vue integration |
 | Gateway PIX | ✅ Completed | Focused tests passed | Recipient CRUD, transfer request, permissions, Pint verified |
@@ -308,7 +310,7 @@ app/
 
 ## Next Steps (Priority Order)
 
-1. **Lifecycle integration**: Define production call sites for the invoice-generation Actions.
+1. **Lifecycle integration**: ✅ Completed (2026-08-18). The invoice-generation Actions (`GenerateContractInvoicesAction`, `GenerateSaleInvoicesAction`, `GeneratePurchaseInvoicesAction`, `GenerateDirectLessonInvoicesAction`) are now the invoice-generation step inside the module Create/Update Actions; the duplicated inline `InvoiceGenerator` + gateway-sync code was removed.
 2. **Phase 8**: Resolve Vite manifest issue in test container, then run full suite and static analysis.
 3. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
 
@@ -332,4 +334,4 @@ php artisan code:inspect
 
 ---
 
-*Updated: 2026-08-14 | Phases 1–5 completed; Phase 6 has 14 Action-migrated controllers with retained/deferred decisions; gateway PIX transfers completed; Phase 7 completed; focused Docker tests pass for previously verified flows; Phase 8 full suite and static analysis remain pending (full suite has pre-existing Vite manifest failures in test container); Phase 9 pending.*
+*Updated: 2026-08-18 | Phases 1–5 completed; Phase 6 has 14 Action-migrated controllers with retained/deferred decisions; gateway PIX transfers completed; Phase 7 completed with the invoice-generation Actions wired into the module Create/Update Actions; invoice-generation morph-alias bugs fixed (InvoiceGenerator, CancelContractAction, GenerateContractInvoicesAction, global morph maps); full suite now at 176 passing / 6 pre-existing failures when run with `APP_ENV=testing`; static analysis pending; Phase 9 pending.*
