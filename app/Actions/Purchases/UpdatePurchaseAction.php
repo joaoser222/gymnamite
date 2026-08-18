@@ -8,7 +8,6 @@ use App\DTOs\Purchases\UpdatePurchaseDTO;
 use App\Enums\BillableStatus;
 use App\Models\Purchase;
 use App\Services\BillableItemService;
-use App\Services\Billing\InvoiceGenerator;
 use App\Services\StockRecalculationService;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
@@ -20,7 +19,7 @@ class UpdatePurchaseAction extends BaseAction
 
     public function __construct(
         private readonly BillableItemService $billableItemService,
-        private readonly InvoiceGenerator $invoiceGenerator,
+        private readonly GeneratePurchaseInvoicesAction $generatePurchaseInvoices,
         private readonly StockRecalculationService $stockRecalculationService,
     ) {}
 
@@ -50,7 +49,7 @@ class UpdatePurchaseAction extends BaseAction
         $purchase = $purchase->refresh()->load('items');
 
         if ($generateInvoices && ! $purchase->invoices()->exists()) {
-            $this->invoiceGenerator->generate($purchase);
+            $this->generatePurchaseInvoices->execute($purchase);
         }
 
         $purchase->setAttribute('recalculation_product_ids', array_values(array_unique([

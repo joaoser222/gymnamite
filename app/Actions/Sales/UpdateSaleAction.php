@@ -8,11 +8,8 @@ use App\DTOs\Sales\UpdateSaleDTO;
 use App\Enums\BillableStatus;
 use App\Models\Sale;
 use App\Services\BillableItemService;
-use App\Services\Billing\InvoiceGenerator;
 use App\Services\StockRecalculationService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Artisan;
 use InvalidArgumentException;
 
 class UpdateSaleAction extends BaseAction
@@ -22,7 +19,7 @@ class UpdateSaleAction extends BaseAction
 
     public function __construct(
         private readonly BillableItemService $billableItemService,
-        private readonly InvoiceGenerator $invoiceGenerator,
+        private readonly GenerateSaleInvoicesAction $generateSaleInvoices,
         private readonly StockRecalculationService $stockRecalculationService,
     ) {}
 
@@ -55,7 +52,7 @@ class UpdateSaleAction extends BaseAction
         $sale = $sale->refresh()->load('items');
 
         if ($generateInvoices) {
-            $this->queueGatewayInvoiceSync($this->invoiceGenerator->generate($sale));
+            $this->generateSaleInvoices->execute($sale);
         }
 
         $sale->setAttribute('recalculation_product_ids', array_values(array_unique([
@@ -70,15 +67,6 @@ class UpdateSaleAction extends BaseAction
     {
         if ($result instanceof Sale) {
             $this->stockRecalculationService->recalculateProducts($result->getAttribute('recalculation_product_ids') ?? []);
-        }
-    }
-
-    private function queueGatewayInvoiceSync(Collection $invoices): void
-    {
-        $invoicesToSync = $invoices->filter(fn ($invoice): bool => $invoice->shouldGenerateGatewayTransaction());
-
-        if ($invoicesToSync->isNotEmpty()) {
-            Artisan::queue('gateway:sync-invoices', ['--invoice' => $invoicesToSync->modelKeys()])->afterCommit();
         }
     }
 }

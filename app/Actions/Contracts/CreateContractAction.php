@@ -8,7 +8,6 @@ use App\DTOs\Contracts\ContractResultDTO;
 use App\DTOs\Contracts\CreateContractDTO;
 use App\Models\Client;
 use App\Models\Contract;
-use App\Models\Invoice;
 use App\Models\PlanTier;
 use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Repositories\Contracts\ContractRepositoryInterface;
@@ -16,10 +15,7 @@ use App\Repositories\Contracts\CouponRepositoryInterface;
 use App\Repositories\Contracts\PlanRepositoryInterface;
 use App\Services\Billing\DiscountCalculator;
 use App\Services\Billing\InstallmentSplitter;
-use App\Services\Billing\InvoiceGenerator;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Artisan;
 
 class CreateContractAction extends BaseAction
 {
@@ -33,7 +29,7 @@ class CreateContractAction extends BaseAction
         private readonly ClientRepositoryInterface $clientRepository,
         private readonly PlanRepositoryInterface $planRepository,
         private readonly CouponRepositoryInterface $couponRepository,
-        private readonly InvoiceGenerator $invoiceGenerator,
+        private readonly GenerateContractInvoicesAction $generateContractInvoices,
         private readonly DiscountCalculator $discountCalculator,
         private readonly InstallmentSplitter $installmentSplitter,
     ) {}
@@ -135,15 +131,7 @@ class CreateContractAction extends BaseAction
         ]);
 
         if ($dto->generate_invoices) {
-            $invoices = $this->invoiceGenerator->generate($contract);
-            $discountTotal = round($invoices->sum('discount_value'), 4);
-
-            $this->queueGatewayInvoiceSync($invoices);
-
-            $this->contractRepository->update($contract, [
-                'discount_value' => $discountTotal,
-                'total' => round($grossValue - $discountTotal, 4),
-            ]);
+            $this->generateContractInvoices->execute($contract->id);
         } else {
             $grossInstallments = $this->installmentSplitter->split($grossValue, $dto->installments);
             $discountTotal = round(array_sum($this->discountCalculator->calculate(
@@ -161,23 +149,5 @@ class CreateContractAction extends BaseAction
             ContractResultDTO::fromModel($contract->refresh()),
             'Contrato criado com sucesso.'
         );
-    }
-
-    /**
-     * @param  Collection<int, Invoice>  $invoices
-     */
-    private function queueGatewayInvoiceSync(Collection $invoices): void
-    {
-        $invoicesToSync = $invoices->filter(
-            fn ($invoice): bool => $invoice->shouldGenerateGatewayTransaction(),
-        );
-
-        if ($invoicesToSync->isEmpty()) {
-            return;
-        }
-
-        Artisan::queue('gateway:sync-invoices', [
-            '--invoice' => $invoicesToSync->modelKeys(),
-        ])->afterCommit();
     }
 }
