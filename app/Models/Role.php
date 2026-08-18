@@ -21,6 +21,6 @@ class Role extends Model
             'permission_role',
             'role_id',
             'permission_id'
-        );
+        )->orderByPivot('id');
     }
 }
