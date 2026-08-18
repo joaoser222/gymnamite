@@ -8,40 +8,53 @@ use Tests\TestCase;
 
 class GatewayModuleAccessTest extends TestCase
 {
-    public function test_gateway_modules_are_assigned_to_administrator_by_default(): void
+    public function test_administrator_receives_all_actions_for_gateway_modules(): void
     {
         $map = (new RolePermissionMap)->getMap();
+        $admin = $map[AccessRole::ADMINISTRATOR->value];
 
-        foreach ($this->gatewayModules() as $module) {
-            $this->assertSame(
-                ['view'],
-                $map[AccessRole::ADMINISTRATOR->value][$module],
-            );
+        foreach ($this->allGatewayModules() as $module) {
+            $this->assertArrayHasKey($module, $admin);
+            $this->assertContains('view', $admin[$module]);
+            $this->assertContains('create', $admin[$module]);
         }
     }
 
-    public function test_gateway_modules_are_not_assigned_to_non_admin_roles_by_default(): void
+    public function test_manager_receives_gateway_modules_without_delete(): void
     {
         $map = (new RolePermissionMap)->getMap();
+        $manager = $map[AccessRole::MANAGER->value];
 
-        foreach ([AccessRole::MANAGER, AccessRole::BILLING] as $role) {
-            foreach (['gateway_accounts', ...$this->gatewayModules()] as $module) {
-                $this->assertArrayNotHasKey($module, $map[$role->value]);
-            }
+        foreach ($this->allGatewayModules() as $module) {
+            $this->assertArrayHasKey($module, $manager);
+            $this->assertNotContains('delete', $manager[$module]);
+        }
+    }
+
+    public function test_billing_does_not_receive_gateway_modules(): void
+    {
+        $map = (new RolePermissionMap)->getMap();
+        $billing = $map[AccessRole::BILLING->value];
+
+        foreach ($this->allGatewayModules() as $module) {
+            $this->assertArrayNotHasKey($module, $billing);
         }
     }
 
     /**
      * @return array<int, string>
      */
-    private function gatewayModules(): array
+    private function allGatewayModules(): array
     {
         return [
+            'gateway_accounts',
             'gateway_payments',
             'gateway_transfers',
+            'gateway_transfer_recipients',
             'gateway_postbacks',
             'gateway_customers',
             'gateway_credit_cards',
+            'gateway_invoices',
         ];
     }
 }
