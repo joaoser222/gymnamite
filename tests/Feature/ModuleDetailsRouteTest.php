@@ -326,10 +326,7 @@ class ModuleDetailsRouteTest extends TestCase
 
         $response->assertRedirect(route('settings.show'));
 
-        $this->assertDatabaseHas('settings', [
-            'id' => $setting->id,
-            'content' => (string) $category->id,
-        ]);
+        $this->assertSame($category->id, $setting->refresh()->content);
     }
 
     public function test_select_settings_reject_missing_records(): void

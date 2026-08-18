@@ -19,11 +19,13 @@ class UpdateSettingsAction extends BaseAction
             throw new \InvalidArgumentException('UpdateSettingsAction requires an UpdateSettingsDTO.');
         }
 
+        $updated = 0;
+
         Setting::query()
             ->select(['id', 'name'])
             ->orderBy('id')
             ->get()
-            ->each(function (Setting $setting) use ($input): void {
+            ->each(function (Setting $setting) use ($input, &$updated): void {
                 if (! array_key_exists($setting->name, $input->settings)) {
                     return;
                 }
@@ -31,6 +33,10 @@ class UpdateSettingsAction extends BaseAction
                 $setting->update([
                     'content' => $input->settings[$setting->name] ?? '',
                 ]);
+
+                $updated++;
             });
+
+        return $updated;
     }
 }
