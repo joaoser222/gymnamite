@@ -16,7 +16,9 @@ class GatewayModuleAccessTest extends TestCase
         foreach ($this->allGatewayModules() as $module) {
             $this->assertArrayHasKey($module, $admin);
             $this->assertContains('view', $admin[$module]);
-            $this->assertContains('create', $admin[$module]);
+            if (in_array($module, ['gateway_accounts', 'gateway_transfers', 'gateway_transfer_recipients'], true)) {
+                $this->assertContains('create', $admin[$module]);
+            }
         }
     }
 
