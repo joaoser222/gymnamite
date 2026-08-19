@@ -1,33 +1,45 @@
 # Last Session
 
-Updated: 2026-08-14
+Updated: 2026-08-19
 
 ## Progress
 
-- Fixed the `BaseDTO::fromArray()` memory recursion and the Eloquent repository model instantiation issue.
-- Updated PostgreSQL generated-column migrations from `virtualAs()` to `storedAs()`.
-- Removed the legacy manual `Transfer` application surface: controller, model, routes, navigation, pages, and persisted `transfers.*` permissions.
-- Added `GatewayTransferRecipient` with an encrypted PIX key and a relationship to `GatewayAccount`.
-- Added the migration linking `gateway_transfers` to `gateway_transfer_recipients`.
-- Added `CreateGatewayTransferAction` and `POST /gateway-transfers`. The request accepts a recipient, amount, and optional description; the Action resolves the appropriate gateway adapter from that recipient's gateway account.
-- Updated the Asaas adapter to persist `gateway_transfer_recipient_id` when a transfer is created.
-- `gateway_transfers` supports only `view` and `create`; update and delete remain unavailable.
-- Managers now receive gateway-module permissions, including gateway account configuration and transfer creation.
-
-## Remaining Gateway PIX Work
-
-1. Create the recipient CRUD module: controller, validation, routes, Inertia/Vuetify pages, navigation, and permissions.
-2. Add the Inertia/Vuetify transfer-request interface to the gateway transfers area.
-3. Add focused tests for recipient access, request validation, adapter delegation, and status handling.
-4. Run formatting and focused tests after starting the application container.
+- Fixed phpunit.xml to force `APP_ENV=testing` permanently via `force="true"` (no runtime prefix needed).
+- Fixed pre-existing `EloquentProductRepository::$with` referencing `'unity'` instead of `'productUnity'` (broke `UpdateProductAction` via `findOrFail`).
+- Created 56 feature tests for Actions across 6 test files:
+  - `CreateModalityActionTest` (4 tests)
+  - `UpdateModalityActionTest` (4 tests)
+  - `CreateProductActionTest` (5 tests)
+  - `UpdateProductActionTest` (4 tests)
+  - `UpdateSettingsActionTest` (5 tests)
+  - `CreateClientActionTest` (5 tests)
+  - `UpdateClientActionTest` (4 tests)
+  - `CreatePlanActionTest` (4 tests)
+  - `UpdatePlanActionTest` (4 tests)
+  - `SaveUserWithPermissionsActionTest` (4 tests)
+  - `UpdateRolePermissionsActionTest` (6 tests)
+- Created 9 controller delegation tests (`ControllerDelegationTest`) verifying HTTP routes delegate to Actions: Client, Modality, Plan, Product, Settings, User, and Role controllers.
+- Full test suite is now green: **240 passed, 0 failed** (was 182 passed before this step).
 
 ## Verification
 
-- Earlier focused Docker tests, TypeScript checking, Vite build, Pint, and `git diff --check` passed for the prior verified changes.
-- Latest gateway PIX changes are not yet verified: host PHP is unavailable and `docker compose ps` shows only the `db` service running. The `app` container must be started before running Pint and tests.
+- Pint: `vendor/bin/pint --dirty --format agent` passed.
+- `git diff --check` passed.
+- Full suite: 240 passed, 0 failed (1380 assertions).
+
+## Environment Notes
+
+- PHP runs only inside the Docker container `gymnamite_app`; the host has no PHP.
+- Tests now run with `php artisan test --compact` without the `APP_ENV=testing` prefix (phpunit.xml has `force="true"`).
+- `vendor/bin/pint --dirty --format agent` for code style.
+
+## Remaining Work
+
+1. Phase 8: remaining checklist item — integration tests for billing/gateway flows.
+2. Phase 9 (PENDING): audit Inertia/Vue pages against final DTO and response contracts — form payloads, error handling, redirects, JSON responses.
 
 ## Worktree Safety
 
-- The worktree remains intentionally dirty, with changes from multiple tasks.
+- The worktree is clean as of 2026-08-18 (all prior changes committed and pushed).
 - Do not reset, revert, or stage unrelated files.
 - Review the full diff before any future commit.
