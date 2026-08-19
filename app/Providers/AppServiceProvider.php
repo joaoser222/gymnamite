@@ -11,8 +11,11 @@ use App\PaymentGateways\Contracts\PaymentGatewayInvoicingAdapter;
 use App\PaymentGateways\PaymentGatewayManager;
 use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Repositories\Contracts\ContractRepositoryInterface;
+use App\Repositories\Contracts\CostCenterRepositoryInterface;
 use App\Repositories\Contracts\CouponRepositoryInterface;
 use App\Repositories\Contracts\DirectLessonRepositoryInterface;
+use App\Repositories\Contracts\FinancialAccountRepositoryInterface;
+use App\Repositories\Contracts\FinancialCategoryRepositoryInterface;
 use App\Repositories\Contracts\GatewayAccountRepositoryInterface;
 use App\Repositories\Contracts\GatewayInvoiceRepositoryInterface;
 use App\Repositories\Contracts\GatewayPaymentRepositoryInterface;
@@ -30,8 +33,11 @@ use App\Repositories\Contracts\SupplierRepositoryInterface;
 use App\Repositories\Contracts\TrainerRepositoryInterface;
 use App\Repositories\Eloquent\EloquentClientRepository;
 use App\Repositories\Eloquent\EloquentContractRepository;
+use App\Repositories\Eloquent\EloquentCostCenterRepository;
 use App\Repositories\Eloquent\EloquentCouponRepository;
 use App\Repositories\Eloquent\EloquentDirectLessonRepository;
+use App\Repositories\Eloquent\EloquentFinancialAccountRepository;
+use App\Repositories\Eloquent\EloquentFinancialCategoryRepository;
 use App\Repositories\Eloquent\EloquentGatewayAccountRepository;
 use App\Repositories\Eloquent\EloquentGatewayInvoiceRepository;
 use App\Repositories\Eloquent\EloquentGatewayPaymentRepository;
@@ -140,6 +146,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TrainerRepositoryInterface::class, EloquentTrainerRepository::class);
         $this->app->bind(GatewayPaymentRepositoryInterface::class, EloquentGatewayPaymentRepository::class);
         $this->app->bind(GatewayInvoiceRepositoryInterface::class, EloquentGatewayInvoiceRepository::class);
+        $this->app->bind(FinancialCategoryRepositoryInterface::class, EloquentFinancialCategoryRepository::class);
+        $this->app->bind(CostCenterRepositoryInterface::class, EloquentCostCenterRepository::class);
+        $this->app->bind(FinancialAccountRepositoryInterface::class, EloquentFinancialAccountRepository::class);
     }
 
     /**
