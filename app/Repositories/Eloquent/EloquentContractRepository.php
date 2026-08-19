@@ -35,8 +35,13 @@ class EloquentContractRepository extends BaseEloquentRepository implements Contr
             ->where('payment_method', '!=', 'cash')
             ->where('accepted_terms', 'accepted')
             ->whereHas('invoices', function ($query) {
-                $query->where('uses_gateway_payment_method', true)
-                    ->where('should_generate_gateway_transaction', true);
+                $query->where(function ($subQuery) {
+                    $subQuery->where('payment_method', 'boleto')
+                        ->orWhere(function ($nested) {
+                            $nested->whereIn('payment_method', ['pix', 'credit_card'])
+                                ->whereDate('due_date', now()->toDateString());
+                        });
+                });
             })
             ->get();
     }

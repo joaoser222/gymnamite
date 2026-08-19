@@ -33,8 +33,13 @@ class EloquentInvoiceRepository extends BaseEloquentRepository implements Invoic
     {
         return $this->newQuery()
             ->where('operation_type', 'receivable')
-            ->where('uses_gateway_payment_method', true)
-            ->where('should_generate_gateway_transaction', true)
+            ->where(function ($query) {
+                $query->where('payment_method', 'boleto')
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->whereIn('payment_method', ['pix', 'credit_card'])
+                            ->whereDate('due_date', now()->toDateString());
+                    });
+            })
             ->where('status', 'pending')
             ->whereHas('gatewayPayment', function ($query) {
                 $query->where('status', 'pending');

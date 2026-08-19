@@ -5,6 +5,7 @@ namespace App\Services\Gateway;
 use App\Contracts\BillingInvoiceSource;
 use App\Enums\InvoiceStatus;
 use App\Enums\OperationType;
+use App\Enums\PaymentMethod;
 use App\Models\Invoice;
 use App\PaymentGateways\Contracts\PaymentGatewayAdapter;
 use App\Repositories\Contracts\GatewayPaymentRepositoryInterface;
@@ -61,8 +62,15 @@ class GatewayBillingOrchestrator
     {
         return Invoice::query()
             ->where('operation_type', OperationType::RECEIVABLE)
-            ->where('uses_gateway_payment_method', true)
-            ->where('should_generate_gateway_transaction', true)
+            ->where(function ($query) {
+                $query->where('payment_method', PaymentMethod::BOLETO)
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->whereIn('payment_method', [
+                            PaymentMethod::PIX,
+                            PaymentMethod::CREDIT_CARD,
+                        ])->whereDate('due_date', now()->toDateString());
+                    });
+            })
             ->where('status', InvoiceStatus::PENDING)
             ->whereDoesntHave('gatewayPayment')
             ->get();
