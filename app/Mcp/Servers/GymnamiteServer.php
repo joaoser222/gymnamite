@@ -79,7 +79,32 @@ class GymnamiteServer extends Server
     /**
      * @var array<int, class-string<\Laravel\Mcp\Server\Resource>>
      */
-    protected array $resources = [];
+    protected array $resources = [
+        // Detail resources
+        \App\Mcp\Resources\ClientResource::class,
+        \App\Mcp\Resources\ContractResource::class,
+        \App\Mcp\Resources\InvoiceResource::class,
+        \App\Mcp\Resources\SaleResource::class,
+        \App\Mcp\Resources\PurchaseResource::class,
+        \App\Mcp\Resources\DirectLessonResource::class,
+        \App\Mcp\Resources\PlanResource::class,
+        \App\Mcp\Resources\ModalityResource::class,
+        \App\Mcp\Resources\ProductResource::class,
+        \App\Mcp\Resources\ReceivableResource::class,
+        \App\Mcp\Resources\PayableResource::class,
+        \App\Mcp\Resources\MovementsByDateResource::class,
+        \App\Mcp\Resources\MovementResource::class,
+        \App\Mcp\Resources\GatewayAccountResource::class,
+        // List resources
+        \App\Mcp\Resources\ClientsListResource::class,
+        \App\Mcp\Resources\ContractsListResource::class,
+        \App\Mcp\Resources\InvoicesListResource::class,
+        \App\Mcp\Resources\SalesListResource::class,
+        \App\Mcp\Resources\PurchasesListResource::class,
+        \App\Mcp\Resources\ReceivablesListResource::class,
+        \App\Mcp\Resources\PayablesListResource::class,
+        \App\Mcp\Resources\OverdueReceivablesResource::class,
+    ];
 
     /**
      * @var array<int, class-string<\Laravel\Mcp\Server\Prompt>>
