@@ -66,6 +66,14 @@ const togglePermission = (
                 text="O administrador possui todas as permissões e não pode ser alterado."
             />
 
+            <v-alert
+                v-if="errors.permission_ids"
+                type="error"
+                variant="tonal"
+                class="mb-4"
+                :text="errors.permission_ids"
+            />
+
             <v-row class="ma-0">
                 <v-col
                     v-for="group in permissionGroups"

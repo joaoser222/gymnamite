@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import PasswordField from '@/components/inputs/PasswordField.vue';
 import { email, required, same } from '@/plugins/validators';
@@ -44,8 +44,9 @@ const editablePermissionIdsByRole = computed<Record<number, number[]>>(
     () => (sharedProps.options?.editablePermissionIdsByRole as Record<number, number[]>) ?? {},
 );
 
+const activeTab = ref('general');
+
 const defaults = {
-    _tab: 'general',
     name: '',
     email: '',
     role_id: null,
@@ -110,12 +111,12 @@ const visiblePermissionGroups = computed(() => {
         module="users"
     >
         <template #default="{ form, errors, isCreating }">
-            <v-tabs v-model="form._tab" color="primary" class="mb-4">
+            <v-tabs v-model="activeTab" color="primary" class="mb-4">
                 <v-tab value="general">Dados Gerais</v-tab>
                 <v-tab value="permissions">Permissões</v-tab>
             </v-tabs>
 
-            <v-window v-model="form._tab">
+            <v-window v-model="activeTab">
                 <v-window-item value="general">
                     <v-row class="ma-0">
                         <v-col cols="12" md="6">
