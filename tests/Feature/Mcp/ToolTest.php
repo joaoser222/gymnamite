@@ -7,6 +7,7 @@ namespace Tests\Feature\Mcp;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class ToolTest extends TestCase
@@ -23,7 +24,7 @@ class ToolTest extends TestCase
         $user->permissions()->attach($permission);
     }
 
-    private function mcpCall(User $user, string $method, array $params = []): \Illuminate\Testing\TestResponse
+    private function mcpCall(User $user, string $method, array $params = []): TestResponse
     {
         return $this->actingAs($user)->postJson('/mcp/gymnamite', [
             'jsonrpc' => '2.0',
@@ -146,7 +147,7 @@ class ToolTest extends TestCase
             'save-user', 'update-role-permissions', 'update-settings',
         ];
 
-        $this->assertCount(43, $allToolNames, 'Expected 43 tools, got: ' . implode(', ', $allToolNames));
+        $this->assertCount(43, $allToolNames, 'Expected 43 tools, got: '.implode(', ', $allToolNames));
         foreach ($expectedTools as $toolName) {
             $this->assertContains($toolName, $allToolNames, "Tool '{$toolName}' not registered");
         }
@@ -170,7 +171,7 @@ class ToolTest extends TestCase
         $response->assertOk();
 
         $body = $response->json();
-        $this->assertFalse($this->isMcpError($body), 'MCP error: ' . $this->mcpErrorMessage($body));
+        $this->assertFalse($this->isMcpError($body), 'MCP error: '.$this->mcpErrorMessage($body));
         $this->assertDatabaseHas('coupons', ['code' => 'MCPTEST']);
     }
 
@@ -189,7 +190,7 @@ class ToolTest extends TestCase
         $response->assertOk();
 
         $body = $response->json();
-        $this->assertTrue($this->isMcpError($body) || ! isset($body['result']['content']), 'Expected error for unauthorized user. Response: ' . json_encode($body));
+        $this->assertTrue($this->isMcpError($body) || ! isset($body['result']['content']), 'Expected error for unauthorized user. Response: '.json_encode($body));
     }
 
     public function test_create_coupon_tool_validates_required_fields(): void
@@ -205,6 +206,6 @@ class ToolTest extends TestCase
         $response->assertOk();
 
         $body = $response->json();
-        $this->assertTrue($this->isMcpError($body), 'Expected validation error. Response: ' . json_encode($body));
+        $this->assertTrue($this->isMcpError($body), 'Expected validation error. Response: '.json_encode($body));
     }
 }
