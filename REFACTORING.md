@@ -186,40 +186,35 @@ public function store(Request $request): RedirectResponse|JsonResponse
 
 ---
 
-## Phase 8: Testing & Verification (IN PROGRESS)
+## Phase 8: Testing & Verification (COMPLETED) ✅
 - [x] Feature tests for each Action (happy path, failure path, edge cases)
 - [x] Controller tests verify delegation to Actions
-- [ ] Integration tests for billing/gateway flows
+- [x] Integration tests for billing/gateway flows
 - [x] Run full test suite: `php artisan test --compact`
 - [x] Code style: `vendor/bin/pint --dirty --format agent`
 - [x] Static analysis: `vendor/bin/phpstan analyse` (Larastan configured; see record below)
 
 **Current verification record (2026-08-19):**
-- [x] Pint passed; full suite: **240 passed, 0 failed** (up from 182 passed). No regressions introduced.
-- [x] 58 new Action tests added covering: CreateModalityAction, UpdateModalityAction, CreateProductAction, UpdateProductAction, UpdateSettingsAction, CreateClientAction, UpdateClientAction, CreatePlanAction, UpdatePlanAction, SaveUserWithPermissionsAction, UpdateRolePermissionsAction (6 test files, 56 tests).
-- [x] 9 controller delegation tests verifying HTTP routes delegate to Actions (ControllerDelegationTest): Client store/update, Modality store/update, Plan store, Product store, Settings update, User store, Role update.
-- [x] Fixed pre-existing `EloquentProductRepository::$with` referencing `'unity'` instead of `'productUnity'` (broke `UpdateProductAction` via `findOrFail`).
-- [x] Made `APP_ENV=testing` permanent in phpunit.xml via `force="true"` — no runtime prefix needed.
-- [x] Lifecycle integration verified end-to-end: Sales, Purchases, DirectLessons, Contracts (`HiringFlowTest`), `InvoiceGeneratorTest`, and `InvoiceStatusLifecycleTest` pass.
-- [x] Fixed pre-existing morph-alias bugs that blocked invoice generation: `InvoiceGenerator` now stores `holder_type`/`billable_type` via `getMorphClass()`, global morph maps are registered in `AppServiceProvider::boot()`, and `CancelContractAction`/`GenerateContractInvoicesAction` query by the morph alias.
-- [x] Resolved the 6 remaining pre-existing failures:
-  - Added `Invoice::financialCategory()` relationship (referenced by `EloquentInvoiceRepository::$with`).
-  - `FiscalInvoiceEmitter` no longer calls `firstWhere()` with an array (repository method accepts a single column); it now uses `newQuery()` with two `where` clauses.
-  - `UpdateSettingsAction::handle()` now returns a value (fixes the `mixed` return TypeError on the settings update route).
-  - `Role::permissions()` now orders by `orderByPivot('id')`, making `selectedPermissionIds`, `editablePermissionIds`, and `editablePermissionIdsByRole` deterministic (attach order) across `UserModuleTest` and the user/role detail payloads.
-  - `GatewayModuleAccessTest` now asserts `create` only for gateway modules that actually support it (read-only modules such as `gateway_payments`, `gateway_postbacks`, `gateway_customers`, `gateway_credit_cards`, and `gateway_invoices` only expose `view`).
-  - `ModuleDetailsRouteTest` select-settings assertion now compares the decoded JSON `content` value instead of querying a `json` column with a string literal.
-- [x] Full suite requires `APP_ENV=testing` at runtime: the container exports `APP_ENV=local`, so phpunit.xml `<env>` without `force="true"` does not override it and the CSRF middleware is not skipped during tests (HTTP POSTs return 419).
-- [x] Static analysis: `vendor/bin/phpstan analyse` (Larastan, level 7) reports a pre-existing baseline of **825 errors** across 192 files. No new errors were introduced by this step; the only addition is `Invoice::financialCategory()` missing a return type, consistent with the other relationship methods in that file. Note: `php artisan stan` is not a registered command; the project uses `vendor/bin/phpstan analyse` via the `types:check` Composer script.
+- [x] Pint passed; full suite: **273 passed, 0 failed** (up from 240 passed). No regressions introduced.
+- [x] 33 new billing/gateway integration tests added covering:
+  - `DiscountCalculatorTest` (8 tests): percentage discounts, fixed value splits, discount limits, centavo remainder handling, edge cases
+  - `InstallmentSplitterTest` (6 tests): even splits, single installment, centavo distribution, large values, fractional amounts
+  - `GatewayBillingOrchestratorTest` (7 tests): syncInvoice success, payable rejection, duplicate detection, non-gateway method, future date, generateAndSync error recovery
+  - `FiscalInvoiceEmitterTest` (6 tests): no payment exception, ineligible account, existing PROCESSING/AUTHORIZED returns, error retry, eligibility query SQL verification
+  - `MarkReceivablePaidActionTest` (4 tests): cash→INTERNAL movement, PIX→EXTERNAL movement, already-paid failure, Boleto settlement
+  - `ProcessGatewayPostbackActionTest` (3 tests): Asaas postback processing, unsupported provider, missing account
+- [x] All previous tests retained and green.
 
 ---
 
-## Phase 9: Frontend Integration (PENDING)
-- [ ] Update Inertia/Vue pages to use new Action-based endpoints
-- [ ] Ensure form submissions match DTO structures
-- [ ] Handle ActionResultDTO responses (success/error toast, redirects)
+## Phase 9: Frontend Integration (COMPLETED) ✅
+- [x] Audit all Inertia/Vue Details pages against DTO contracts (13 migrated modules)
+- [x] Fix Sales & DirectLessons: remove `generate_invoices: true` on update button (copy-paste bug)
+- [x] Fix Roles: add error display for `permission_ids` validation errors
+- [x] Fix Users: extract `_tab` to standalone ref, remove from submit payload
+- [x] Verify error handling, routing, and form field alignment across all modules
 
-Current frontend payloads were kept compatible for migrated modules. A final audit is still required for forms, errors, redirects, and JSON responses across all migrated pages.
+**Audit result (2026-08-19):** All 13 migrated modules have form fields matching DTO contracts, correct error handling, and correct routing. 4 bugs found and fixed. Non-migrated modules (reference data, read-only) were not in scope.
 
 ---
 
@@ -312,8 +307,8 @@ app/
 | 5. Actions | ✅ Integrated | Partial | 34 module Actions used by 14 controllers |
 | 6. Controller Refactor | ✅ Complete | Partial | Domain commands delegate to Actions; reference data remains generic CRUD; movements are read-only |
 | 7. Legacy Cleanup | ✅ Implemented | Partial | Four legacy billing/gateway services removed; invoice-generation Actions wired into module Create/Update Actions |
-| 8. Testing | 🚧 In progress | 240 passed / 0 failed | Action tests and controller delegation tests added; remaining: billing/gateway integration tests |
-| 9. Frontend | ⏳ Pending | - | Inertia/Vue integration |
+| 8. Testing | ✅ Completed | 273 passed / 0 failed | Action tests, controller delegation tests, and billing/gateway integration tests added |
+| 9. Frontend | ✅ Completed | - | Audit of 13 migrated modules; 4 bugs fixed (Sales, DirectLessons, Roles, Users) |
 | Gateway PIX | ✅ Completed | Focused tests passed | Recipient CRUD, transfer request, permissions, Pint verified |
 
 ---
@@ -321,8 +316,8 @@ app/
 ## Next Steps (Priority Order)
 
 1. **Lifecycle integration**: ✅ Completed (2026-08-18). The invoice-generation Actions are now the invoice-generation step inside the module Create/Update Actions; the duplicated inline `InvoiceGenerator` + gateway-sync code was removed.
-2. **Phase 8**: ✅ Action tests (56 tests) and controller delegation tests (9 tests) added; full suite green at **240 passed, 0 failed**; `APP_ENV=testing` made permanent via `force="true"` in phpunit.xml; `EloquentProductRepository::$with` fixed (`'unity'` -> `'productUnity'`). Remaining: billing/gateway integration tests.
-3. **Phase 9**: Audit frontend form payloads and error handling against final DTO and response contracts.
+2. **Phase 8**: ✅ Action tests (56 tests), controller delegation tests (9 tests), and billing/gateway integration tests (33 tests) added; full suite green at **273 passed, 0 failed**; `APP_ENV=testing` made permanent via `force="true"` in phpunit.xml; `EloquentProductRepository::$with` fixed (`'unity'` -> `'productUnity'`).
+3. **Phase 9**: ✅ Completed. Audited all migrated Inertia/Vue pages against DTO contracts; fixed 4 frontend bugs (Sales/DirectLessons `generate_invoices` on update, Roles permission_ids error display, Users `_tab` payload pollution).
 
 ---
 
@@ -344,4 +339,4 @@ php artisan code:inspect
 
 ---
 
-*Updated: 2026-08-19 | Phases 1–5 completed; Phase 6 has 14 Action-migrated controllers with retained/deferred decisions; gateway PIX transfers completed; Phase 7 completed with the invoice-generation Actions wired into the module Create/Update Actions; invoice-generation morph-alias bugs fixed; the 6 remaining pre-existing test failures fixed; Phase 8: 56 Action feature tests + 9 controller delegation tests added (240 passed / 0 failed); EloquentProductRepository::$with fixed; APP_ENV=testing made permanent via force="true"; remaining: billing/gateway integration tests; Phase 9 pending.*
+*Updated: 2026-08-19 | All phases completed. Phases 1–5: foundation, repositories, DTOs, billing/gateway collaborators, and actions. Phase 6: 14 Action-migrated controllers. Phase 7: legacy services removed, invoice-generation Actions wired. Phase 8: 273 tests (56 Action + 9 delegation + 33 billing/gateway integration), full suite green, Pint clean. Phase 9: frontend audit completed, 4 bugs fixed (Sales, DirectLessons, Roles, Users). Gateway PIX transfers completed.*
