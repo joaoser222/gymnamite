@@ -26,7 +26,7 @@ class EloquentClientRepository extends BaseEloquentRepository implements ClientR
 
     public function findWithRelations(int $id): ?Model
     {
-        return $this->newQuery()->with(['contracts', 'invoices'])->find($id);
+        return $this->newQuery()->find($id);
     }
 
     public function findByDocument(string $document): ?Model

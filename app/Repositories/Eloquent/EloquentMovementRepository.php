@@ -26,7 +26,7 @@ class EloquentMovementRepository extends BaseEloquentRepository implements Movem
 
     public function findWithRelations(int $id): ?Model
     {
-        return $this->newQuery()->with($this->with)->find($id);
+        return $this->newQuery()->find($id);
     }
 
     public function findByFinancialAccount(int $financialAccountId): Collection

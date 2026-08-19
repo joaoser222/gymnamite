@@ -26,7 +26,7 @@ class EloquentPlanRepository extends BaseEloquentRepository implements PlanRepos
 
     public function findWithRelations(int $id): ?Model
     {
-        return $this->newQuery()->with($this->with)->find($id);
+        return $this->newQuery()->find($id);
     }
 
     public function findActive(): Collection

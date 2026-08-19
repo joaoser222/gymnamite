@@ -33,8 +33,10 @@ abstract class BaseEloquentRepository implements RepositoryInterface
             $query->{$scope}();
         }
 
-        if (! empty($this->with)) {
-            $query->with($this->with);
+        $relations = $this->existingRelations($this->with);
+
+        if ($relations !== []) {
+            $query->with($relations);
         }
 
         return $query;
@@ -48,6 +50,29 @@ abstract class BaseEloquentRepository implements RepositoryInterface
     public function findOrFail(int $id): Model
     {
         return $this->newQuery()->findOrFail($id);
+    }
+
+    public function findWithRelations(int $id): ?Model
+    {
+        return $this->newQuery()->find($id);
+    }
+
+    /**
+     * @param  array<int, string>  $relations
+     * @return array<int, string>
+     */
+    protected function existingRelations(array $relations): array
+    {
+        if ($relations === []) {
+            return [];
+        }
+
+        $instance = new ($this->modelClass());
+
+        return array_values(array_filter(
+            $relations,
+            fn (string $relation): bool => method_exists($instance, $relation),
+        ));
     }
 
     public function all(array $filters = []): Collection

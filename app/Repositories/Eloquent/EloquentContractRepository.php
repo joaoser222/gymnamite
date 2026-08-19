@@ -26,7 +26,7 @@ class EloquentContractRepository extends BaseEloquentRepository implements Contr
 
     public function findWithRelations(int $id): ?Model
     {
-        return $this->newQuery()->with($this->with)->find($id);
+        return $this->newQuery()->find($id);
     }
 
     public function findEligibleForGatewaySync(array $filters = []): Collection
