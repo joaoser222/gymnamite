@@ -27,9 +27,10 @@ class CreatePayableAction extends BaseAction
 
         $dto = $input;
         $payable = $this->payableRepository->create([
-            'supplier_id' => $dto->supplier_id,
+            'holder_type' => 'supplier',
+            'holder_id' => $dto->supplier_id,
             'due_date' => $dto->due_date,
-            'total' => $dto->total,
+            'gross_value' => $dto->total,
             'payment_method' => $dto->payment_method,
             'operation_type' => $dto->operation_type,
             'annotations' => $dto->annotations,

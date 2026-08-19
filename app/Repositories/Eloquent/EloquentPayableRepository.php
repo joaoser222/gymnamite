@@ -14,7 +14,7 @@ class EloquentPayableRepository extends BaseEloquentRepository implements Payabl
         return Payable::class;
     }
 
-    protected array $with = ['supplier', 'financialAccount', 'financialCategory'];
+    protected array $with = ['holder', 'financialAccount', 'financialCategory'];
 
     protected array $searchableFields = ['status'];
 

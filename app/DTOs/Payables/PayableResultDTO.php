@@ -29,8 +29,8 @@ class PayableResultDTO extends Data
             total: $payable->total,
             status: $payable->status->value,
             created_at: $payable->created_at?->toISOString() ?? '',
-            supplier_id: $payable->supplier_id,
-            supplier_name: $payable->supplier?->name ?? '',
+            supplier_id: $payable->holder_id,
+            supplier_name: $payable->holder?->name ?? '',
             financial_account_id: $payable->financial_account_id,
             financial_category_id: $payable->financial_category_id,
         );
