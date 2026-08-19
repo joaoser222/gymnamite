@@ -14,7 +14,7 @@ class EloquentProductRepository extends BaseEloquentRepository implements Produc
         return Product::class;
     }
 
-    protected array $with = ['unity'];
+    protected array $with = ['productUnity'];
 
     protected array $searchableFields = ['name', 'description', 'sku'];
 
