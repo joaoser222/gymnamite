@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import axios from 'axios';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -20,6 +19,14 @@ const xsrfToken = decodeURIComponent(
     document.cookie.match(/(^|; )XSRF-TOKEN=([^;]*)/)?.[1] ?? '',
 );
 
+function updateMessage(id: number, text: string): void {
+    const message = messages.value.find((entry) => entry.id === id);
+
+    if (message) {
+        message.text = text;
+    }
+}
+
 async function send(): Promise<void> {
     const text = draft.value.trim();
 
@@ -31,26 +38,83 @@ async function send(): Promise<void> {
     draft.value = '';
     loading.value = true;
 
+    const assistantId = Date.now() + 1;
+    messages.value.push({ id: assistantId, role: 'assistant', text: '' });
+    let accumulated = '';
+
     try {
-        const { data } = await axios.post(
-            '/chat/message',
-            { message: text, conversation_id: conversationId.value },
-            { headers: { 'X-XSRF-TOKEN': xsrfToken } },
-        );
-
-        conversationId.value = data.conversation_id ?? null;
-
-        messages.value.push({
-            id: Date.now() + 1,
-            role: 'assistant',
-            text: data.reply ?? 'Sem resposta.',
+        const response = await fetch('/chat/message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': xsrfToken,
+            },
+            body: JSON.stringify({
+                message: text,
+                conversation_id: conversationId.value,
+                stream: true,
+            }),
         });
+
+        if (!response.ok || !response.body) {
+            throw new Error('Resposta inválida do servidor.');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+
+            let separator: number;
+            while ((separator = buffer.indexOf('\n\n')) !== -1) {
+                const rawEvent = buffer.slice(0, separator);
+                buffer = buffer.slice(separator + 2);
+
+                for (const line of rawEvent.split('\n')) {
+                    if (!line.startsWith('data:')) {
+                        continue;
+                    }
+
+                    const data = line.slice(5).trim();
+
+                    if (data === '' || data === '[DONE]') {
+                        continue;
+                    }
+
+                    try {
+                        const payload = JSON.parse(data);
+
+                        if (payload.type === 'meta') {
+                            conversationId.value = payload.conversation_id ?? conversationId.value;
+                        } else if (payload.type === 'token') {
+                            accumulated += payload.content;
+                            updateMessage(assistantId, accumulated);
+                        } else if (payload.type === 'done') {
+                            accumulated = payload.content ?? accumulated;
+                            updateMessage(assistantId, accumulated);
+                        }
+                    } catch {
+                        // Ignore malformed SSE payloads.
+                    }
+                }
+            }
+        }
+
+        if (accumulated === '') {
+            updateMessage(assistantId, 'Sem resposta.');
+        }
     } catch {
-        messages.value.push({
-            id: Date.now() + 1,
-            role: 'assistant',
-            text: 'Erro ao obter resposta do assistente.',
-        });
+        updateMessage(assistantId, 'Erro ao obter resposta do assistente.');
     } finally {
         loading.value = false;
     }
