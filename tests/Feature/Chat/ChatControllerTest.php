@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Chat;
 
+use App\Models\ChatMessage;
 use App\Models\Client;
+use App\Models\Conversation;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -248,5 +250,106 @@ class ChatControllerTest extends TestCase
         }
 
         $this->assertNotContains('create-client', $exposedToolNames, 'Usuário sem permissão não deve ver a tool de escrita.');
+    }
+
+    public function test_chat_persists_conversation_and_messages(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+
+        Http::fake([
+            '*' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Resposta persistida.',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Primeira mensagem',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonStructure(['reply', 'conversation_id']);
+        $this->assertNotNull($response->json('conversation_id'));
+
+        $this->assertDatabaseHas('chat_conversations', [
+            'user_id' => $user->id,
+            'title' => 'Primeira mensagem',
+        ]);
+
+        $this->assertDatabaseHas('chat_messages', [
+            'role' => 'user',
+            'content' => 'Primeira mensagem',
+        ]);
+
+        $this->assertDatabaseHas('chat_messages', [
+            'role' => 'assistant',
+            'content' => 'Resposta persistida.',
+        ]);
+    }
+
+    public function test_chat_uses_database_history_when_conversation_id_provided(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+
+        $conversation = Conversation::create([
+            'user_id' => $user->id,
+            'title' => 'Conversa existente',
+        ]);
+        $conversation->messages()->create(['role' => 'user', 'content' => 'Mensagem anterior do usuário']);
+        $conversation->messages()->create(['role' => 'assistant', 'content' => 'Resposta anterior do assistente']);
+
+        Http::fake([
+            '*' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Resposta com contexto.',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Continuação',
+            'conversation_id' => $conversation->id,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['conversation_id' => $conversation->id]);
+
+        $sentHistory = [];
+        foreach (Http::recorded() as [$request]) {
+            $body = $request->data();
+            if (! empty($body['messages'])) {
+                $sentHistory = array_column($body['messages'], 'content');
+            }
+        }
+
+        $this->assertContains('Mensagem anterior do usuário', $sentHistory);
+        $this->assertContains('Resposta anterior do assistente', $sentHistory);
+        $this->assertContains('Continuação', $sentHistory);
+
+        $this->assertDatabaseHas('chat_messages', [
+            'conversation_id' => $conversation->id,
+            'role' => 'user',
+            'content' => 'Continuação',
+        ]);
+        $this->assertDatabaseHas('chat_messages', [
+            'conversation_id' => $conversation->id,
+            'role' => 'assistant',
+            'content' => 'Resposta com contexto.',
+        ]);
+
+        $this->assertSame(
+            4,
+            ChatMessage::where('conversation_id', $conversation->id)->count(),
+            'A conversa deve acumular 2 mensagens anteriores + 2 novas.',
+        );
     }
 }
