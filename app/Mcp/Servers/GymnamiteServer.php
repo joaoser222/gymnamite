@@ -109,5 +109,11 @@ class GymnamiteServer extends Server
     /**
      * @var array<int, class-string<\Laravel\Mcp\Server\Prompt>>
      */
-    protected array $prompts = [];
+    protected array $prompts = [
+        \App\Mcp\Prompts\OnboardClientPrompt::class,
+        \App\Mcp\Prompts\RegisterSalePrompt::class,
+        \App\Mcp\Prompts\CollectReceivablePrompt::class,
+        \App\Mcp\Prompts\FinancialOverviewPrompt::class,
+        \App\Mcp\Prompts\RegisterTrainerPrompt::class,
+    ];
 }

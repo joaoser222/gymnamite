@@ -89,4 +89,45 @@ class ServerRegistrationTest extends TestCase
 
         $this->assertCount(22, $resourceNames, 'Expected 22 resources, got: '.implode(', ', $resourceNames));
     }
+
+    public function test_server_registers_prompts_for_permitted_user(): void
+    {
+        $user = User::factory()->create();
+
+        foreach ([
+            'clients.create',
+            'sales.create',
+            'receivables.mark_paid',
+            'receivables.view',
+            'trainers.create',
+        ] as $permission) {
+            $this->givePermission($user, $permission);
+        }
+
+        $response = $this->mcpCall($user, 'prompts/list');
+        $response->assertOk();
+
+        $promptNames = array_column($response->json('result.prompts', []), 'name');
+
+        $expected = [
+            'onboard-client',
+            'register-sale',
+            'collect-receivable',
+            'financial-overview',
+            'register-trainer',
+        ];
+
+        $this->assertCount(5, $promptNames, 'Expected 5 prompts, got: '.implode(', ', $promptNames));
+        $this->assertEqualsCanonicalizing($expected, $promptNames);
+    }
+
+    public function test_server_hides_prompts_without_permission(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->mcpCall($user, 'prompts/list');
+        $response->assertOk();
+
+        $this->assertCount(0, $response->json('result.prompts', []));
+    }
 }
