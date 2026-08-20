@@ -42,6 +42,12 @@ const menuGroups: MenuGroup[] = [
                 href: '/reports',
                 permission: 'reports.view',
             },
+            {
+                title: 'Chat',
+                icon: 'ti ti-message-circle',
+                href: '/chat',
+                permission: 'chat.view',
+            },
         ],
     },
     {
