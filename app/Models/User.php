@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
@@ -26,7 +27,7 @@ class User extends Authenticatable
     ];
 
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasVisibility, Notifiable;
+    use HasApiTokens, HasFactory, HasVisibility, Notifiable;
 
     /**
      * Get the attributes that should be cast.
