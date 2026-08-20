@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'driver' => 'openai-compatible',
 
-    'base_url' => env('MCP_CHAT_BASE_URL', 'https://opencode.ai/zen/v1/chat/completions'),
+    'base_url' => env('MCP_CHAT_BASE_URL', 'https://api.groq.com/openai/v1/chat/completions'),
 
     'api_key' => env('MCP_CHAT_API_KEY', ''),
 
@@ -18,12 +18,12 @@ return [
     'request_timeout' => (int) env('MCP_CHAT_REQUEST_TIMEOUT', 60),
 
     // Ordered list of models used as fallback chain. All entries share the
-    // same base_url/api_key (e.g. OpenCode Zen free models). The first model
-    // that answers successfully is kept for the whole conversation; on failure
-    // the next model is tried.
+    // same base_url/api_key (e.g. Groq free models). The first model that
+    // answers successfully is kept for the whole conversation; on failure the
+    // next model is tried.
     'providers' => [
-        env('MCP_CHAT_MODEL', 'hy3-free'),
-        env('MCP_CHAT_MODEL_2', 'mimo-v2.5-free'),
-        env('MCP_CHAT_MODEL_3', 'nemotron-3-ultra-free'),
+        env('MCP_CHAT_MODEL', 'llama-3.3-70b-versatile'),
+        env('MCP_CHAT_MODEL_2', 'llama-3.1-8b-instant'),
+        env('MCP_CHAT_MODEL_3', 'qwen/qwen3-32b'),
     ],
 ];
