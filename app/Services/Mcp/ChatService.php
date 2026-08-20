@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Mcp;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Laravel\Mcp\Request;
-use Laravel\Mcp\Response;
+use Laravel\Mcp\Response as McpResponse;
 use Laravel\Mcp\ResponseFactory;
 use Throwable;
 
@@ -30,27 +31,11 @@ class ChatService
 
         $config = config('mcp_chat');
         $maxIterations = (int) $config['max_tool_iterations'];
+        $providers = $this->orderedProviders($config);
+        $activeIndex = 0;
 
         for ($iteration = 0; $iteration <= $maxIterations; $iteration++) {
-            $payload = [
-                'model' => $config['model'],
-                'messages' => $messages,
-                'temperature' => (float) $config['temperature'],
-                'max_tokens' => (int) $config['max_tokens'],
-            ];
-
-            if ($tools !== []) {
-                $payload['tools'] = $tools;
-                $payload['tool_choice'] = 'auto';
-            }
-
-            $response = Http::withToken((string) $config['api_key'])
-                ->timeout((int) $config['request_timeout'])
-                ->post((string) $config['base_url'], $payload);
-
-            if ($response->failed()) {
-                throw new \RuntimeException('Falha ao chamar o provedor de LLM: '.$response->body());
-            }
+            $response = $this->completeChat($providers, $activeIndex, $config, $tools, $messages);
 
             $data = $response->json();
             $assistantMessage = $data['choices'][0]['message'] ?? null;
@@ -83,6 +68,84 @@ class ChatService
         }
 
         return 'Não foi possível concluir a resposta a tempo. Tente novamente.';
+    }
+
+    /**
+     * Try each provider starting at $activeIndex and return the first
+     * successful completion, keeping the chosen provider for later calls.
+     *
+     * @param  array<int, array{base_url: string, api_key: string, model: string}>  $providers
+     * @param  array<string, mixed>  $config
+     * @param  array<int, array<string, mixed>>  $tools
+     * @param  array<int, array<string, mixed>>  $messages
+     */
+    private function completeChat(array $providers, int &$activeIndex, array $config, array $tools, array $messages): Response
+    {
+        $lastError = null;
+
+        for ($i = $activeIndex; $i < count($providers); $i++) {
+            $response = $this->callProvider($providers[$i], $config, $tools, $messages);
+
+            if ($response->successful()) {
+                $activeIndex = $i;
+
+                return $response;
+            }
+
+            $lastError = $response->body();
+        }
+
+        throw new \RuntimeException('Falha ao chamar os provedores de LLM: '.$lastError);
+    }
+
+    /**
+     * @param  array{base_url: string, api_key: string, model: string}  $provider
+     * @param  array<string, mixed>  $config
+     * @param  array<int, array<string, mixed>>  $tools
+     * @param  array<int, array<string, mixed>>  $messages
+     */
+    private function callProvider(array $provider, array $config, array $tools, array $messages): Response
+    {
+        $payload = [
+            'model' => $provider['model'],
+            'messages' => $messages,
+            'temperature' => (float) $config['temperature'],
+            'max_tokens' => (int) $config['max_tokens'],
+        ];
+
+        if ($tools !== []) {
+            $payload['tools'] = $tools;
+            $payload['tool_choice'] = 'auto';
+        }
+
+        return Http::withToken((string) $provider['api_key'])
+            ->timeout((int) $config['request_timeout'])
+            ->post((string) $provider['base_url'], $payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @return array<int, array{base_url: string, api_key: string, model: string}>
+     */
+    private function orderedProviders(array $config): array
+    {
+        $baseUrl = (string) ($config['base_url'] ?? '');
+        $apiKey = (string) ($config['api_key'] ?? '');
+        $models = $config['providers'] ?? [];
+
+        if ($models === [] && isset($config['model'])) {
+            $models = [$config['model']];
+        }
+
+        return collect($models)
+            ->filter(fn ($model): bool => is_string($model) && $model !== '')
+            ->map(fn (string $model): array => [
+                'base_url' => $baseUrl,
+                'api_key' => $apiKey,
+                'model' => $model,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -158,7 +221,7 @@ class ChatService
             return $text;
         }
 
-        if ($result instanceof Response) {
+        if ($result instanceof McpResponse) {
             return (string) $result->content();
         }
 
