@@ -58,7 +58,7 @@ class AuthenticationTest extends TestCase
 
         $response->assertRedirect(route('login'));
 
-        $this->assertGuest();
+        $this->assertGuest('web');
     }
 
     public function test_users_are_rate_limited()
