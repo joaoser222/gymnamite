@@ -51,6 +51,7 @@ enum AccessModule: string
     case GATEWAY_ACCOUNT = 'gateway_accounts';
     case USER = 'users';
     case SETTING = 'settings';
+    case CHAT = 'chat';
 
     public function label(): string
     {
@@ -84,7 +85,8 @@ enum AccessModule: string
             self::FINANCIAL_ACCOUNT => 'Contas',
             self::GATEWAY_ACCOUNT => 'Contas do Gateway',
             self::USER => 'Usuários',
-            self::SETTING => 'Configurações'
+            self::SETTING => 'Configurações',
+            self::CHAT => 'Chat'
         };
     }
 
@@ -155,7 +157,8 @@ enum AccessModule: string
             self::SETTING => [
                 AccessAction::VIEW,
                 AccessAction::UPDATE,
-            ]
+            ],
+            self::CHAT => [AccessAction::VIEW]
         };
     }
 }
