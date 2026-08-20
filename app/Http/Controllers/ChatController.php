@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\Conversation;
 use App\Services\Mcp\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,10 +22,46 @@ class ChatController extends Controller
             'history' => ['nullable', 'array'],
             'history.*.role' => ['required_with:history', 'string', 'in:user,assistant'],
             'history.*.content' => ['required_with:history', 'string', 'max:8000'],
+            'conversation_id' => ['nullable', 'integer', 'exists:chat_conversations,id'],
         ]);
 
-        $reply = $this->chatService->ask($data['message'], $data['history'] ?? []);
+        $user = $request->user();
 
-        return response()->json(['reply' => $reply]);
+        if (! empty($data['conversation_id'])) {
+            $conversation = Conversation::query()
+                ->where('id', $data['conversation_id'])
+                ->where('user_id', $user->id)
+                ->firstOrFail();
+
+            $history = $conversation->messages()
+                ->orderBy('id')
+                ->get(['role', 'content'])
+                ->map(fn ($message) => ['role' => $message->role, 'content' => $message->content])
+                ->all();
+        } else {
+            $history = $data['history'] ?? [];
+
+            $conversation = Conversation::create([
+                'user_id' => $user->id,
+                'title' => mb_substr($data['message'], 0, 100),
+            ]);
+        }
+
+        $conversation->messages()->create([
+            'role' => 'user',
+            'content' => $data['message'],
+        ]);
+
+        $reply = $this->chatService->ask($data['message'], $history);
+
+        $conversation->messages()->create([
+            'role' => 'assistant',
+            'content' => $reply,
+        ]);
+
+        return response()->json([
+            'reply' => $reply,
+            'conversation_id' => $conversation->id,
+        ]);
     }
 }
