@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Services\Mcp\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
 {
@@ -15,7 +16,7 @@ class ChatController extends Controller
         private readonly ChatService $chatService,
     ) {}
 
-    public function message(Request $request): JsonResponse
+    public function message(Request $request): JsonResponse|StreamedResponse
     {
         $data = $request->validate([
             'message' => ['required', 'string', 'max:4000'],
@@ -23,6 +24,7 @@ class ChatController extends Controller
             'history.*.role' => ['required_with:history', 'string', 'in:user,assistant'],
             'history.*.content' => ['required_with:history', 'string', 'max:8000'],
             'conversation_id' => ['nullable', 'integer', 'exists:chat_conversations,id'],
+            'stream' => ['nullable', 'boolean'],
         ]);
 
         $user = $request->user();
@@ -51,6 +53,20 @@ class ChatController extends Controller
             'role' => 'user',
             'content' => $data['message'],
         ]);
+
+        if (! empty($data['stream'])) {
+            return $this->chatService->streamAsk(
+                $data['message'],
+                $history,
+                function (string $reply) use ($conversation): void {
+                    $conversation->messages()->create([
+                        'role' => 'assistant',
+                        'content' => $reply,
+                    ]);
+                },
+                $conversation->id,
+            );
+        }
 
         $reply = $this->chatService->ask($data['message'], $history);
 
