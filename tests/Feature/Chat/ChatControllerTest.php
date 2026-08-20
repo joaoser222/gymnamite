@@ -115,4 +115,33 @@ class ChatControllerTest extends TestCase
 
         $this->assertFalse($sentTools, 'Usuário sem permissão de módulo não deve receber tools.');
     }
+
+    public function test_chat_falls_back_to_next_model_when_first_fails(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['choices' => [['message' => ['role' => 'assistant', 'content' => 'erro']]]], 500)
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Resposta do modelo de fallback.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Olá',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['reply' => 'Resposta do modelo de fallback.']);
+
+        // First request (primary model) failed, second (fallback) succeeded.
+        $this->assertCount(2, Http::recorded());
+    }
 }
