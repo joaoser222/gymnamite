@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->preventRequestForgery(except: [
             'gateway-postbacks/*/receive',
             'mcp/*',
+            'chat/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
