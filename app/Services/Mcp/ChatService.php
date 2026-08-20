@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Mcp;
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response as McpResponse;
 use Laravel\Mcp\ResponseFactory;
@@ -25,7 +27,11 @@ class ChatService
      */
     public function ask(string $message, array $history = []): string
     {
-        ['tools' => $tools, 'map' => $map] = $this->schemaProvider->readOnlyResourcesForCurrentUser();
+        ['tools' => $resourceTools, 'map' => $resourceMap] = $this->schemaProvider->readOnlyResourcesForCurrentUser();
+        ['tools' => $writeTools, 'map' => $writeMap] = $this->schemaProvider->writableToolsForCurrentUser();
+
+        $tools = array_merge($resourceTools, $writeTools);
+        $map = $resourceMap + $writeMap;
 
         $messages = $this->buildInitialMessages($history, $message);
 
@@ -57,7 +63,18 @@ class ChatService
                 $name = (string) ($function['name'] ?? '');
                 $arguments = json_decode((string) ($function['arguments'] ?? '{}'), true) ?? [];
 
-                $resultText = $this->executeResource($map, $name, $arguments);
+                $entry = $map[$name] ?? null;
+
+                if ($entry === null) {
+                    $resultText = json_encode(
+                        ['error' => "Ferramenta {$name} não disponível para este usuário."],
+                        JSON_UNESCAPED_UNICODE,
+                    );
+                } elseif (isset($entry['tool'])) {
+                    $resultText = $this->executeTool($entry['tool'], $arguments);
+                } else {
+                    $resultText = $this->executeResource($map, $name, $arguments);
+                }
 
                 $messages[] = [
                     'role' => 'tool',
@@ -197,6 +214,30 @@ class ChatService
         try {
             $request = new Request($requestArguments);
             $result = $resource->handle($request);
+        } catch (Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_UNESCAPED_UNICODE);
+        }
+
+        return $this->responseToText($result);
+    }
+
+    /**
+     * Execute a writable MCP tool for the current user and return its result
+     * as text for the LLM. Validation or runtime failures are returned as an
+     * error payload so the model can recover instead of aborting the turn.
+     *
+     * @param  class-string<\Laravel\Mcp\Server\Tool>  $class
+     */
+    private function executeTool(string $class, array $arguments): string
+    {
+        try {
+            $tool = app($class);
+            $result = $tool->handle(new Request($arguments));
+        } catch (ValidationException $exception) {
+            return json_encode(
+                ['error' => 'Validação falhou: '.implode('; ', Arr::flatten($exception->errors()))],
+                JSON_UNESCAPED_UNICODE,
+            );
         } catch (Throwable $exception) {
             return json_encode(['error' => $exception->getMessage()], JSON_UNESCAPED_UNICODE);
         }

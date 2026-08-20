@@ -144,4 +144,109 @@ class ChatControllerTest extends TestCase
         // First request (primary model) failed, second (fallback) succeeded.
         $this->assertCount(2, Http::recorded());
     }
+
+    public function test_chat_executes_writable_tool_when_user_has_permission(): void
+    {
+        $this->withoutExceptionHandling();
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+        $this->givePermission($user, 'clients.create');
+
+        Http::fake([
+            '*' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => null,
+                            'tool_calls' => [[
+                                'id' => 'call_1',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'create-client',
+                                    'arguments' => (string) json_encode([
+                                        'name' => 'Cliente Via Tool',
+                                        'email' => 'cliente@tool.com',
+                                        'phone' => '11999999999',
+                                        'document' => '12345678901',
+                                        'gender' => 'male',
+                                        'birth_date' => '1990-01-01',
+                                    ]),
+                                ],
+                            ]],
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Cliente criado com sucesso.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Crie um cliente',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['reply' => 'Cliente criado com sucesso.']);
+
+        $this->assertDatabaseHas('clients', [
+            'name' => 'Cliente Via Tool',
+            'document' => '12345678901',
+        ]);
+
+        $toolCalled = false;
+        foreach (Http::recorded() as [$request]) {
+            $body = $request->data();
+            if (! empty($body['tools'])) {
+                $names = array_column(array_column($body['tools'], 'function'), 'name');
+                if (in_array('create-client', $names, true)) {
+                    $toolCalled = true;
+                }
+            }
+        }
+
+        $this->assertTrue($toolCalled, 'A tool create-client não foi exposta ao LLM.');
+    }
+
+    public function test_chat_hides_writable_tool_without_permission(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+        // Intentionally NOT granting clients.create.
+
+        Http::fake([
+            '*' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Sem ferramentas de escrita.',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Crie um cliente',
+        ]);
+
+        $response->assertOk();
+
+        $exposedToolNames = [];
+        foreach (Http::recorded() as [$request]) {
+            $body = $request->data();
+            if (! empty($body['tools'])) {
+                $exposedToolNames = array_merge(
+                    $exposedToolNames,
+                    array_column(array_column($body['tools'], 'function'), 'name'),
+                );
+            }
+        }
+
+        $this->assertNotContains('create-client', $exposedToolNames, 'Usuário sem permissão não deve ver a tool de escrita.');
+    }
 }

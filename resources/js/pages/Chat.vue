@@ -58,10 +58,11 @@ async function send(): Promise<void> {
     <div class="mx-auto" style="max-width: 900px">
         <div class="mb-6">
             <h1 class="text-h4">Chat</h1>
-            <p class="text-medium-emphasis mt-1">
-                Assistente de leitura (somente visualização). A geração de
-                respostas será disponibilizada em breve.
-            </p>
+        <p class="text-medium-emphasis mt-1">
+            Assistente que lê dados e executa ações permitidas à sua conta
+            (clientes, vendas, recebimentos, entre outros), conforme as
+            ferramentas do servidor MCP.
+        </p>
         </div>
 
         <v-card

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Mcp;
 
 use App\Mcp\Servers\GymnamiteServer;
+use Illuminate\JsonSchema\JsonSchemaTypeFactory;
+use Laravel\Mcp\Request;
 use Laravel\Mcp\Server\Resource;
+use Laravel\Mcp\Server\Tool;
 use ReflectionClass;
 
 class ChatToolSchemaProvider
@@ -55,6 +58,47 @@ class ChatToolSchemaProvider
     }
 
     /**
+     * Build OpenAI-compatible tool definitions from the writable MCP tools that
+     * the current user is allowed to execute (gated by shouldRegister).
+     *
+     * @return array{tools: array<int, array>, map: array<string, array{tool: class-string<Tool>}>}
+     */
+    public function writableToolsForCurrentUser(): array
+    {
+        $tools = [];
+        $map = [];
+
+        foreach ($this->toolClassList() as $class) {
+            if (! class_exists($class)) {
+                continue;
+            }
+
+            /** @var Tool $tool */
+            $tool = app($class);
+
+            if (! $tool->eligibleForRegistration()) {
+                continue;
+            }
+
+            $jsonSchema = new JsonSchemaTypeFactory();
+            $objectType = $jsonSchema->object($tool->schema($jsonSchema));
+
+            $tools[] = [
+                'type' => 'function',
+                'function' => [
+                    'name' => $tool->name(),
+                    'description' => $tool->description(),
+                    'parameters' => $objectType->toArray(),
+                ],
+            ];
+
+            $map[$tool->name()] = ['tool' => $class];
+        }
+
+        return ['tools' => $tools, 'map' => $map];
+    }
+
+    /**
      * @return array<int, string>
      */
     private function resourceClassList(): array
@@ -63,6 +107,17 @@ class ChatToolSchemaProvider
             ->getDefaultProperties();
 
         return $defaults['resources'] ?? [];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toolClassList(): array
+    {
+        $defaults = (new ReflectionClass(GymnamiteServer::class))
+            ->getDefaultProperties();
+
+        return $defaults['tools'] ?? [];
     }
 
     /**
