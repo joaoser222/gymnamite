@@ -420,4 +420,49 @@ class ChatControllerTest extends TestCase
         $this->assertArrayHasKey('tools', $body);
         $this->assertSame('auto', $body['tool_choice']);
     }
+
+    public function test_chat_stream_emite_tokens_e_persiste_mensagem(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+
+        $sseBody = implode("\n\n", [
+            'data: '.json_encode(['choices' => [['delta' => ['content' => 'Olá']]]]),
+            'data: '.json_encode(['choices' => [['delta' => ['content' => ' mundo']]]]),
+            'data: [DONE]',
+        ])."\n\n";
+
+        Http::fake([
+            '*' => Http::response($sseBody, 200, ['Content-Type' => 'text/event-stream']),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Oi',
+            'stream' => true,
+        ]);
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/event-stream', (string) $response->headers->get('Content-Type'));
+
+        ob_start();
+        $response->baseResponse->sendContent();
+        $output = (string) ob_get_clean();
+
+        $this->assertStringContainsString('"type":"meta"', $output);
+        $this->assertStringContainsString('"type":"token"', $output);
+        $this->assertStringContainsString('"content":"Olá"', $output);
+        $this->assertStringContainsString('"content":" mundo"', $output);
+        $this->assertStringContainsString('"type":"done"', $output);
+        $this->assertStringContainsString('"content":"Olá mundo"', $output);
+
+        $this->assertDatabaseHas('chat_messages', [
+            'role' => 'user',
+            'content' => 'Oi',
+        ]);
+
+        $this->assertDatabaseHas('chat_messages', [
+            'role' => 'assistant',
+            'content' => 'Olá mundo',
+        ]);
+    }
 }
