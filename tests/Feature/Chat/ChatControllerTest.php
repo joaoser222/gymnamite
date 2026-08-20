@@ -352,4 +352,72 @@ class ChatControllerTest extends TestCase
             'A conversa deve acumular 2 mensagens anteriores + 2 novas.',
         );
     }
+
+    public function test_chat_usa_groq_com_formato_tool_calls(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+        $this->givePermission($user, 'clients.create');
+
+        config([
+            'mcp_chat.base_url' => 'https://api.groq.com/openai/v1/chat/completions',
+            'mcp_chat.providers' => ['llama-3.3-70b-versatile'],
+        ]);
+
+        Http::fake([
+            'https://api.groq.com/openai/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => null,
+                            'tool_calls' => [[
+                                'id' => 'call_1',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'create-client',
+                                    'arguments' => (string) json_encode([
+                                        'name' => 'Cliente Groq',
+                                        'email' => 'groq@tool.com',
+                                        'phone' => '11999999999',
+                                        'document' => '12345678901',
+                                        'gender' => 'male',
+                                        'birth_date' => '1990-01-01',
+                                    ]),
+                                ],
+                            ]],
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Cliente criado via Groq.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Crie um cliente',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['reply' => 'Cliente criado via Groq.']);
+
+        $this->assertDatabaseHas('clients', [
+            'name' => 'Cliente Groq',
+            'document' => '12345678901',
+        ]);
+
+        $recorded = Http::recorded()
+            ->first(fn ($pair) => str_contains($pair[0]->url(), 'groq.com'));
+
+        $this->assertNotNull($recorded, 'A requisição deve ir para o endpoint da Groq.');
+        $body = $recorded[0]->data();
+        $this->assertSame('llama-3.3-70b-versatile', $body['model']);
+        $this->assertArrayHasKey('tools', $body);
+        $this->assertSame('auto', $body['tool_choice']);
+    }
 }
