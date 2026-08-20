@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\UserPermissionsController;
@@ -63,6 +64,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('auth/permissions', UserPermissionsController::class)->name('auth.permissions');
 
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('chat', fn () => inertia('Chat'))->name('chat')->can('chat.view');
+    Route::post('chat/message', [ChatController::class, 'message'])->name('chat.message')->can('chat.view');
     Route::get('select-box/{objectName}', SelectBoxController::class)->name('select-box');
     Route::get('contracts/find-client', [ContractController::class, 'findClient'])->name('contracts.find-client');
     Route::get('contracts/find-coupon', [ContractController::class, 'findCoupon'])->name('contracts.find-coupon');
