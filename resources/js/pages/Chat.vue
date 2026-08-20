@@ -14,6 +14,7 @@ type ChatMessage = {
 const messages = ref<ChatMessage[]>([]);
 const draft = ref('');
 const loading = ref(false);
+const conversationId = ref<number | null>(null);
 
 const xsrfToken = decodeURIComponent(
     document.cookie.match(/(^|; )XSRF-TOKEN=([^;]*)/)?.[1] ?? '',
@@ -33,9 +34,11 @@ async function send(): Promise<void> {
     try {
         const { data } = await axios.post(
             '/chat/message',
-            { message: text },
+            { message: text, conversation_id: conversationId.value },
             { headers: { 'X-XSRF-TOKEN': xsrfToken } },
         );
+
+        conversationId.value = data.conversation_id ?? null;
 
         messages.value.push({
             id: Date.now() + 1,
