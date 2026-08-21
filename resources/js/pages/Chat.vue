@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 
 defineOptions({ layout: AuthenticatedLayout });
@@ -10,14 +10,54 @@ type ChatMessage = {
     text: string;
 };
 
+type ChatPrompt = {
+    name: string;
+    label: string;
+    description: string;
+    text: string;
+};
+
 const messages = ref<ChatMessage[]>([]);
 const draft = ref('');
 const loading = ref(false);
 const conversationId = ref<number | null>(null);
+const prompts = ref<ChatPrompt[]>([]);
 
 const xsrfToken = decodeURIComponent(
     document.cookie.match(/(^|; )XSRF-TOKEN=([^;]*)/)?.[1] ?? '',
 );
+
+async function loadPrompts(): Promise<void> {
+    try {
+        const response = await fetch('/chat/prompts', {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': xsrfToken,
+            },
+        });
+
+        if (! response.ok) {
+            return;
+        }
+
+        const data = await response.json();
+        prompts.value = data.prompts ?? [];
+    } catch {
+        prompts.value = [];
+    }
+}
+
+function applyPrompt(prompt: ChatPrompt): void {
+    if (loading.value) {
+        return;
+    }
+
+    draft.value = prompt.label;
+    void send(prompt.name);
+}
+
+onMounted(loadPrompts);
 
 function updateMessage(id: number, text: string): void {
     const message = messages.value.find((entry) => entry.id === id);
@@ -27,7 +67,7 @@ function updateMessage(id: number, text: string): void {
     }
 }
 
-async function send(): Promise<void> {
+async function send(promptName: string | null = null): Promise<void> {
     const text = draft.value.trim();
 
     if (text === '' || loading.value) {
@@ -55,6 +95,7 @@ async function send(): Promise<void> {
                 message: text,
                 conversation_id: conversationId.value,
                 stream: true,
+                prompt: promptName,
             }),
         });
 
@@ -185,5 +226,25 @@ async function send(): Promise<void> {
                 </v-btn>
             </v-card-actions>
         </v-card>
+
+        <div v-if="prompts.length > 0" class="mt-4">
+            <div class="text-subtitle-2 text-medium-emphasis mb-2">
+                Prompts úteis
+            </div>
+            <div class="d-flex flex-wrap ga-2">
+                <v-chip
+                    v-for="prompt in prompts"
+                    :key="prompt.name"
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    :disabled="loading"
+                    :title="prompt.description"
+                    @click="applyPrompt(prompt)"
+                >
+                    {{ prompt.label }}
+                </v-chip>
+            </div>
+        </div>
     </div>
 </template>
