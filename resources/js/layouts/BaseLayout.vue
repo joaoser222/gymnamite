@@ -66,7 +66,15 @@
             />
 
             <v-app-bar-title>
-                <h3>{{ currentPageTitle }}</h3>
+                <div class="d-flex align-center ga-2">
+                    <v-icon
+                        v-if="currentMenuItem?.icon"
+                        :icon="currentMenuItem.icon"
+                        size="small"
+                        color="primary"
+                    />
+                    <h3>{{ currentPageTitle }}</h3>
+                </div>
             </v-app-bar-title>
 
             <v-menu>
