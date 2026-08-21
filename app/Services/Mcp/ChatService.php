@@ -21,6 +21,7 @@ class ChatService
 {
     public function __construct(
         private readonly ChatToolSchemaProvider $schemaProvider,
+        private readonly ChatPromptProvider $promptProvider,
     ) {}
 
     /**
@@ -35,6 +36,7 @@ class ChatService
         array $history = [],
         ?callable $onComplete = null,
         ?int $conversationId = null,
+        ?string $promptName = null,
     ): StreamedResponse {
         ['tools' => $resourceTools, 'map' => $resourceMap] = $this->schemaProvider->readOnlyResourcesForCurrentUser();
         ['tools' => $writeTools, 'map' => $writeMap] = $this->schemaProvider->writableToolsForCurrentUser();
@@ -42,7 +44,8 @@ class ChatService
         $tools = array_merge($resourceTools, $writeTools);
         $map = $resourceMap + $writeMap;
 
-        $messages = $this->buildInitialMessages($history, $message);
+        $promptText = $promptName !== null ? $this->promptProvider->promptTextByName($promptName) : null;
+        $messages = $this->buildInitialMessages($history, $message, $promptText);
 
         $config = config('mcp_chat');
         $maxIterations = (int) $config['max_tool_iterations'];
@@ -112,6 +115,10 @@ class ChatService
             }
 
             if ($full === '') {
+                $full = $this->synthesizeFinalAnswer($messages, $providers, $activeIndex, $config);
+            }
+
+            if ($full === '') {
                 $full = 'Não foi possível concluir a resposta a tempo. Tente novamente.';
             }
 
@@ -134,7 +141,7 @@ class ChatService
      *
      * @param  array<int, array{role: string, content: string}>  $history
      */
-    public function ask(string $message, array $history = []): string
+    public function ask(string $message, array $history = [], ?string $promptName = null): string
     {
         ['tools' => $resourceTools, 'map' => $resourceMap] = $this->schemaProvider->readOnlyResourcesForCurrentUser();
         ['tools' => $writeTools, 'map' => $writeMap] = $this->schemaProvider->writableToolsForCurrentUser();
@@ -142,7 +149,8 @@ class ChatService
         $tools = array_merge($resourceTools, $writeTools);
         $map = $resourceMap + $writeMap;
 
-        $messages = $this->buildInitialMessages($history, $message);
+        $promptText = $promptName !== null ? $this->promptProvider->promptTextByName($promptName) : null;
+        $messages = $this->buildInitialMessages($history, $message, $promptText);
 
         $config = config('mcp_chat');
         $maxIterations = (int) $config['max_tool_iterations'];
@@ -182,7 +190,11 @@ class ChatService
             }
         }
 
-        return 'Não foi possível concluir a resposta a tempo. Tente novamente.';
+        $full = $this->synthesizeFinalAnswer($messages, $providers, $activeIndex, $config);
+
+        return $full !== ''
+            ? $full
+            : 'Não foi possível concluir a resposta a tempo. Tente novamente.';
     }
 
     /**
@@ -233,9 +245,51 @@ class ChatService
             $payload['tool_choice'] = 'auto';
         }
 
-        return Http::withToken((string) $provider['api_key'])
+        return $this->postWithRetry($provider, $config, $payload, false);
+    }
+
+    /**
+     * POST to the provider, retrying with backoff while it answers with HTTP 429
+     * (rate limit). The Groq "try again in Xs" hint is honored when present.
+     *
+     * @return \Illuminate\Http\Client\Response
+     */
+    private function postWithRetry(array $provider, array $config, array $payload, bool $stream): Response
+    {
+        $maxAttempts = (int) ($config['retry_attempts'] ?? 3);
+        $delaySeconds = (float) ($config['retry_base_delay'] ?? 2);
+
+        $response = Http::withToken((string) $provider['api_key'])
+            ->withOptions(['stream' => $stream])
             ->timeout((int) $config['request_timeout'])
             ->post((string) $provider['base_url'], $payload);
+
+        for ($attempt = 1; $attempt < $maxAttempts && $response->status() === 429; $attempt++) {
+            $wait = $this->retryDelaySeconds($response, $delaySeconds);
+            $delaySeconds = min($delaySeconds * 2, 15);
+            usleep((int) ($wait * 1000000));
+
+            $response = Http::withToken((string) $provider['api_key'])
+                ->withOptions(['stream' => $stream])
+                ->timeout((int) $config['request_timeout'])
+                ->post((string) $provider['base_url'], $payload);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Parse the Groq "try again in Xs" hint, falling back to the provided delay.
+     */
+    private function retryDelaySeconds(Response $response, float $fallback): float
+    {
+        $message = (string) (json_decode($response->body(), true)['error']['message'] ?? '');
+
+        if (preg_match('/try again in ([0-9]+(?:\.[0-9]+)?)s/', $message, $matches) === 1) {
+            return (float) $matches[1] + 0.5;
+        }
+
+        return $fallback;
     }
 
     /**
@@ -267,9 +321,25 @@ class ChatService
      * @param  array<int, array{role: string, content: string}>  $history
      * @return array<int, array<string, mixed>>
      */
-    private function buildInitialMessages(array $history, string $message): array
+    private function buildInitialMessages(array $history, string $message, ?string $promptText = null): array
     {
-        $messages = [];
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => 'Você é o assistente virtual da academia Gymnamite. Responda sempre em '
+                    .'português do Brasil. Use as ferramentas disponíveis apenas quando forem '
+                    .'necessárias para obter ou registrar dados. Após coletar as informações '
+                    .'necessárias, forneça uma resposta final e objetiva ao usuário, sem chamar '
+                    .'ferramentas adicionais.',
+            ],
+        ];
+
+        if ($promptText !== null && $promptText !== '') {
+            $messages[] = [
+                'role' => 'system',
+                'content' => 'Siga estritamente estas instruções para a tarefa solicitada: '.$promptText,
+            ];
+        }
 
         foreach ($history as $entry) {
             $messages[] = [
@@ -284,6 +354,56 @@ class ChatService
         ];
 
         return $messages;
+    }
+
+    /**
+     * When the tool-calling loop ends without a final textual answer (reasoning
+     * models often emit empty content after using tools, or the iteration cap
+     * is reached mid-workflow), ask the model once more without tools so it must
+     * produce a plain answer from the accumulated context.
+     *
+     * @param  array<int, array<string, mixed>>  $messages
+     * @param  array<int, array{base_url: string, api_key: string, model: string}>  $providers
+     * @param  array<string, mixed>  $config
+     */
+    private function synthesizeFinalAnswer(array $messages, array $providers, int &$activeIndex, array $config): string
+    {
+        $clean = $this->stripToolInteractions($messages);
+
+        try {
+            $response = $this->completeChat($providers, $activeIndex, $config, [], $clean);
+        } catch (Throwable $exception) {
+            return '';
+        }
+
+        $data = $response->json();
+        $content = $data['choices'][0]['message']['content'] ?? '';
+
+        return is_string($content) ? trim($content) : '';
+    }
+
+    /**
+     * Remove tool-result messages and tool_call markers so the final synthesis
+     * call is a clean conversational transcript the model can summarize.
+     *
+     * @param  array<int, array<string, mixed>>  $messages
+     * @return array<int, array<string, mixed>>
+     */
+    private function stripToolInteractions(array $messages): array
+    {
+        $clean = [];
+
+        foreach ($messages as $message) {
+            if (($message['role'] ?? null) === 'tool') {
+                continue;
+            }
+
+            unset($message['tool_calls']);
+
+            $clean[] = $message;
+        }
+
+        return $clean;
     }
 
     /**
@@ -408,6 +528,7 @@ class ChatService
             'messages' => $messages,
             'temperature' => (float) $config['temperature'],
             'max_tokens' => (int) $config['max_tokens'],
+            'stream' => true,
         ];
 
         if ($tools !== []) {
@@ -415,10 +536,7 @@ class ChatService
             $payload['tool_choice'] = 'auto';
         }
 
-        $response = Http::withToken((string) $provider['api_key'])
-            ->withOptions(['stream' => true])
-            ->timeout((int) $config['request_timeout'])
-            ->post((string) $provider['base_url'], $payload);
+        $response = $this->postWithRetry($provider, $config, $payload, true);
 
         if (! $response->successful()) {
             return null;

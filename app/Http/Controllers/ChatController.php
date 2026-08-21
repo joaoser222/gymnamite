@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Conversation;
+use App\Services\Mcp\ChatPromptProvider;
 use App\Services\Mcp\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class ChatController extends Controller
 {
     public function __construct(
         private readonly ChatService $chatService,
+        private readonly ChatPromptProvider $promptProvider,
     ) {}
 
     public function message(Request $request): JsonResponse|StreamedResponse
@@ -24,6 +26,7 @@ class ChatController extends Controller
             'history.*.role' => ['required_with:history', 'string', 'in:user,assistant'],
             'history.*.content' => ['required_with:history', 'string', 'max:8000'],
             'conversation_id' => ['nullable', 'integer', 'exists:chat_conversations,id'],
+            'prompt' => ['nullable', 'string', 'max:255'],
             'stream' => ['nullable', 'boolean'],
         ]);
 
@@ -65,10 +68,11 @@ class ChatController extends Controller
                     ]);
                 },
                 $conversation->id,
+                $data['prompt'] ?? null,
             );
         }
 
-        $reply = $this->chatService->ask($data['message'], $history);
+        $reply = $this->chatService->ask($data['message'], $history, $data['prompt'] ?? null);
 
         $conversation->messages()->create([
             'role' => 'assistant',
@@ -78,6 +82,13 @@ class ChatController extends Controller
         return response()->json([
             'reply' => $reply,
             'conversation_id' => $conversation->id,
+        ]);
+    }
+
+    public function prompts(Request $request): JsonResponse
+    {
+        return response()->json([
+            'prompts' => $this->promptProvider->promptsForCurrentUser(),
         ]);
     }
 }

@@ -154,7 +154,7 @@ class ChatToolSchemaProvider
 
         return [
             'type' => 'object',
-            'properties' => $properties,
+            'properties' => (object) $properties,
             'required' => $params,
         ];
     }
