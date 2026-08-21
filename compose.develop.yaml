@@ -51,7 +51,7 @@ services:
       context: .
     image: ${APP_IMAGE:-gymnamite:local}
     command: >-
-      sh -c 'php artisan migrate:fresh --force --env=testing && php artisan test --compact'
+      sh -c 'ln -sfn /opt/public /var/www/html/public && php artisan migrate:fresh --force --env=testing && php artisan test --compact'
     depends_on:
       db:
         condition: service_healthy
