@@ -465,4 +465,120 @@ class ChatControllerTest extends TestCase
             'content' => 'Olá mundo',
         ]);
     }
+
+    public function test_chat_lists_eligible_prompts_for_current_user(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+        $this->givePermission($user, 'clients.create');
+
+        $response = $this->actingAs($user)->getJson('/chat/prompts');
+
+        $response->assertOk();
+        $response->assertJsonStructure(['prompts']);
+        $this->assertNotEmpty($response->json('prompts'));
+        $this->assertArrayHasKey('text', $response->json('prompts')[0]);
+
+        $names = array_column($response->json('prompts'), 'name');
+        $this->assertContains('onboard-client', $names);
+    }
+
+    public function test_chat_hides_prompts_without_module_permission(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+
+        $response = $this->actingAs($user)->getJson('/chat/prompts');
+
+        $response->assertOk();
+        $this->assertEmpty($response->json('prompts'));
+    }
+
+    public function test_chat_synthesizes_final_answer_when_model_returns_empty_content(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+        $this->givePermission($user, 'clients.view');
+
+        Http::fake([
+            '*' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => null,
+                            'tool_calls' => [[
+                                'id' => 'call_1',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'read_client',
+                                    'arguments' => (string) json_encode(['id' => '1']),
+                                ],
+                            ]],
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '',
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Resposta final sintetizada a partir dos dados.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Mostre o cliente 1',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['reply' => 'Resposta final sintetizada a partir dos dados.']);
+    }
+
+    public function test_chat_injects_prompt_instructions_when_prompt_activated(): void
+    {
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+        $this->givePermission($user, 'clients.create');
+
+        Http::fake([
+            '*' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Vamos criar o cliente.',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Criar cliente',
+            'prompt' => 'onboard-client',
+        ]);
+
+        $response->assertOk();
+
+        $injected = false;
+        foreach (Http::recorded() as [$request]) {
+            $body = $request->data();
+            foreach ($body['messages'] ?? [] as $message) {
+                if (($message['role'] ?? null) === 'system'
+                    && str_contains((string) ($message['content'] ?? ''), 'criar contrato informando o ID do cliente')) {
+                    $injected = true;
+                }
+            }
+        }
+
+        $this->assertTrue($injected, 'As instruções do prompt não foram injetadas como mensagem de sistema.');
+    }
 }
