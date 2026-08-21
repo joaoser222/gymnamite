@@ -22,6 +22,9 @@ export default defineConfig({
                 google('Barlow Condensed', {
                     weights: [400, 500, 600],
                 }),
+                google('Bebas Neue', {
+                    weights: [400],
+                }),
             ],
         }),
         vue(),

@@ -48,10 +48,20 @@ body {
 }
 
 // Tipografia: títulos usam a família condensada da identidade visual.
-h1,
+// h1 usa Bebas Neue (display) e h2/h3 usam Barlow Condensed, ambos em
+// uppercase/negrito para o clima esportivo do tema de referência.
+h1 {
+    font-family: 'Bebas Neue', 'Barlow Condensed', sans-serif !important;
+    text-transform: uppercase;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+}
+
 h2,
 h3 {
     font-family: 'Barlow Condensed' !important;
+    text-transform: uppercase;
+    font-weight: 800;
 }
 
 // Scrollbar: personalização leve alinhada ao tema.

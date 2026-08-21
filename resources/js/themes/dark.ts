@@ -7,7 +7,8 @@ export default {
   },
   colors: {
     primary: "#0057FF",
-    accent: colors.shades.white,
+    accent: "#E8B84B",
+    gold: "#E8B84B",
     surface: "#161616",
     secondary: "#181818",
     tertiary: "#282828",
