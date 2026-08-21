@@ -48,7 +48,6 @@ export default createVuetify({
         // Defaults globais e por componente evitam repetir props visuais nas páginas.
         global: {
             elevation: 0,
-            rounded: 0
         },
         VTextField: {
             variant: 'outlined',
@@ -89,6 +88,7 @@ export default createVuetify({
         VClippedButton: {
             elevation: 0,
             variant: 'flat',
+            rounded: 0,
             class: ['clipped-object'],
         },
         VBtnGroup: {
@@ -126,7 +126,7 @@ export default createVuetify({
             hideDetails: 'auto',
             menuProps: {
                 elevation: 2,
-                contentClass: ['border-0','rounded-0'],
+                contentClass: ['border-0','rounded-sm'],
             },
         },
 
@@ -139,7 +139,7 @@ export default createVuetify({
             hideDetails: 'auto',
             menuProps: {
                 elevation: 2,
-                contentClass: ['border-0','rounded-0'],
+                contentClass: ['border-0','rounded-sm'],
             },
         },
         VChip: {
@@ -152,7 +152,7 @@ export default createVuetify({
         },
         VTable: {
             density: 'compact',
-            class: ['border-sm', 'border-surface-variant']
+            class: ['border-sm', 'border-surface-variant', 'rounded']
         },
         VAlert: {
             variant: 'tonal',

@@ -9,7 +9,7 @@ export default {
     primary: "#0057FF",
     accent: "#E8B84B",
     gold: "#E8B84B",
-    surface: "#161616",
+    surface: "#1a1a1a",
     secondary: "#181818",
     tertiary: "#282828",
     soft: colors.grey.lighten2,
@@ -17,6 +17,6 @@ export default {
     success: colors.green.base,
     warning: colors.amber.base,
     error: colors.red.base,
-    background: '#080808'
+    background: '#121212'
   }
 };

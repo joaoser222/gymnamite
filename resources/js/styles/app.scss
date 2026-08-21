@@ -1,6 +1,6 @@
 @use 'vuetify/settings' with (
     $body-font-family: 'Barlow',
-    $border-radius-root: 0px
+    $border-radius-root: 8px
 );
 
 // Base da aplicação: garante altura total e aplica o background global cacheável.
