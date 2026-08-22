@@ -13,7 +13,7 @@ type UserListItem = {
     created_at: string | null;
     role?: {
         id: number;
-        name: string;
+        description: string;
     } | null;
 };
 
@@ -53,7 +53,7 @@ const routes: TableRoutes = {
         :custom-slots="['role_description', 'created_at']"
     >
         <template #column-role_description="{ item }">
-            {{ item.role.description}}
+            {{ item.role?.description ?? '—' }}
         </template>
         <template #column-created_at="{ item }">
             {{ formatDate(item.created_at) }}
