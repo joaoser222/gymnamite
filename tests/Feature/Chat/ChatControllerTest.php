@@ -581,4 +581,71 @@ class ChatControllerTest extends TestCase
 
         $this->assertTrue($injected, 'As instruções do prompt não foram injetadas como mensagem de sistema.');
     }
+
+    public function test_chat_stream_executes_resource_via_tool_call(): void
+    {
+        $client = Client::factory()->create(['name' => 'Cliente Stream Tool']);
+
+        $user = User::factory()->create();
+        $this->givePermission($user, 'chat.view');
+        $this->givePermission($user, 'clients.view');
+
+        $toolCallChunk = json_encode([
+            'choices' => [[
+                'delta' => [
+                    'tool_calls' => [[
+                        'index' => 0,
+                        'id' => 'call_1',
+                        'type' => 'function',
+                        'function' => [
+                            'name' => 'read_client',
+                            'arguments' => (string) json_encode(['id' => (string) $client->id]),
+                        ],
+                    ]],
+                ],
+            ]],
+        ]);
+
+        $finalChunk = json_encode([
+            'choices' => [[
+                'delta' => ['content' => 'Aqui estão os dados do cliente.'],
+            ]],
+        ]);
+
+        $sseToolCall = 'data: '.$toolCallChunk."\n\n".'data: [DONE]'."\n\n";
+        $sseFinal = 'data: '.$finalChunk."\n\n".'data: [DONE]'."\n\n";
+
+        Http::fake([
+            '*' => Http::sequence()
+                ->push($sseToolCall)
+                ->push($sseFinal),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/chat/message', [
+            'message' => 'Mostre o cliente',
+            'stream' => true,
+        ]);
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/event-stream', (string) $response->headers->get('Content-Type'));
+
+        ob_start();
+        $response->baseResponse->sendContent();
+        $output = (string) ob_get_clean();
+
+        $this->assertStringContainsString('"type":"done"', $output);
+
+        $toolCalled = false;
+        foreach (Http::recorded() as [$request]) {
+            $body = $request->data();
+            foreach ($body['messages'] ?? [] as $message) {
+                if (($message['role'] ?? null) === 'tool'
+                    && str_contains((string) ($message['content'] ?? ''), 'Cliente Stream Tool')) {
+                    $toolCalled = true;
+                }
+            }
+        }
+
+        $this->assertTrue($toolCalled, 'O recurso read_client não foi executado via streaming.');
+    }
 }
