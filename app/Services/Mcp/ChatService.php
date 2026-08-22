@@ -51,7 +51,7 @@ class ChatService
         $maxIterations = (int) $config['max_tool_iterations'];
         $providers = $this->orderedProviders($config);
 
-        return response()->stream(function () use ($providers, $config, $tools, $messages, $maxIterations, $onComplete, $conversationId): void {
+        return response()->stream(function () use ($providers, $config, $tools, $messages, $map, $maxIterations, $onComplete, $conversationId): void {
             if ($conversationId !== null) {
                 echo $this->sseEvent(['type' => 'meta', 'conversation_id' => $conversationId]);
             }
@@ -171,22 +171,28 @@ class ChatService
 
             $toolCalls = $assistantMessage['tool_calls'] ?? [];
 
-            if ($toolCalls === []) {
-                return (string) ($assistantMessage['content'] ?? '');
+            if ($toolCalls !== []) {
+                foreach ($toolCalls as $toolCall) {
+                    $function = $toolCall['function'] ?? [];
+                    $name = (string) ($function['name'] ?? '');
+                    $arguments = json_decode((string) ($function['arguments'] ?? '{}'), true) ?? [];
+
+                    $resultText = $this->executeToolCall($name, $arguments, $map);
+
+                    $messages[] = [
+                        'role' => 'tool',
+                        'tool_call_id' => (string) ($toolCall['id'] ?? ''),
+                        'content' => $resultText,
+                    ];
+                }
+
+                continue;
             }
 
-            foreach ($toolCalls as $toolCall) {
-                $function = $toolCall['function'] ?? [];
-                $name = (string) ($function['name'] ?? '');
-                $arguments = json_decode((string) ($function['arguments'] ?? '{}'), true) ?? [];
+            $content = (string) ($assistantMessage['content'] ?? '');
 
-                $resultText = $this->executeToolCall($name, $arguments, $map);
-
-                $messages[] = [
-                    'role' => 'tool',
-                    'tool_call_id' => (string) ($toolCall['id'] ?? ''),
-                    'content' => $resultText,
-                ];
+            if ($content !== '') {
+                return $content;
             }
         }
 
@@ -251,8 +257,6 @@ class ChatService
     /**
      * POST to the provider, retrying with backoff while it answers with HTTP 429
      * (rate limit). The Groq "try again in Xs" hint is honored when present.
-     *
-     * @return \Illuminate\Http\Client\Response
      */
     private function postWithRetry(array $provider, array $config, array $payload, bool $stream): Response
     {
