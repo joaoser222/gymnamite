@@ -475,7 +475,6 @@ defineExpose({ loadItems, selectedItems, internalLoading });
                 <v-card-title>Alterar Visibilidade</v-card-title>
                 <v-list density="compact" nav>
                     <v-list-item
-                        class="clipped-object"
                         v-for="item in visibilityOptions"
                         :key="item.value"
                         :prepend-icon="item.icon"

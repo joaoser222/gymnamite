@@ -90,7 +90,12 @@
                 <v-list density="comfortable" min-width="240">
                     <v-list-item>
                         <template #prepend>
-                            <v-avatar color="primary" variant="tonal">
+                            <v-avatar
+                                color="primary"
+                                variant="tonal"
+                                rounded="sm"
+                                class="clipped-object"
+                            >
                                 <span class="text-subtitle-2">{{
                                     userInitials
                                 }}</span>

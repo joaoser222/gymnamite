@@ -20,7 +20,12 @@ function optionFor(): StatusOption | undefined {
 </script>
 
 <template>
-    <v-chip :color="optionFor()?.color ?? 'secondary'" variant="tonal">
+    <v-chip
+        :color="optionFor()?.color ?? 'secondary'"
+        variant="tonal"
+        rounded="sm"
+        class="clipped-object-sm"
+    >
         {{ optionFor()?.label ?? value ?? '-' }}
     </v-chip>
 </template>

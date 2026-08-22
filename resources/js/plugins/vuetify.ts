@@ -88,7 +88,7 @@ export default createVuetify({
         VClippedButton: {
             elevation: 0,
             variant: 'flat',
-            rounded: 0,
+            rounded: 'sm',
             class: ['clipped-object'],
         },
         VBtnGroup: {

@@ -1,6 +1,6 @@
 @use 'vuetify/settings' with (
     $body-font-family: 'Barlow',
-    $border-radius-root: 8px
+    $border-radius-root: 4px
 );
 
 // Base da aplicação: garante altura total e aplica o background global cacheável.
@@ -102,7 +102,18 @@ h3 {
         0% 100%,
         0% 10px
     );
-    border-radius: 0 !important; /* remove border-radius padrão do Vuetify */
+}
+
+// Variante compacta do recorte para elementos pequenos como chips e avatares.
+.clipped-object-sm {
+    clip-path: polygon(
+        5px 0%,
+        /* corte superior-esquerdo */ 100% 0%,
+        100% calc(100% - 5px),
+        /* corte inferior-direito */ calc(100% - 5px) 100%,
+        0% 100%,
+        0% 5px
+    );
 }
 
 // Utilitários de superfície: efeito glass escuro para overlays e cards especiais.
